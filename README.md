@@ -13,7 +13,10 @@ Dashboard autoalojado para ver el estado de tus servicios de un vistazo.
 - Integraciones de solo lectura: Proxmox VE, Home Assistant y AdGuard Home.
 - Instalación en un LXC autónomo de Proxmox.
 
-El diseño está en [docs/design.md](docs/design.md).
+## Documentación
+
+- [Manual de usuario](docs/usuario/manual-de-usuario.md)
+- [Documentación del proyecto](docs/README.md)
 
 ## Desarrollo
 
@@ -22,6 +25,7 @@ Requiere Go y Node.js 22.
 ```sh
 make build   # compila la web y el binario en bin/talaia
 make test    # ejecuta go vet y los tests
+make e2e     # ejecuta las pruebas en el navegador
 ./bin/talaia -listen :8080 -data ./data
 ```
 

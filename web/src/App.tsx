@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, ApiError, type Connection, type ConnectionInput, type ConnectionType } from "./api";
+import { api, ApiError, type Connection, type ConnectionInput, type ConnectionType, type ConnectionState } from "./api";
+import { CATALOG, catalogEntry } from "./catalog";
+import { Horizon, IntegrationIcon, LanguageSwitch } from "./chrome";
+import Dashboard from "./Dashboard";
 import { useI18n } from "./i18n";
 
 function usePath(): [string, (path: string) => void] {
@@ -41,69 +44,12 @@ export default function App() {
   if (state.data.setup_required) return <Credentials mode="setup" />;
   if (path.startsWith("/admin")) {
     return state.data.user ? (
-      <Admin user={state.data.user} version={state.data.version} navigate={navigate} />
+      <Admin user={state.data.user} version={state.data.version} path={path} navigate={navigate} />
     ) : (
       <Credentials mode="login" />
     );
   }
   return <Dashboard navigate={navigate} />;
-}
-
-function LanguageSwitch() {
-  const { lang, setLang } = useI18n();
-  const next = lang === "es" ? "en" : "es";
-  return (
-    <button className="quiet language" lang={next} onClick={() => setLang(next)}>
-      {next === "en" ? "English" : "Español"}
-    </button>
-  );
-}
-
-function Tower() {
-  return (
-    <svg className="tower" viewBox="0 0 120 200" aria-hidden="true">
-      <path className="beam" d="M64 30 L3000 -110 L3000 170 Z" />
-      <path className="masonry" d="M36 200 46 62h28l10 138Z" />
-      <path className="masonry" d="M40 62V44h6v6h7v-6h6v6h7v-6h6v6h7v12Z" transform="translate(-1 0)" />
-      <path className="door" d="M54 200v-22a6 6 0 0 1 12 0v22Z" />
-      <circle className="beacon" cx="60" cy="30" r="7" />
-    </svg>
-  );
-}
-
-function Horizon({ children }: { children: ReactNode }) {
-  return (
-    <main className="horizon">
-      <div className="sky">
-        <span className="wordmark">Talaia</span>
-        <LanguageSwitch />
-        <Tower />
-      </div>
-      <div className="sea">
-        <div className="sea-content">{children}</div>
-      </div>
-    </main>
-  );
-}
-
-function Dashboard({ navigate }: { navigate: (path: string) => void }) {
-  const { t } = useI18n();
-  return (
-    <Horizon>
-      <h1>{t("dashboard.title")}</h1>
-      <p>{t("dashboard.lead")}</p>
-      <a
-        className="button primary"
-        href="/admin"
-        onClick={(event) => {
-          event.preventDefault();
-          navigate("/admin");
-        }}
-      >
-        {t("dashboard.admin")}
-      </a>
-    </Horizon>
-  );
 }
 
 function Credentials({ mode }: { mode: "setup" | "login" }) {
@@ -158,7 +104,17 @@ function Credentials({ mode }: { mode: "setup" | "login" }) {
   );
 }
 
-function Admin({ user, version, navigate }: { user: string; version: string; navigate: (path: string) => void }) {
+function Admin({
+  user,
+  version,
+  path,
+  navigate,
+}: {
+  user: string;
+  version: string;
+  path: string;
+  navigate: (path: string) => void;
+}) {
   const { t } = useI18n();
   const client = useQueryClient();
   const logout = useMutation({
@@ -200,18 +156,93 @@ function Admin({ user, version, navigate }: { user: string; version: string; nav
           </button>
         </nav>
       </header>
-      <Connections />
+      {path === NEW_CONNECTION_PATH ? <NewConnection navigate={navigate} /> : <Connections navigate={navigate} />}
       <footer>Talaia {version}</footer>
     </div>
   );
 }
 
-type Editing = { kind: "new" } | { kind: "edit"; connection: Connection } | null;
+function ConnectionHealth({ type, state }: { type: ConnectionType; state?: ConnectionState }) {
+  const { t, collectError } = useI18n();
+  if (!catalogEntry(type).readable) return <span>{t("connections.notAvailable")}</span>;
+  if (!state || state.status === "pending") return <span>{t("status.checking")}</span>;
+  if (state.status === "error") return <span className="warn">{collectError(state.error)}</span>;
+  return <span>{t("connections.working")}</span>;
+}
 
-function Connections() {
+const NEW_CONNECTION_PATH = "/admin/connections/new";
+
+function normalize(text: string) {
+  return text
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
+}
+
+function NewConnection({ navigate }: { navigate: (path: string) => void }) {
+  const { t } = useI18n();
+  const [query, setQuery] = useState("");
+  const [chosen, setChosen] = useState<ConnectionType | null>(null);
+  const terms = normalize(query).trim();
+  const matches = CATALOG.filter((entry) =>
+    normalize(`${t(`type.${entry.type}`)} ${t(`catalog.desc.${entry.type}`)}`).includes(terms),
+  );
+  return (
+    <main className="panel">
+      <a
+        className="back"
+        href="/admin"
+        onClick={(event) => {
+          event.preventDefault();
+          navigate("/admin");
+        }}
+      >
+        {t("catalog.back")}
+      </a>
+      <div>
+        <h1>{t("catalog.title")}</h1>
+        <p className="lead">{t("catalog.lead")}</p>
+      </div>
+      <label className="catalog-search">
+        {t("catalog.search")}
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          // En pantallas táctiles abriría el teclado y taparía el catálogo.
+          autoFocus={window.matchMedia("(pointer: fine)").matches}
+        />
+      </label>
+      {matches.length === 0 && <p className="lead">{t("catalog.empty", { query })}</p>}
+      <ul className="catalog">
+        {matches.map((entry) => (
+          <li key={entry.type}>
+            <button onClick={() => setChosen(entry.type)}>
+              <IntegrationIcon icon={entry.icon} />
+              <strong>{t(`type.${entry.type}`)}</strong>
+              <span>{t(`catalog.desc.${entry.type}`)}</span>
+              {!entry.readable && <em>{t("catalog.soon")}</em>}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {chosen && (
+        <ConnectionDialog
+          key={chosen}
+          connection={null}
+          initialType={chosen}
+          onClose={() => setChosen(null)}
+          onSaved={() => navigate("/admin")}
+        />
+      )}
+    </main>
+  );
+}
+
+function Connections({ navigate }: { navigate: (path: string) => void }) {
   const { t, errorText } = useI18n();
   const client = useQueryClient();
-  const [editing, setEditing] = useState<Editing>(null);
+  const [editing, setEditing] = useState<Connection | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
   const connections = useQuery({
     queryKey: ["connections"],
@@ -223,10 +254,12 @@ function Connections() {
       client.invalidateQueries({ queryKey: ["state"] });
     }
   }, [connections.error, client]);
+  const states = useQuery({ queryKey: ["dashboard"], queryFn: api.dashboard, refetchInterval: 10000 });
   const remove = useMutation({
     mutationFn: api.deleteConnection,
     onSuccess: () => {
       setConfirming(null);
+      client.invalidateQueries({ queryKey: ["dashboard"] });
       return client.invalidateQueries({ queryKey: ["connections"] });
     },
   });
@@ -238,9 +271,16 @@ function Connections() {
           <h1>{t("connections.title")}</h1>
           <p>{t("connections.lead")}</p>
         </div>
-        <button className="primary" onClick={() => setEditing({ kind: "new" })}>
+        <a
+          className="button primary"
+          href={NEW_CONNECTION_PATH}
+          onClick={(event) => {
+            event.preventDefault();
+            navigate(NEW_CONNECTION_PATH);
+          }}
+        >
           {t("connections.add")}
-        </button>
+        </a>
       </div>
 
       {connections.isError && <p role="alert" className="error">{t("connections.loadError")}</p>}
@@ -264,6 +304,10 @@ function Connections() {
               <div className="connection-meta">
                 <span className="url">{connection.base_url}</span>
                 <span>{t("connections.every", { n: connection.interval_seconds })}</span>
+                <ConnectionHealth
+                  type={connection.type}
+                  state={states.data?.connections.find((state) => state.id === connection.id)}
+                />
                 {connection.tls_skip_verify && <span className="warn">{t("connections.tlsOff")}</span>}
               </div>
               <div className="connection-actions">
@@ -283,7 +327,7 @@ function Connections() {
                   </>
                 ) : (
                   <>
-                    <button className="quiet" onClick={() => setEditing({ kind: "edit", connection })}>
+                    <button className="quiet" onClick={() => setEditing(connection)}>
                       {t("connections.edit")}
                     </button>
                     <button className="quiet" onClick={() => setConfirming(connection.id)}>
@@ -299,33 +343,41 @@ function Connections() {
 
       {editing && (
         <ConnectionDialog
-          key={editing.kind === "edit" ? editing.connection.id : "new"}
-          connection={editing.kind === "edit" ? editing.connection : null}
+          key={editing.id}
+          connection={editing}
+          initialType={editing.type}
           onClose={() => setEditing(null)}
+          onSaved={() => setEditing(null)}
         />
       )}
     </main>
   );
 }
 
-const TYPES: ConnectionType[] = ["proxmox", "homeassistant", "adguard"];
-const PLACEHOLDERS: Record<ConnectionType, string> = {
-  proxmox: "https://proxmox.example:8006",
-  homeassistant: "http://homeassistant.local:8123",
-  adguard: "http://adguard.local:3000",
-};
-
-function ConnectionDialog({ connection, onClose }: { connection: Connection | null; onClose: () => void }) {
-  const { t, errorText } = useI18n();
+function ConnectionDialog({
+  connection,
+  initialType,
+  onClose,
+  onSaved,
+}: {
+  connection: Connection | null;
+  initialType: ConnectionType;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { t, errorText, collectError } = useI18n();
   const client = useQueryClient();
+  const form = useRef<HTMLFormElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
-  const [type, setType] = useState<ConnectionType>(connection?.type ?? "proxmox");
+  const type = initialType;
+  const entry = catalogEntry(type);
   const [name, setName] = useState(connection?.name ?? "");
   const [url, setUrl] = useState(connection?.base_url ?? "");
   const [username, setUsername] = useState(connection?.username ?? "");
   const [secret, setSecret] = useState("");
   const [interval, setIntervalValue] = useState(String(connection?.interval_seconds ?? 30));
   const [skipTls, setSkipTls] = useState(connection?.tls_skip_verify ?? false);
+  const [options, setOptions] = useState<Record<string, boolean>>(connection?.options ?? {});
 
   useEffect(() => {
     dialog.current?.showModal();
@@ -339,53 +391,50 @@ function ConnectionDialog({ connection, onClose }: { connection: Connection | nu
       : t(`form.secretHint.${type}`)
     : t("form.secretKeep");
 
+  const input = (): ConnectionInput => ({
+    name,
+    type,
+    base_url: url,
+    username,
+    interval_seconds: Number(interval),
+    tls_skip_verify: skipTls,
+    options,
+    ...(secret ? { secret } : {}),
+  });
   const save = useMutation({
-    mutationFn: () => {
-      const input: ConnectionInput = {
-        name,
-        type,
-        base_url: url,
-        username,
-        interval_seconds: Number(interval),
-        tls_skip_verify: skipTls,
-        ...(secret ? { secret } : {}),
-      };
-      return connection ? api.updateConnection(connection.id, input) : api.createConnection(input);
-    },
+    mutationFn: () => (connection ? api.updateConnection(connection.id, input()) : api.createConnection(input())),
     onSuccess: async () => {
       setSecret("");
+      client.invalidateQueries({ queryKey: ["dashboard"] });
       await client.invalidateQueries({ queryKey: ["connections"] });
-      onClose();
+      onSaved();
     },
   });
+  const test = useMutation({
+    mutationFn: () => api.testConnection({ ...input(), ...(connection ? { id: connection.id } : {}) }),
+  });
+  const { reset: resetTest } = test;
+  // Un resultado solo vale para los datos con los que se probó.
+  useEffect(() => resetTest(), [type, url, username, secret, skipTls, resetTest]);
 
   return (
     <dialog ref={dialog} onClose={onClose}>
       <form
+        ref={form}
         className="stack"
         onSubmit={(event) => {
           event.preventDefault();
           save.mutate();
         }}
       >
-        <h2>{connection ? t("form.editTitle", { name: connection.name }) : t("form.addTitle")}</h2>
-        {!connection && (
-          <fieldset className="types">
-            <legend>{t("form.type")}</legend>
-            {TYPES.map((value) => (
-              <label key={value}>
-                <input
-                  type="radio"
-                  name="type"
-                  value={value}
-                  checked={type === value}
-                  onChange={() => setType(value)}
-                />
-                {t(`type.${value}`)}
-              </label>
-            ))}
-          </fieldset>
-        )}
+        <div className="dialog-title">
+          <IntegrationIcon icon={entry.icon} />
+          <h2>
+            {connection
+              ? t("form.editTitle", { name: connection.name })
+              : t("form.addTitle", { name: t(`type.${type}`) })}
+          </h2>
+        </div>
         <label>
           {t("form.name")}
           <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required autoFocus />
@@ -396,7 +445,7 @@ function ConnectionDialog({ connection, onClose }: { connection: Connection | nu
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder={PLACEHOLDERS[type]}
+            placeholder={entry.urlPlaceholder}
             required
           />
         </label>
@@ -428,6 +477,24 @@ function ConnectionDialog({ connection, onClose }: { connection: Connection | nu
             required
           />
         </label>
+        {entry.options.length > 0 && (
+          <fieldset className="options">
+            <legend>{t("form.display")}</legend>
+            {entry.options.map((option) => (
+              <label key={option} className="check">
+                <input
+                  type="checkbox"
+                  checked={!!options[option]}
+                  onChange={(e) => setOptions({ ...options, [option]: e.target.checked })}
+                />
+                <span>
+                  {t(`form.option.${option}`)}
+                  <small>{t(`form.option.${option}.hint`)}</small>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+        )}
         <label className="check">
           <input type="checkbox" checked={skipTls} onChange={(e) => setSkipTls(e.target.checked)} />
           <span>
@@ -436,7 +503,26 @@ function ConnectionDialog({ connection, onClose }: { connection: Connection | nu
           </span>
         </label>
         {save.isError && <p role="alert" className="error">{errorText(code(save.error))}</p>}
+        {test.isError && <p role="alert" className="error">{errorText(code(test.error))}</p>}
+        {test.data && (
+          <p role="status" className={test.data.ok ? "test-ok" : "error"}>
+            {test.data.ok ? t("form.testOk") : collectError(test.data.error)}
+          </p>
+        )}
         <div className="dialog-actions">
+          {entry.readable && (
+            <button
+              type="button"
+              className="secondary"
+              disabled={test.isPending}
+              onClick={() => {
+                if (form.current?.reportValidity()) test.mutate();
+              }}
+            >
+              {t(test.isPending ? "form.testing" : "form.test")}
+            </button>
+          )}
+          <span className="spacer" />
           <button type="button" className="quiet" onClick={onClose}>
             {t("form.cancel")}
           </button>

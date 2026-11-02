@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -20,6 +21,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/izakdev/talaia/internal/auth"
+	"github.com/izakdev/talaia/internal/collector"
+	"github.com/izakdev/talaia/internal/integrations"
+	"github.com/izakdev/talaia/internal/integrations/adguard"
 	"github.com/izakdev/talaia/internal/store"
 )
 
@@ -29,6 +33,8 @@ const (
 	maxBody         = 64 << 10
 	maxFailures     = 10
 	failureWindow   = 15 * time.Minute
+	sseHeartbeat    = 25 * time.Second
+	sseWriteTimeout = 10 * time.Second
 )
 
 // Server contiene las dependencias de la API.
@@ -41,10 +47,12 @@ type Server struct {
 	hashSlots chan struct{}
 	dummyHash string
 	failures  *failureLimiter
+	collector *collector.Manager
+	registry  integrations.Registry
 }
 
 // New crea el servidor. web puede estar vacío si el frontend no se ha compilado.
-func New(st *store.Store, log *slog.Logger, version string, web fs.FS) (*Server, error) {
+func New(st *store.Store, manager *collector.Manager, registry integrations.Registry, log *slog.Logger, version string, web fs.FS) (*Server, error) {
 	dummy, err := auth.HashPassword("talaia-dummy-password")
 	if err != nil {
 		return nil, err
@@ -54,6 +62,8 @@ func New(st *store.Store, log *slog.Logger, version string, web fs.FS) (*Server,
 		hashSlots: make(chan struct{}, 2),
 		dummyHash: dummy,
 		failures:  &failureLimiter{entries: map[string]*failureEntry{}},
+		collector: manager,
+		registry:  registry,
 	}, nil
 }
 
@@ -67,6 +77,8 @@ func (s *Server) Handler() http.Handler {
 	r.Route("/api", func(r chi.Router) {
 		r.Use(sameOrigin, limitBody)
 		r.Get("/state", s.state)
+		r.Get("/dashboard", s.dashboard)
+		r.Get("/dashboard/events", s.dashboardEvents)
 		r.Post("/setup", s.setup)
 		r.Post("/auth/login", s.login)
 		r.Post("/auth/logout", s.logout)
@@ -74,6 +86,7 @@ func (s *Server) Handler() http.Handler {
 			r.Use(s.requireAuth)
 			r.Get("/connections", s.listConnections)
 			r.Post("/connections", s.createConnection)
+			r.Post("/connections/test", s.testConnection)
 			r.Get("/connections/{id}", s.getConnection)
 			r.Put("/connections/{id}", s.updateConnection)
 			r.Delete("/connections/{id}", s.deleteConnection)
@@ -299,35 +312,40 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 }
 
 // connectionTypes define qué credenciales exige cada integración.
-var connectionTypes = map[string]struct{ needsUsername bool }{
+var connectionTypes = map[string]struct {
+	needsUsername bool
+	options       []string
+}{
 	"proxmox":       {},
 	"homeassistant": {},
-	"adguard":       {needsUsername: true},
+	"adguard":       {needsUsername: true, options: []string{adguard.OptionShowTopDomains}},
 }
 
 type connectionIn struct {
-	Name            string  `json:"name"`
-	Type            string  `json:"type"`
-	BaseURL         string  `json:"base_url"`
-	Username        string  `json:"username"`
-	Secret          *string `json:"secret"`
-	IntervalSeconds int     `json:"interval_seconds"`
-	TLSSkipVerify   bool    `json:"tls_skip_verify"`
+	Name            string          `json:"name"`
+	Type            string          `json:"type"`
+	BaseURL         string          `json:"base_url"`
+	Username        string          `json:"username"`
+	Secret          *string         `json:"secret"`
+	IntervalSeconds int             `json:"interval_seconds"`
+	TLSSkipVerify   bool            `json:"tls_skip_verify"`
+	Options         map[string]bool `json:"options"`
 }
 
 type connectionOut struct {
-	ID              string    `json:"id"`
-	Name            string    `json:"name"`
-	Type            string    `json:"type"`
-	BaseURL         string    `json:"base_url"`
-	Username        string    `json:"username"`
-	IntervalSeconds int       `json:"interval_seconds"`
-	TLSSkipVerify   bool      `json:"tls_skip_verify"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID              string          `json:"id"`
+	Name            string          `json:"name"`
+	Type            string          `json:"type"`
+	BaseURL         string          `json:"base_url"`
+	Username        string          `json:"username"`
+	IntervalSeconds int             `json:"interval_seconds"`
+	TLSSkipVerify   bool            `json:"tls_skip_verify"`
+	Options         map[string]bool `json:"options"`
+	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
 func toOut(c store.Connection) connectionOut {
-	return connectionOut{c.ID, c.Name, c.Type, c.BaseURL, c.Username, c.IntervalSeconds, c.TLSSkipVerify, c.UpdatedAt}
+	return connectionOut{c.ID, c.Name, c.Type, c.BaseURL, c.Username, c.IntervalSeconds, c.TLSSkipVerify, c.Options, c.UpdatedAt}
 }
 
 func validateConnection(in *connectionIn) string {
@@ -350,6 +368,11 @@ func validateConnection(in *connectionIn) string {
 	}
 	if !spec.needsUsername {
 		in.Username = ""
+	}
+	for key := range in.Options {
+		if !slices.Contains(spec.options, key) {
+			return "invalid_options"
+		}
 	}
 	if in.IntervalSeconds < 5 || in.IntervalSeconds > 3600 {
 		return "invalid_interval"
@@ -401,12 +424,13 @@ func (s *Server) createConnection(w http.ResponseWriter, r *http.Request) {
 	}
 	c, err := s.store.CreateConnection(r.Context(), store.Connection{
 		Name: in.Name, Type: in.Type, BaseURL: in.BaseURL, Username: in.Username,
-		IntervalSeconds: in.IntervalSeconds, TLSSkipVerify: in.TLSSkipVerify,
+		IntervalSeconds: in.IntervalSeconds, TLSSkipVerify: in.TLSSkipVerify, Options: in.Options,
 	}, *in.Secret)
 	if err != nil {
 		s.internal(w, err)
 		return
 	}
+	s.refresh(r, c.ID)
 	writeJSON(w, http.StatusCreated, toOut(c))
 }
 
@@ -436,18 +460,146 @@ func (s *Server) updateConnection(w http.ResponseWriter, r *http.Request) {
 	}
 	c, err := s.store.UpdateConnection(r.Context(), store.Connection{
 		ID: id, Name: in.Name, BaseURL: in.BaseURL, Username: in.Username,
-		IntervalSeconds: in.IntervalSeconds, TLSSkipVerify: in.TLSSkipVerify,
+		IntervalSeconds: in.IntervalSeconds, TLSSkipVerify: in.TLSSkipVerify, Options: in.Options,
 	}, in.Secret)
 	if s.storeError(w, err) {
 		return
 	}
+	s.refresh(r, id)
 	writeJSON(w, http.StatusOK, toOut(c))
 }
 
-func (s *Server) deleteConnection(w http.ResponseWriter, r *http.Request) {
-	if s.storeError(w, s.store.DeleteConnection(r.Context(), chi.URLParam(r, "id"))) {
+func (s *Server) refresh(r *http.Request, id string) {
+	if err := s.collector.Refresh(r.Context(), id); err != nil {
+		s.log.Error("no se pudo actualizar el recolector", "conexion", id, "error", err)
+	}
+}
+
+// testConnection consulta el servicio una vez, sin guardar nada.
+func (s *Server) testConnection(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		ID string `json:"id"`
+		connectionIn
+	}
+	if !decode(w, r, &in) {
 		return
 	}
+	if in.Secret != nil && *in.Secret == "" {
+		in.Secret = nil
+	}
+	var current store.Connection
+	if in.ID != "" {
+		var err error
+		current, err = s.store.GetConnection(r.Context(), in.ID)
+		if s.storeError(w, err) {
+			return
+		}
+		in.Type = current.Type
+	}
+	if code := validateConnection(&in.connectionIn); code != "" {
+		writeError(w, http.StatusBadRequest, code)
+		return
+	}
+	var secret string
+	switch {
+	case in.Secret != nil:
+		secret = *in.Secret
+	case in.ID == "":
+		writeError(w, http.StatusBadRequest, "invalid_secret")
+		return
+	case in.BaseURL != current.BaseURL:
+		writeError(w, http.StatusBadRequest, "secret_required_for_url_change")
+		return
+	default:
+		var err error
+		secret, err = s.store.ConnectionSecret(r.Context(), in.ID)
+		if s.storeError(w, err) {
+			return
+		}
+	}
+	factory, supported := s.registry[in.Type]
+	if !supported {
+		writeError(w, http.StatusBadRequest, "not_supported")
+		return
+	}
+	integration := factory(integrations.Config{
+		BaseURL: in.BaseURL, Username: in.Username, Secret: secret, TLSSkipVerify: in.TLSSkipVerify, Options: in.Options,
+	})
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	defer cancel()
+	if _, err := integration.Collect(ctx); err != nil {
+		s.log.Info("prueba de conexión fallida", "error", err)
+		writeJSON(w, http.StatusOK, map[string]any{"ok": false, "error": integrations.Code(err)})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) dashboard(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"connections": s.collector.Snapshots()})
+}
+
+// dashboardEvents envía el estado completo al conectar y en cada cambio.
+func (s *Server) dashboardEvents(w http.ResponseWriter, r *http.Request) {
+	changes, unsubscribe, ok := s.collector.Subscribe()
+	if !ok {
+		writeError(w, http.StatusServiceUnavailable, "busy")
+		return
+	}
+	defer unsubscribe()
+
+	h := w.Header()
+	h.Set("Content-Type", "text/event-stream")
+	h.Set("Cache-Control", "no-store")
+	// Evita que un proxy como Nginx retenga los eventos.
+	h.Set("X-Accel-Buffering", "no")
+	w.WriteHeader(http.StatusOK)
+
+	rc := http.NewResponseController(w)
+	send := func(payload []byte) bool {
+		if err := rc.SetWriteDeadline(time.Now().Add(sseWriteTimeout)); err != nil && !errors.Is(err, http.ErrNotSupported) {
+			return false
+		}
+		if _, err := w.Write(payload); err != nil {
+			return false
+		}
+		return rc.Flush() == nil
+	}
+	sendSnapshot := func() bool {
+		data, err := json.Marshal(map[string]any{"connections": s.collector.Snapshots()})
+		if err != nil {
+			s.log.Error("no se pudo serializar el estado", "error", err)
+			return false
+		}
+		return send(append(append([]byte("event: snapshot\ndata: "), data...), "\n\n"...))
+	}
+	if !sendSnapshot() {
+		return
+	}
+	heartbeat := time.NewTicker(sseHeartbeat)
+	defer heartbeat.Stop()
+	for {
+		select {
+		case <-changes:
+			if !sendSnapshot() {
+				return
+			}
+		case <-heartbeat.C:
+			if !send([]byte(": ping\n\n")) {
+				return
+			}
+		case <-r.Context().Done():
+			return
+		}
+	}
+}
+
+func (s *Server) deleteConnection(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if s.storeError(w, s.store.DeleteConnection(r.Context(), id)) {
+		return
+	}
+	s.collector.Remove(id)
 	w.WriteHeader(http.StatusNoContent)
 }
 
