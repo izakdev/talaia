@@ -37,6 +37,7 @@ flowchart LR
 | Base de datos | SQLite con `modernc.org/sqlite` | Sin CGO ni servicios externos |
 | Criptografía | AES-256-GCM, Argon2id con `golang.org/x/crypto` | Algoritmos actuales |
 | Frontend | React, TypeScript, Vite, TanStack Query | Ecosistema actual, con tipado |
+| WebSocket | `coder/websocket` | Sin dependencias; necesario para consultar Supervisor |
 | Iconos | `simple-icons` | Incluidos en la aplicación, sin depender de Internet |
 | Tipografía | Schibsted Grotesk, servida por Talaia | Sin peticiones a terceros |
 | CI | GitHub Actions | Pruebas en cada cambio y publicación por etiqueta |
@@ -134,9 +135,12 @@ type Integration interface {
 | Aspecto | Detalle |
 |---|---|
 | Autenticación | Cabecera `Authorization: Bearer` con un token de larga duración |
-| Consultas | `/api/config` y, si hay entidades elegidas, `/api/states` |
+| Consultas | `/api/config`; `/api/states` si hay entidades elegidas o resumen; y `/core/stats` y `/host/info` por WebSocket |
+| Recursos | El proxy REST de Supervisor no permite esas rutas: se usa `supervisor/api` por `/api/websocket`, que exige administrador. Si falla, el bloque sigue funcionando sin recursos, y **Probar conexión** lo indica |
+| Resumen | Cuenta por dominio y excluye grupos, entidades sin datos, y puertas, garajes y verjas |
+| Nunca se publica | Personas, cerraduras, alarmas y nombre del equipo |
 | Selección | Lista de `entity_id` por conexión, en la columna `entities` |
-| Datos públicos | Identificador, nombre, estado, unidad y clase de las entidades elegidas, además de versión y estado del servicio |
+| Datos públicos | Identificador, nombre, estado, unidad y clase de las entidades elegidas; versión y estado del servicio; recursos y resumen |
 | Excluido | Ubicación de `/api/config`, atributos y el resto de entidades |
 | Consumos | Entidades con clase `power` o `energy`, sin sumar: un medidor general y sus enchufes contarían dos veces |
 | Entidad eliminada | Se publica con estado `missing` para que se vea en el panel |
@@ -163,7 +167,7 @@ Las respuestas son JSON. Las escrituras exigen `Content-Type: application/json` 
 |---|---|---|
 | `GET /healthz` | Público | Comprobación de vida |
 | `GET /api/state` | Público | Si falta el primer arranque, versión y usuario actual |
-| `GET /api/dashboard` | Público | Estado de las conexiones con integración disponible |
+| `GET /api/dashboard` | Público | Estado de las conexiones, con el enlace a cada servicio |
 | `GET /api/dashboard/events` | Público | Eventos SSE con el mismo contenido |
 | `POST /api/setup` | Público, solo una vez | Crea el primer administrador e inicia sesión |
 | `POST /api/auth/login` | Público | Inicia sesión |
@@ -203,6 +207,7 @@ erDiagram
         integer tls_skip_verify
         text options
         text entities
+        text link_url
         integer created_at
         integer updated_at
     }
@@ -227,7 +232,8 @@ erDiagram
 | Archivos | Al crearlos, directorio de datos `700` y base de datos `600` |
 | Salida a servicios | Sin proxy, sin seguir redirecciones, 10 s de espera por petición y respuestas de 32 MiB como máximo |
 | TLS | Verificación activa por defecto, con excepción explícita por conexión |
-| API pública | Sin URL, usuarios ni credenciales |
+| API pública | Sin usuarios ni credenciales. Incluye el enlace al servicio: la URL de conexión o la dirección propia configurada |
+| Enlaces | Solo `http` y `https`, sin credenciales; se abren con `noopener` y `noreferrer` |
 | Navegador | CSP `default-src 'self'`, `frame-ancestors 'none'`, `nosniff` y `Referrer-Policy: same-origin` |
 | CSRF | Cookie `SameSite=Lax`, comprobación de `Origin` y JSON obligatorio |
 | Tamaño de petición | 64 KiB como máximo |
@@ -235,6 +241,8 @@ erDiagram
 ### Riesgos aceptados
 
 - **Dashboard abierto:** cualquiera que llegue al puerto puede ver el estado de los servicios. No debe publicarse en Internet hasta disponer del login opcional (RF-07), o debe protegerse con otra capa.
+- **Enlaces visibles:** quien abra el panel ve la dirección de cada servicio, que puede ser interna. Una dirección propia evita mostrar la URL de conexión.
+- **Token de administrador para los recursos:** Home Assistant solo da CPU y memoria a un administrador, de modo que quien quiera verlas debe dar a Talaia un token con todos esos permisos, aunque solo lea.
 - **Primer arranque abierto:** hasta crear el administrador, cualquiera en la red puede hacerlo.
 - **Bloqueo por IP detrás de un proxy inverso:** Talaia ve la IP del proxy, de modo que los fallos cuentan para todos los clientes. No se confía en `X-Forwarded-For` porque se podría falsificar.
 - **Sin TLS propio:** Talaia sirve HTTP y delega el cifrado en un proxy inverso.

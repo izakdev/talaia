@@ -96,7 +96,10 @@ func TestCollectsAndPassesDecryptedSecret(t *testing.T) {
 	}
 	s := e.waitFor(t, func(s Snapshot) bool { return s.Status == StatusOK })
 	raw, _ := json.Marshal(s)
-	for _, leak := range []string{"clave-secreta", "usuario-secreto", "interno.example"} {
+	if s.Link != "http://interno.example" {
+		t.Fatalf("enlace = %s", s.Link)
+	}
+	for _, leak := range []string{"clave-secreta", "usuario-secreto"} {
 		if strings.Contains(string(raw), leak) {
 			t.Fatalf("el snapshot filtra %q: %s", leak, raw)
 		}
@@ -177,6 +180,24 @@ func TestChangingEntitiesDropsOldData(t *testing.T) {
 	}
 	if s := e.waitFor(t, func(s Snapshot) bool { return s.Status == StatusError }); s.Data != nil {
 		t.Fatalf("conserva datos de otra selección: %+v", s)
+	}
+}
+
+func TestChangingLinkKeepsData(t *testing.T) {
+	e := setup(t)
+	c := e.create(t, "adguard")
+	e.waitFor(t, func(s Snapshot) bool { return s.Status == StatusOK })
+	e.fail.Store(true)
+	c.LinkURL = "https://servicio.example"
+	if _, err := e.st.UpdateConnection(context.Background(), c, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.m.Refresh(context.Background(), c.ID); err != nil {
+		t.Fatal(err)
+	}
+	s := e.waitFor(t, func(s Snapshot) bool { return s.Status == StatusError })
+	if s.Link != "https://servicio.example" || s.Data == nil {
+		t.Fatalf("snapshot = %+v", s)
 	}
 }
 

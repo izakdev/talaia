@@ -29,11 +29,13 @@ const (
 	CodeSecretUnreadable = "secret_unreadable"
 )
 
-// Snapshot es el estado público de una conexión: sin URL, usuario ni credenciales.
+// Snapshot es el estado público de una conexión: sin usuario ni credenciales. Link es
+// la dirección para abrir el servicio, que el administrador puede sustituir.
 type Snapshot struct {
 	ID            string     `json:"id"`
 	Name          string     `json:"name"`
 	Type          string     `json:"type"`
+	Link          string     `json:"link"`
 	Status        string     `json:"status"`
 	Error         string     `json:"error,omitempty"`
 	Data          any        `json:"data"`
@@ -133,12 +135,12 @@ func (m *Manager) start(c store.Connection) {
 		return
 	}
 	target := strings.Join(append([]string{c.BaseURL, c.Username, string(options)}, c.Entities...), "\x00")
-	snapshot := Snapshot{ID: c.ID, Name: c.Name, Type: c.Type, Status: StatusPending}
+	snapshot := Snapshot{ID: c.ID, Name: c.Name, Type: c.Type, Link: c.Link(), Status: StatusPending}
 	if old, ok := m.items[c.ID]; ok {
 		old.cancel()
 		if old.target == target {
 			snapshot = old.snapshot
-			snapshot.Name = c.Name
+			snapshot.Name, snapshot.Link = c.Name, c.Link()
 		}
 	}
 	ctx, cancel := context.WithCancel(m.base)

@@ -368,6 +368,7 @@ function ConnectionDialog({
   const [skipTls, setSkipTls] = useState(connection?.tls_skip_verify ?? false);
   const [options, setOptions] = useState<Record<string, boolean>>(connection?.options ?? entry.defaultOptions);
   const [entities, setEntities] = useState<string[]>(connection?.entities ?? []);
+  const [link, setLink] = useState(connection?.link_url ?? "");
 
   useEffect(() => {
     dialog.current?.showModal();
@@ -390,6 +391,7 @@ function ConnectionDialog({
     tls_skip_verify: skipTls,
     options,
     entities,
+    link_url: link,
     ...(secret ? { secret } : {}),
   });
   const save = useMutation({
@@ -457,6 +459,11 @@ function ConnectionDialog({
           {hint && <small>{hint}</small>}
         </label>
         <label>
+          {t("form.link")}
+          <input type="url" value={link} onChange={(e) => setLink(e.target.value)} />
+          <small>{t("form.link.hint")}</small>
+        </label>
+        <label>
           {t("form.interval")}
           <input
             type="number"
@@ -509,6 +516,7 @@ function ConnectionDialog({
             {test.data.ok ? t("form.testOk") : collectError(test.data.error)}
           </p>
         )}
+        {test.data?.notes?.includes("system_unavailable") && <small>{t("form.note.system_unavailable")}</small>}
         <div className="dialog-actions">
           <button
             type="button"

@@ -3,13 +3,21 @@ package homeassistant
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
+	"slices"
 	"sort"
 	"strings"
 
 	"github.com/izakdev/talaia/internal/integrations"
 )
+
+// OptionShowSummary incluye los agregados de luces, interruptores y otros dominios.
+const OptionShowSummary = "show_summary"
+
+// NoteSystemUnavailable indica que Supervisor no ofrece CPU, memoria ni disco.
+const NoteSystemUnavailable = "system_unavailable"
 
 // StateMissing indica que una entidad elegida ya no existe en Home Assistant.
 const StateMissing = "missing"
@@ -30,6 +38,33 @@ type Data struct {
 	SafeMode bool     `json:"safe_mode"`
 	Recovery bool     `json:"recovery_mode"`
 	Entities []Entity `json:"entities"`
+	System   *System  `json:"system,omitempty"`
+	Summary  *Summary `json:"summary,omitempty"`
+}
+
+// Notes devuelve avisos que no impiden mostrar el servicio.
+func (d Data) Notes() []string {
+	if d.System == nil {
+		return []string{NoteSystemUnavailable}
+	}
+	return nil
+}
+
+// DomainSummary cuenta los elementos activos de un dominio.
+type DomainSummary struct {
+	Domain string `json:"domain"`
+	Active int    `json:"active"`
+	Total  int    `json:"total"`
+}
+
+// Summary son agregados sin nombres. No incluye personas, cerraduras ni alarmas,
+// porque revelarían si hay alguien en casa o el estado de la seguridad.
+type Summary struct {
+	Domains      []DomainSummary `json:"domains"`
+	Entities     int             `json:"entities"`
+	Unavailable  int             `json:"unavailable"`
+	Updates      int             `json:"updates"`
+	Integrations int             `json:"integrations"`
 }
 
 type client struct {
@@ -43,10 +78,11 @@ func New(cfg integrations.Config) integrations.Integration {
 }
 
 type configResponse struct {
-	Version  string `json:"version"`
-	State    string `json:"state"`
-	SafeMode bool   `json:"safe_mode"`
-	Recovery bool   `json:"recovery_mode"`
+	Version    string   `json:"version"`
+	State      string   `json:"state"`
+	SafeMode   bool     `json:"safe_mode"`
+	Recovery   bool     `json:"recovery_mode"`
+	Components []string `json:"components"`
 }
 
 type stateResponse struct {
@@ -56,6 +92,8 @@ type stateResponse struct {
 		FriendlyName string `json:"friendly_name"`
 		Unit         string `json:"unit_of_measurement"`
 		DeviceClass  string `json:"device_class"`
+		// Los grupos listan aquí sus miembros.
+		Members json.RawMessage `json:"entity_id"`
 	} `json:"attributes"`
 }
 
@@ -102,12 +140,20 @@ func (c *client) Collect(ctx context.Context) (any, error) {
 		return nil, err
 	}
 	data := Data{Version: config.Version, State: config.State, SafeMode: config.SafeMode, Recovery: config.Recovery, Entities: []Entity{}}
-	if len(c.cfg.Entities) == 0 {
+	// CPU, memoria y disco son opcionales: sin Supervisor, el resto sigue funcionando.
+	if system, err := c.system(ctx); err == nil {
+		data.System = system
+	}
+	showSummary := c.cfg.Options[OptionShowSummary]
+	if len(c.cfg.Entities) == 0 && !showSummary {
 		return data, nil
 	}
 	var states []stateResponse
 	if err := c.get(ctx, "/api/states", &states); err != nil {
 		return nil, err
+	}
+	if showSummary {
+		data.Summary = summarize(states, config.Components)
 	}
 	byID := make(map[string]stateResponse, len(states))
 	for _, s := range states {
@@ -123,6 +169,68 @@ func (c *client) Collect(ctx context.Context) (any, error) {
 	}
 	sortByName(data.Entities)
 	return data, nil
+}
+
+// summaryDomains define qué dominios se agregan y qué estados cuentan como activos.
+var summaryDomains = []struct {
+	domain string
+	active []string
+}{
+	{"light", []string{"on"}},
+	{"switch", []string{"on"}},
+	{"fan", []string{"on"}},
+	{"climate", nil}, // Activo si no está apagado.
+	{"cover", []string{"open", "opening", "closing"}},
+	{"media_player", []string{"on", "playing", "paused", "buffering"}},
+	{"automation", []string{"on"}},
+}
+
+func summarize(states []stateResponse, components []string) *Summary {
+	counts := map[string]*DomainSummary{}
+	summary := &Summary{Domains: []DomainSummary{}, Entities: len(states)}
+	for _, s := range states {
+		domain, _, _ := strings.Cut(s.EntityID, ".")
+		noData := s.State == "unavailable" || s.State == "unknown"
+		if s.State == "unavailable" {
+			summary.Unavailable++
+		}
+		if domain == "update" && s.State == "on" {
+			summary.Updates++
+		}
+		// Un grupo contaría dos veces a sus miembros.
+		if noData || len(s.Attributes.Members) > 0 {
+			continue
+		}
+		// Una puerta o un garaje abiertos no deben publicarse como una persiana más.
+		if domain == "cover" && slices.Contains([]string{"door", "garage", "gate"}, s.Attributes.DeviceClass) {
+			continue
+		}
+		for _, rule := range summaryDomains {
+			if rule.domain != domain {
+				continue
+			}
+			entry := counts[domain]
+			if entry == nil {
+				entry = &DomainSummary{Domain: domain}
+				counts[domain] = entry
+			}
+			entry.Total++
+			if (rule.active == nil && s.State != "off") || slices.Contains(rule.active, s.State) {
+				entry.Active++
+			}
+		}
+	}
+	for _, rule := range summaryDomains {
+		if entry := counts[rule.domain]; entry != nil {
+			summary.Domains = append(summary.Domains, *entry)
+		}
+	}
+	for _, component := range components {
+		if !strings.Contains(component, ".") {
+			summary.Integrations++
+		}
+	}
+	return summary
 }
 
 // ListEntities devuelve todas las entidades, para elegirlas en la administración.

@@ -135,10 +135,25 @@ func TestEntitiesArePersisted(t *testing.T) {
 	}
 }
 
+func TestLinkFallsBackToConnectionURL(t *testing.T) {
+	s, _ := newStore(t)
+	c, err := s.CreateConnection(context.Background(), Connection{Name: "a", Type: "adguard", BaseURL: "http://interna", IntervalSeconds: 30}, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Link() != "http://interna" {
+		t.Fatalf("enlace = %s", c.Link())
+	}
+	c.LinkURL = "https://servicio.example/panel"
+	if c, err = s.UpdateConnection(context.Background(), c, nil); err != nil || c.Link() != "https://servicio.example/panel" {
+		t.Fatalf("enlace = %s, err = %v", c.Link(), err)
+	}
+}
+
 func TestMigratesExistingDatabase(t *testing.T) {
 	s, path := newStore(t)
 	ctx := context.Background()
-	if _, err := s.db.Exec(`ALTER TABLE connections DROP COLUMN entities; ALTER TABLE connections DROP COLUMN options; PRAGMA user_version = 1;`); err != nil {
+	if _, err := s.db.Exec(`ALTER TABLE connections DROP COLUMN link_url; ALTER TABLE connections DROP COLUMN entities; ALTER TABLE connections DROP COLUMN options; PRAGMA user_version = 1;`); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.db.Exec(`INSERT INTO connections(id, name, type, base_url, secret, interval_seconds, created_at, updated_at)

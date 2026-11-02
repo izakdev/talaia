@@ -25,6 +25,7 @@ import (
 	"github.com/izakdev/talaia/internal/collector"
 	"github.com/izakdev/talaia/internal/integrations"
 	"github.com/izakdev/talaia/internal/integrations/adguard"
+	"github.com/izakdev/talaia/internal/integrations/homeassistant"
 	"github.com/izakdev/talaia/internal/integrations/proxmox"
 	"github.com/izakdev/talaia/internal/store"
 )
@@ -322,7 +323,7 @@ var connectionTypes = map[string]struct {
 	hasEntities   bool
 }{
 	"proxmox":       {options: []string{proxmox.OptionShowGuests}},
-	"homeassistant": {hasEntities: true},
+	"homeassistant": {hasEntities: true, options: []string{homeassistant.OptionShowSummary}},
 	"adguard":       {needsUsername: true, options: []string{adguard.OptionShowTopDomains}},
 }
 
@@ -342,6 +343,7 @@ type connectionIn struct {
 	TLSSkipVerify   bool            `json:"tls_skip_verify"`
 	Options         map[string]bool `json:"options"`
 	Entities        []string        `json:"entities"`
+	LinkURL         string          `json:"link_url"`
 }
 
 type connectionOut struct {
@@ -354,11 +356,12 @@ type connectionOut struct {
 	TLSSkipVerify   bool            `json:"tls_skip_verify"`
 	Options         map[string]bool `json:"options"`
 	Entities        []string        `json:"entities"`
+	LinkURL         string          `json:"link_url"`
 	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
 func toOut(c store.Connection) connectionOut {
-	return connectionOut{c.ID, c.Name, c.Type, c.BaseURL, c.Username, c.IntervalSeconds, c.TLSSkipVerify, c.Options, c.Entities, c.UpdatedAt}
+	return connectionOut{c.ID, c.Name, c.Type, c.BaseURL, c.Username, c.IntervalSeconds, c.TLSSkipVerify, c.Options, c.Entities, c.LinkURL, c.UpdatedAt}
 }
 
 func validateConnection(in *connectionIn) string {
@@ -376,6 +379,14 @@ func validateConnection(in *connectionIn) string {
 		return "invalid_url"
 	}
 	in.BaseURL = strings.TrimRight(u.String(), "/")
+	in.LinkURL = strings.TrimSpace(in.LinkURL)
+	if in.LinkURL != "" {
+		// El enlace se muestra en el panel: solo http o https, nunca javascript: ni similares.
+		link, err := url.Parse(in.LinkURL)
+		if err != nil || (link.Scheme != "http" && link.Scheme != "https") || link.Host == "" || link.User != nil || len(in.LinkURL) > 2048 {
+			return "invalid_link"
+		}
+	}
 	if spec.needsUsername && in.Username == "" {
 		return "invalid_username"
 	}
@@ -450,7 +461,7 @@ func (s *Server) createConnection(w http.ResponseWriter, r *http.Request) {
 	}
 	c, err := s.store.CreateConnection(r.Context(), store.Connection{
 		Name: in.Name, Type: in.Type, BaseURL: in.BaseURL, Username: in.Username,
-		IntervalSeconds: in.IntervalSeconds, TLSSkipVerify: in.TLSSkipVerify, Options: in.Options, Entities: in.Entities,
+		IntervalSeconds: in.IntervalSeconds, TLSSkipVerify: in.TLSSkipVerify, Options: in.Options, Entities: in.Entities, LinkURL: in.LinkURL,
 	}, *in.Secret)
 	if err != nil {
 		s.internal(w, err)
@@ -486,7 +497,7 @@ func (s *Server) updateConnection(w http.ResponseWriter, r *http.Request) {
 	}
 	c, err := s.store.UpdateConnection(r.Context(), store.Connection{
 		ID: id, Name: in.Name, BaseURL: in.BaseURL, Username: in.Username,
-		IntervalSeconds: in.IntervalSeconds, TLSSkipVerify: in.TLSSkipVerify, Options: in.Options, Entities: in.Entities,
+		IntervalSeconds: in.IntervalSeconds, TLSSkipVerify: in.TLSSkipVerify, Options: in.Options, Entities: in.Entities, LinkURL: in.LinkURL,
 	}, in.Secret)
 	if s.storeError(w, err) {
 		return
@@ -563,12 +574,19 @@ func (s *Server) testConnection(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 	defer cancel()
-	if _, err := integration.Collect(ctx); err != nil {
+	data, err := integration.Collect(ctx)
+	if err != nil {
 		s.log.Info("prueba de conexión fallida", "error", err)
 		writeJSON(w, http.StatusOK, map[string]any{"ok": false, "error": integrations.Code(err)})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+	response := map[string]any{"ok": true}
+	if noter, ok := data.(integrations.Noter); ok {
+		if notes := noter.Notes(); len(notes) > 0 {
+			response["notes"] = notes
+		}
+	}
+	writeJSON(w, http.StatusOK, response)
 }
 
 // listEntities devuelve las entidades que se pueden elegir en una conexión.

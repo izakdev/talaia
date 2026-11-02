@@ -41,8 +41,15 @@ func (f fakeIntegration) Collect(context.Context) (any, error) {
 	if f.cfg.Secret != "correcta" {
 		return nil, &integrations.Error{Code: integrations.CodeUnauthorized, Err: errors.New("credencial")}
 	}
-	return map[string]int{"queries": 7}, nil
+	return notedData{Queries: 7}, nil
 }
+
+// notedData simula datos con avisos que no impiden mostrar el servicio.
+type notedData struct {
+	Queries int `json:"queries"`
+}
+
+func (notedData) Notes() []string { return []string{"aviso"} }
 
 // plainIntegration no ofrece entidades que elegir.
 type plainIntegration struct{ cfg integrations.Config }
@@ -302,7 +309,10 @@ func TestDashboardIsPublicAndHidesConfiguration(t *testing.T) {
 	if !strings.Contains(body, `"queries":7`) {
 		t.Fatalf("sin datos: %s", body)
 	}
-	for _, leak := range []string{"192.0.2.1", "admin", "correcta", "base_url", "username", "secret"} {
+	if !strings.Contains(body, `"link":"http://192.0.2.1:3000"`) {
+		t.Fatalf("falta el enlace al servicio: %s", body)
+	}
+	for _, leak := range []string{"admin", "correcta", "base_url", "link_url", "username", "secret"} {
 		if strings.Contains(body, leak) {
 			t.Fatalf("el dashboard público filtra %q: %s", leak, body)
 		}
@@ -485,6 +495,35 @@ func TestEntitySelectionValidation(t *testing.T) {
 	valid := homeAssistantConn("correcta")
 	valid["entities"] = []string{"light.salon", "sensor.casa_potencia"}
 	if got := c.want(201, "POST", create, valid); !strings.Contains(got, `"entities":["light.salon","sensor.casa_potencia"]`) {
+		t.Fatal(got)
+	}
+}
+
+func TestConnectionLink(t *testing.T) {
+	c, _ := newServer(t)
+	c.want(200, "POST", "/api/setup", creds())
+	for _, bad := range []string{"javascript:alert(1)", "data:text/html,x", "ftp://host", "http://usuario:clave@host", "sin-esquema"} {
+		m := adguardConn("correcta")
+		m["link_url"] = bad
+		if got := c.want(400, "POST", "/api/admin/connections", m); !strings.Contains(got, "invalid_link") {
+			t.Fatalf("%s: %s", bad, got)
+		}
+	}
+	m := adguardConn("correcta")
+	m["link_url"] = "https://adguard.example/panel?vista=1"
+	if got := c.want(201, "POST", "/api/admin/connections", m); !strings.Contains(got, `"link_url":"https://adguard.example/panel?vista=1"`) {
+		t.Fatal(got)
+	}
+	body := waitDashboard(t, newClient(t, c.base), `"status":"ok"`)
+	if !strings.Contains(body, `"link":"https://adguard.example/panel?vista=1"`) || strings.Contains(body, "192.0.2.1") {
+		t.Fatalf("con enlace propio no debe mostrarse la URL de conexión: %s", body)
+	}
+}
+
+func TestConnectionTestReportsNotes(t *testing.T) {
+	c, _ := newServer(t)
+	c.want(200, "POST", "/api/setup", creds())
+	if got := c.want(200, "POST", "/api/admin/connections/test", homeAssistantConn("correcta")); !strings.Contains(got, `"notes":["aviso"]`) {
 		t.Fatal(got)
 	}
 }

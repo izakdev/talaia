@@ -1,5 +1,6 @@
 // Home Assistant simulado, con la forma de respuesta de la API REST real.
 import { createServer } from "node:http";
+import { WebSocketServer } from "ws";
 
 export const HA_TOKEN = "token-de-prueba-larga-duracion";
 
@@ -17,10 +18,14 @@ export function fakeHomeAssistant(port) {
     entity("sensor.temperatura", "21.4", { friendly_name: "Temperatura", unit_of_measurement: "°C", device_class: "temperature" }),
     entity("person.privada", "home", { friendly_name: "Persona privada", latitude: 40.1, longitude: -3.2 }),
     entity("sensor.sin_nombre", "unknown", {}),
+    entity("switch.enchufe", "on", { friendly_name: "Enchufe" }),
+    entity("automation.riego", "on", { friendly_name: "Riego" }),
+    entity("update.core", "on", { friendly_name: "Actualización" }),
+    entity("lock.entrada", "unlocked", { friendly_name: "Cerradura privada" }),
   ];
   const config = () => ({
     version: "2026.2.0-simulado", state: state.starting ? "NOT_RUNNING" : "RUNNING",
-    safe_mode: false, recovery_mode: false, location_name: "Casa privada", latitude: 40.1, longitude: -3.2,
+    safe_mode: false, recovery_mode: false, components: ["light", "sensor", "sensor.template", "api"], location_name: "Casa privada", latitude: 40.1, longitude: -3.2,
   });
   let server;
   return {
@@ -40,6 +45,22 @@ export function fakeHomeAssistant(port) {
           }
           res.setHeader("Content-Type", "application/json");
           res.end(JSON.stringify(route()));
+        });
+        const sockets = new WebSocketServer({ server, path: "/api/websocket" });
+        sockets.on("connection", (socket) => {
+          socket.send(JSON.stringify({ type: "auth_required" }));
+          socket.on("message", (raw) => {
+            const message = JSON.parse(raw);
+            if (message.type === "auth") {
+              socket.send(JSON.stringify({ type: message.access_token === HA_TOKEN ? "auth_ok" : "auth_invalid" }));
+              return;
+            }
+            const results = {
+              "/core/stats": { cpu_percent: 12.4, memory_usage: 1024 ** 3, memory_limit: 4 * 1024 ** 3, memory_percent: 25 },
+              "/host/info": { hostname: "nombre-privado", disk_total: 32, disk_used: 8, boot_timestamp: (Date.now() - 3 * 86400000) * 1000 },
+            };
+            socket.send(JSON.stringify({ id: message.id, type: "result", success: true, result: results[message.endpoint] }));
+          });
         });
         server.once("error", reject);
         server.listen(port, "127.0.0.1", resolve);

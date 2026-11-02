@@ -49,6 +49,7 @@ Mientras no exista un administrador, todas las rutas muestran el asistente de pr
 
 | Elemento | Comportamiento |
 |---|---|
+| Nombre del servicio | Enlace a su URL, con un icono, que se abre en una pestaña nueva |
 | Actualización | En vivo. Si se pierde, muestra un aviso y reintenta |
 | Antigüedad | «Actualizado hace…», recalculado cada 10 segundos |
 | Estado | Se indica con texto y forma, no solo con color |
@@ -117,7 +118,11 @@ El detalle desplegado sigue abierto cuando llegan datos nuevos.
 |---|---|
 | Consumos | Entidades elegidas con clase de potencia o energía, con su valor y unidad. No se suman |
 | Entidades | El resto de las elegidas, por nombre |
-| Sin selección | Solo el estado y la versión |
+| Recursos | CPU y RAM de Home Assistant, y disco y arranque del equipo. Solo con Supervisor y token de administrador |
+| Resumen | Elementos activos sobre el total por dominio; entidades, no disponibles, actualizaciones pendientes e integraciones. Opcional |
+| Sin selección | Lo anterior, junto con el estado y la versión |
+
+La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 
 **Valores:** los números siguen el formato del idioma. `on` y `off` se muestran como Encendido y Apagado. El resto de estados se muestra tal como llega de Home Assistant.
 
@@ -147,6 +152,8 @@ El detalle desplegado sigue abierto cuando llegan datos nuevos.
 | Mostrar dominios | AdGuard | Desactivado por defecto |
 | Mostrar detalle de VM y LXC | Proxmox | Activado por defecto |
 | Entidades en el panel | Home Assistant | Ninguna por defecto, hasta 200 |
+| Mostrar resumen | Home Assistant | Activado por defecto |
+| Enlace para abrir el servicio | Todos | Opcional, `http` o `https`, sin credenciales. Vacío, usa la URL de conexión |
 | No verificar TLS | Todos | Desactivado por defecto |
 
 | Credencial | Formato |
@@ -155,7 +162,7 @@ El detalle desplegado sigue abierto cuando llegan datos nuevos.
 | Home Assistant | Token de larga duración |
 | AdGuard | Contraseña |
 
-**Probar conexión:** consulta el servicio una vez con los datos del formulario, sin guardar nada. Si se cambia algún dato de conexión, el resultado anterior desaparece. Al editar, puede usar la credencial guardada si la URL no ha cambiado.
+**Probar conexión:** consulta el servicio una vez con los datos del formulario, sin guardar nada. En Home Assistant, avisa si no hay CPU, memoria ni disco disponibles. Si se cambia algún dato de conexión, el resultado anterior desaparece. Al editar, puede usar la credencial guardada si la URL no ha cambiado.
 
 ### Selector de entidades
 

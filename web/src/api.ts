@@ -16,6 +16,7 @@ export interface Connection {
   tls_skip_verify: boolean;
   options: Record<string, boolean> | null;
   entities: string[] | null;
+  link_url: string;
   updated_at: string;
 }
 
@@ -29,6 +30,7 @@ export interface ConnectionInput {
   tls_skip_verify: boolean;
   options: Record<string, boolean>;
   entities: string[];
+  link_url: string;
 }
 
 export interface EntityOption {
@@ -45,12 +47,32 @@ export interface EntitiesResult {
   entities?: EntityOption[];
 }
 
+export interface HomeAssistantSystem {
+  cpu_percent: number;
+  memory_percent: number;
+  memory_used: number;
+  memory_limit: number;
+  disk_used: number;
+  disk_total: number;
+  booted_at?: number;
+}
+
+export interface HomeAssistantSummary {
+  domains: { domain: string; active: number; total: number }[];
+  entities: number;
+  unavailable: number;
+  updates: number;
+  integrations: number;
+}
+
 export interface HomeAssistantData {
   version: string;
   state: string;
   safe_mode: boolean;
   recovery_mode: boolean;
   entities: EntityOption[];
+  system?: HomeAssistantSystem;
+  summary?: HomeAssistantSummary;
 }
 
 export interface DomainCount {
@@ -121,6 +143,7 @@ export interface ConnectionState {
   id: string;
   name: string;
   type: ConnectionType;
+  link: string;
   status: "pending" | "ok" | "error";
   error?: string;
   data: unknown;
@@ -135,6 +158,7 @@ export interface DashboardState {
 export interface TestResult {
   ok: boolean;
   error?: string;
+  notes?: string[];
 }
 
 export class ApiError extends Error {

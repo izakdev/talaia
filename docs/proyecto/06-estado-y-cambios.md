@@ -7,7 +7,7 @@
 | 1 | Base: repositorio, CI, autenticación, SQLite y conexiones | Terminado, en `main` |
 | 2 | AdGuard y flujo completo, catálogo de servicios y documentación | Terminado y validado por el cliente, en `main` |
 | 3 | Proxmox: visión agregada y detalle por nodo | Terminado y verificado con un clúster real, en `main` |
-| 4 | Home Assistant: estado, entidades y consumos | Verificado con Home Assistant real, en local y con la instalación del cliente; pendiente de fusionar el [PR #3](https://github.com/izakdev/talaia/pull/3) |
+| 4 | Home Assistant: estado, entidades, consumos, recursos y resumen; enlace a cada servicio | Estado y entidades verificados con la instalación del cliente; recursos pendientes de verificar; pendiente de fusionar el [PR #3](https://github.com/izakdev/talaia/pull/3) |
 | 5 | Editor: rejilla, varias páginas y temas; login opcional; cambio y recuperación de contraseña | Pendiente |
 | 6 | Distribución: instalador LXC, actualización y documentación final | Pendiente |
 
@@ -19,6 +19,9 @@
 - Integración de Home Assistant con estado, consumos y entidades elegidas.
 - Selector de entidades con búsqueda y filtros.
 - Detección de arranque, modo seguro y modo de recuperación.
+- CPU, memoria, disco y arranque desde Supervisor, a petición del cliente.
+- Resumen de luces, interruptores y otros elementos activos, a petición del cliente.
+- Enlace al servicio en todos los bloques, con dirección propia opcional, a petición del cliente.
 
 **Cambiado:**
 - Desaparece el aviso «Sin datos todavía» del catálogo, porque todos los servicios ya leen datos.
@@ -68,6 +71,8 @@
 |---|---|---|
 | No se puede cambiar ni recuperar la contraseña | Olvidarla obliga a empezar de cero | RF-08, hito 5 |
 | Sin instalador | Hay que compilar o copiar el binario y crear el servicio a mano | Hito 6 |
+| CPU, memoria y disco de Home Assistant requieren Supervisor y token de administrador | Otras instalaciones no los muestran; pueden elegir sensores de System Monitor | Por diseño de Home Assistant |
+| Recursos sin verificar con un Supervisor real | Puede haber diferencias con el simulador | Antes de cerrar el hito 4 |
 | Home Assistant sin probar con miles de entidades | Cada ciclo descarga todas las entidades, y podría tardar | Si se da el caso, subir el refresco |
 | Estados de Home Assistant sin traducir | Salvo encendido, apagado y sin datos, se muestran como llegan, por ejemplo `heat` | Bajo demanda |
 | Los consumos no se suman | No hay un total automático | Por diseño: se puede crear un sensor agregado en Home Assistant |

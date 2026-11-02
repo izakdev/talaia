@@ -49,7 +49,8 @@ CREATE TABLE connections (
 	updated_at       INTEGER NOT NULL
 );`, `
 ALTER TABLE connections ADD COLUMN options TEXT NOT NULL DEFAULT '{}';`, `
-ALTER TABLE connections ADD COLUMN entities TEXT NOT NULL DEFAULT '[]';`}
+ALTER TABLE connections ADD COLUMN entities TEXT NOT NULL DEFAULT '[]';`, `
+ALTER TABLE connections ADD COLUMN link_url TEXT NOT NULL DEFAULT '';`}
 
 // Store accede a la base de datos.
 type Store struct {
@@ -199,11 +200,12 @@ type Connection struct {
 	TLSSkipVerify   bool
 	Options         map[string]bool
 	Entities        []string
+	LinkURL         string
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }
 
-const connectionColumns = `id, name, type, base_url, username, interval_seconds, tls_skip_verify, options, entities, created_at, updated_at`
+const connectionColumns = `id, name, type, base_url, username, interval_seconds, tls_skip_verify, options, entities, link_url, created_at, updated_at`
 
 type scanner interface{ Scan(...any) error }
 
@@ -211,7 +213,7 @@ func scanConnection(row scanner) (Connection, error) {
 	var c Connection
 	var created, updated int64
 	var options, entities string
-	if err := row.Scan(&c.ID, &c.Name, &c.Type, &c.BaseURL, &c.Username, &c.IntervalSeconds, &c.TLSSkipVerify, &options, &entities, &created, &updated); err != nil {
+	if err := row.Scan(&c.ID, &c.Name, &c.Type, &c.BaseURL, &c.Username, &c.IntervalSeconds, &c.TLSSkipVerify, &options, &entities, &c.LinkURL, &created, &updated); err != nil {
 		return c, err
 	}
 	c.CreatedAt, c.UpdatedAt = time.Unix(created, 0).UTC(), time.Unix(updated, 0).UTC()
@@ -268,9 +270,9 @@ func (s *Store) CreateConnection(ctx context.Context, c Connection, secret strin
 	}
 	now := time.Now().Unix()
 	if _, err := s.db.ExecContext(ctx,
-		`INSERT INTO connections(id, name, type, base_url, username, secret, interval_seconds, tls_skip_verify, options, entities, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		c.ID, c.Name, c.Type, c.BaseURL, c.Username, sealed, c.IntervalSeconds, c.TLSSkipVerify, options, entities, now, now); err != nil {
+		`INSERT INTO connections(id, name, type, base_url, username, secret, interval_seconds, tls_skip_verify, options, entities, link_url, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		c.ID, c.Name, c.Type, c.BaseURL, c.Username, sealed, c.IntervalSeconds, c.TLSSkipVerify, options, entities, c.LinkURL, now, now); err != nil {
 		return c, err
 	}
 	return s.GetConnection(ctx, c.ID)
@@ -282,8 +284,8 @@ func (s *Store) UpdateConnection(ctx context.Context, c Connection, secret *stri
 	if err != nil {
 		return c, err
 	}
-	query := `UPDATE connections SET name = ?, base_url = ?, username = ?, interval_seconds = ?, tls_skip_verify = ?, options = ?, entities = ?, updated_at = ?`
-	args := []any{c.Name, c.BaseURL, c.Username, c.IntervalSeconds, c.TLSSkipVerify, options, entities, time.Now().Unix()}
+	query := `UPDATE connections SET name = ?, base_url = ?, username = ?, interval_seconds = ?, tls_skip_verify = ?, options = ?, entities = ?, link_url = ?, updated_at = ?`
+	args := []any{c.Name, c.BaseURL, c.Username, c.IntervalSeconds, c.TLSSkipVerify, options, entities, c.LinkURL, time.Now().Unix()}
 	if secret != nil {
 		sealed, err := s.box.Seal([]byte(*secret), []byte(c.ID))
 		if err != nil {
@@ -320,6 +322,14 @@ func encodeSelection(c Connection) (options, entities string, err error) {
 		return "", "", err
 	}
 	return string(rawOptions), string(rawEntities), nil
+}
+
+// Link devuelve la dirección para abrir el servicio desde el navegador.
+func (c Connection) Link() string {
+	if c.LinkURL != "" {
+		return c.LinkURL
+	}
+	return c.BaseURL
 }
 
 // DeleteConnection elimina una conexión.

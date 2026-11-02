@@ -46,6 +46,11 @@ type Integration interface {
 	Collect(ctx context.Context) (any, error)
 }
 
+// Noter lo implementan los datos con avisos que no impiden mostrar el servicio.
+type Noter interface {
+	Notes() []string
+}
+
 // EntityOption es una entidad que se puede elegir en la administración.
 type EntityOption struct {
 	ID          string `json:"entity_id"`

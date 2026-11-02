@@ -286,7 +286,8 @@ const scenarios = [
     await page.getByRole("button", { name: "Cargar entidades" }).click();
     const list = page.locator(".picker-list");
     await list.getByText("Potencia de casa").waitFor();
-    assert.equal(await list.locator("li").count(), 7);
+    assert.equal(await list.locator("li").count(), 11);
+    assert.equal(await page.getByLabel(/resumen de luces/).isChecked(), true);
     await page.getByRole("radio", { name: "Consumos" }).check();
     assert.equal(await list.locator("li").count(), 2);
     await list.getByLabel(/Potencia de casa/).check();
@@ -309,9 +310,20 @@ const scenarios = [
   ["E2E-21", "Home Assistant en el panel: consumos, entidades y cambios en vivo", async () => {
     await toDashboard();
     const block = page.locator(".service", { hasText: "Domótica" });
-    await block.getByText("En marcha").waitFor();
-    assert.match(await block.locator(".figures").innerText(), /412,5 W/);
-    assert.match(await block.locator(".figures").innerText(), /1\.?204,3 kWh/);
+    const state = block.locator(".service-state");
+    await state.getByText("En marcha").waitFor();
+    await block.getByText("412,5 W").waitFor();
+    await block.getByText(/1\.?204,3 kWh/).waitFor();
+    const resources = await block.locator(".ha-section", { hasText: "Recursos" }).innerText();
+    assert.match(resources, /CPU\s+12 %/);
+    assert.match(resources, /RAM\s+25 %/);
+    assert.match(resources, /Disco\s+25 %/);
+    assert.match(resources, /Equipo encendido hace 3 días/);
+    const summary = await block.locator(".ha-section", { hasText: "Resumen" }).innerText();
+    assert.match(summary, /Luces encendidas\s+1\/1/);
+    assert.match(summary, /Interruptores activos\s+1\/1/);
+    assert.match(summary, /Automatizaciones activas\s+1\/1/);
+    assert.match(summary, /Actualizaciones pendientes\s+1/);
     const light = block.locator(".ha-entities li", { hasText: "Luz del salón" });
     await light.getByText("Encendido").waitFor();
     await shot(block, "14-panel-home-assistant");
@@ -322,16 +334,16 @@ const scenarios = [
     await block.getByText("Entidades sin datos: 1").waitFor();
     await block.locator(".ha-entities li", { hasText: "Sensor de puerta" }).getByText("No disponible").waitFor();
     homeAssistant.state.door = "off";
-    await block.getByText("En marcha").waitFor();
+    await state.getByText("En marcha").waitFor();
     homeAssistant.state.starting = true;
-    await block.getByText("Arrancando").waitFor();
+    await state.getByText("Arrancando").waitFor();
     homeAssistant.state.starting = false;
-    await block.getByText("En marcha").waitFor();
+    await state.getByText("En marcha").waitFor();
   }],
   ["E2E-22", "Solo las entidades elegidas salen por la API pública", async () => {
     let body = await publicDashboard();
     assert.match(body, /Potencia de casa/);
-    assert.doesNotMatch(body, /Persona privada|person\.|Casa privada|latitude/);
+    assert.doesNotMatch(body, /Persona privada|person\.|Casa privada|latitude|Cerradura privada|lock\.|nombre-privado/);
     await toAdmin();
     await row("Domótica").getByRole("button", { name: "Editar" }).click();
     await page.getByRole("status").getByText("4 seleccionadas").waitFor();
@@ -345,6 +357,28 @@ const scenarios = [
     await page.locator("dialog").waitFor({ state: "detached" });
     body = await publicDashboard();
     assert.doesNotMatch(body, /Potencia de casa/);
+  }],
+  ["E2E-23", "Enlace a cada servicio desde su bloque", async () => {
+    await toDashboard();
+    const adguardLink = page.locator(".service", { hasText: "AdGuard principal" }).locator(".service-link");
+    assert.equal(await adguardLink.getAttribute("href"), adguard.url);
+    assert.equal(await adguardLink.getAttribute("target"), "_blank");
+    assert.match(await adguardLink.getAttribute("rel"), /noopener/);
+    await toAdmin();
+    await row("Domótica").getByRole("button", { name: "Editar" }).click();
+    const link = page.getByLabel(/Enlace para abrir/);
+    await link.fill("javascript:alert(1)");
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await page.getByRole("alert").getByText("El enlace debe empezar").waitFor();
+    await link.fill("https://domotica.example/inicio");
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await page.locator("dialog").waitFor({ state: "detached" });
+    await toDashboard();
+    const homeLink = page.locator(".service", { hasText: "Domótica" }).locator(".service-link");
+    await homeLink.waitFor();
+    assert.equal(await homeLink.getAttribute("href"), "https://domotica.example/inicio");
+    assert.doesNotMatch(await publicDashboard(), /localhost:13002/);
+    await toAdmin();
   }],
   ["E2E-12", "Cambio de idioma recordado", async () => {
     await page.getByRole("button", { name: "English" }).click();
@@ -375,7 +409,7 @@ const scenarios = [
   }],
   ["E2E-14", "La API pública no expone configuración ni credenciales", async () => {
     const body = await publicDashboard();
-    for (const leak of [USER, PASSWORD, TOKEN, HA_TOKEN, "localhost:13000", "localhost:13001", "localhost:13002", "192.0.2.11", "base_url", "secret"]) {
+    for (const leak of [USER, PASSWORD, TOKEN, HA_TOKEN, "localhost:13002", "192.0.2.11", "base_url", "link_url", "secret"]) {
       assert.equal(body.includes(leak), false, leak);
     }
     const headers = (await fetch(BASE)).headers;
