@@ -48,6 +48,51 @@ export interface AdGuardData {
   top_blocked?: DomainCount[];
 }
 
+export interface Count {
+  running: number;
+  total: number;
+}
+
+export interface ProxmoxGuest {
+  vmid: number;
+  name: string;
+  type: "qemu" | "lxc";
+  status: string;
+  cpu: number;
+  max_cpu: number;
+  mem_used: number;
+  mem_total: number;
+}
+
+export interface ProxmoxNode {
+  name: string;
+  online: boolean;
+  cpu: number;
+  max_cpu: number;
+  mem_used: number;
+  mem_total: number;
+  disk_used: number;
+  disk_total: number;
+  vms: Count;
+  containers: Count;
+  guests?: ProxmoxGuest[];
+}
+
+export interface ProxmoxData {
+  version: string;
+  cluster_name?: string;
+  quorate?: boolean;
+  nodes_online: number;
+  nodes_total: number;
+  vms: Count;
+  containers: Count;
+  cpu: number;
+  max_cpu: number;
+  mem_used: number;
+  mem_total: number;
+  nodes: ProxmoxNode[];
+}
+
 export interface ConnectionState {
   id: string;
   name: string;

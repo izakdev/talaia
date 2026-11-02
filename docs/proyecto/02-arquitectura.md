@@ -25,11 +25,11 @@ flowchart LR
     C --> S
     C -.->|descifra con| K
     C -->|solo lectura| AG
-    C -.->|hito 3| PX
+    C -->|solo lectura| PX
     C -.->|hito 4| HA
 ```
 
-Las líneas discontinuas de los servicios indican integraciones todavía no implementadas.
+La línea discontinua de Home Assistant indica una integración todavía no implementada.
 
 ## Tecnologías
 
@@ -57,7 +57,9 @@ Los motivos detallados están en [Decisiones](05-decisiones.md).
 | `internal/collector` | Un recolector por conexión, caché de estado y avisos de cambio |
 | `internal/integrations` | Interfaz común, cliente HTTP y códigos de error |
 | `internal/integrations/adguard` | Integración con AdGuard Home |
+| `internal/integrations/proxmox` | Integración con Proxmox VE |
 | `web` | Frontend; `web/embed.go` lo incluye en el binario |
+| `web/src/widgets` | Estado, contenido y pie del bloque de cada integración |
 | `e2e` | Pruebas de extremo a extremo y generación de capturas |
 | `scripts` | Comprobaciones de la documentación |
 
@@ -109,10 +111,10 @@ type Integration interface {
 
 | Código | Causa |
 |---|---|
-| `unauthorized` | El servicio responde `401` o `403` |
+| `unauthorized` | El servicio responde `401` o `403`, o el token no ve ningún nodo de Proxmox |
 | `timeout` | Se agota el tiempo de espera |
 | `unreachable` | Error de red o conexión rechazada |
-| `tls` | Certificado no válido o protocolo incompatible |
+| `tls` | Certificado no válido, protocolo incompatible o URL `https` contra un servidor HTTP |
 | `bad_response` | Estado HTTP inesperado, redirección o contenido que no corresponde al servicio |
 | `secret_unreadable` | La credencial no se puede descifrar |
 | `internal` | Cualquier otro error |
@@ -123,10 +125,24 @@ type Integration interface {
 2. Registrarla en `registry`, en `cmd/talaia/main.go`.
 3. Declarar el tipo y sus opciones en `connectionTypes`, en `internal/api/api.go`.
 4. Añadir la entrada y su icono en `web/src/catalog.ts`, y sus textos en `web/src/i18n.tsx`.
-5. Añadir su widget en `web/src/Dashboard.tsx`.
+5. Crear su widget en `web/src/widgets` y registrarlo en `WIDGETS`, en `web/src/Dashboard.tsx`.
 6. Actualizar las pruebas y la documentación.
 
-**Deuda técnica conocida:** `Service`, en `web/src/Dashboard.tsx`, solo sabe mostrar AdGuard. Hay que generalizarlo en el hito 3, y los tipos de conexión están repetidos entre backend y frontend.
+**Deuda técnica conocida:** los tipos de conexión y sus opciones están repetidos entre backend y frontend.
+
+### Proxmox VE
+
+| Aspecto | Detalle |
+|---|---|
+| Autenticación | Cabecera `Authorization: PVEAPIToken=usuario@reino!nombre=valor` |
+| Permisos | Rol `PVEAuditor` en `/`; `/cluster/status` exige `Sys.Audit` |
+| Consultas | `/api2/json/version`, `/cluster/status` y `/cluster/resources` |
+| Clúster o nodo | Sin entrada `cluster` en el estado, se trata como nodo independiente |
+| CPU agregada | Media ponderada por CPU de los nodos en línea |
+| Excluido | Plantillas y almacenamiento |
+| Valores booleanos | La API los puede devolver como `0` y `1`, y se aceptan ambas formas |
+
+Proxmox filtra `/cluster/resources` según los permisos. Una lista sin nodos se interpreta como falta de permisos.
 
 ## API HTTP
 

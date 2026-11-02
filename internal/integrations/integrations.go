@@ -11,6 +11,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -61,6 +62,10 @@ func Code(err error) string {
 	var e *Error
 	if errors.As(err, &e) {
 		return e.Code
+	}
+	// net/http solo expone este fallo como texto.
+	if err != nil && strings.Contains(err.Error(), "server gave HTTP response to HTTPS client") {
+		return CodeTLS
 	}
 	var netErr net.Error
 	var unknownAuthority x509.UnknownAuthorityError

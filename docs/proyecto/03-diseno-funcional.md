@@ -75,6 +75,30 @@ Mientras no exista un administrador, todas las rutas muestran el asistente de pr
 
 Las búsquedas seguras reemplazadas no cuentan como bloqueos.
 
+**Estados de un bloque de Proxmox:**
+
+| Estado | Condición | Indicador |
+|---|---|---|
+| Consultando | Aún no hay resultado | Círculo vacío |
+| Clúster correcto | Todos los nodos en línea y con quórum | Círculo verde |
+| Nodo en línea | Nodo independiente en línea | Círculo verde |
+| N de M nodos en línea | Algún nodo sin conexión, con quórum | Triángulo ámbar |
+| Clúster sin quórum | El clúster indica que no hay quórum | Cuadrado rojo |
+| Con fallos | La última consulta ha fallado | Cuadrado rojo, mensaje de error y último dato atenuado |
+
+**Datos de un bloque de Proxmox:**
+
+| Dato | Cálculo |
+|---|---|
+| Nodos | En línea / total |
+| VM y LXC en marcha | En marcha / total, sin plantillas |
+| CPU | Media ponderada por CPU de los nodos en línea, con el total de CPU |
+| RAM | Usada / total de los nodos en línea |
+| Por nodo | CPU, RAM y disco. Con un 90 % o más, el valor se resalta en ámbar. Sin conexión, muestra «Sin conexión» |
+| Detalle | Con la opción activa, cada nodo se despliega para ver sus VM y LXC con estado, CPU y RAM |
+
+El detalle desplegado sigue abierto cuando llegan datos nuevos.
+
 ### Conexiones
 
 - **Lista:** nombre, servicio, URL, intervalo, estado y aviso si no se verifica TLS.
@@ -99,11 +123,12 @@ Las búsquedas seguras reemplazadas no cuentan como bloqueos.
 | Credencial | Todos | Obligatoria al crear y al cambiar la URL; en otro caso, vacía conserva la actual. Hasta 4096 bytes |
 | Refresco | Todos | De 5 a 3600 segundos, 30 por defecto |
 | Mostrar dominios | AdGuard | Desactivado por defecto |
+| Mostrar detalle de VM y LXC | Proxmox | Activado por defecto |
 | No verificar TLS | Todos | Desactivado por defecto |
 
 | Credencial | Formato |
 |---|---|
-| Proxmox | API token, `usuario@pam!nombre=valor`; debe contener `!` |
+| Proxmox | API token, `usuario@reino!nombre=valor` |
 | Home Assistant | Token de larga duración |
 | AdGuard | Contraseña |
 
@@ -116,7 +141,7 @@ Las búsquedas seguras reemplazadas no cuentan como bloqueos.
 | `unauthorized` | Credenciales rechazadas por el servicio. Revisa la conexión. |
 | `timeout` | El servicio no ha respondido a tiempo. |
 | `unreachable` | No se puede conectar con el servicio. Revisa la URL y la red. |
-| `tls` | Certificado TLS no válido. Si es autofirmado, desactiva la verificación en la conexión. |
+| `tls` | Error de TLS. Revisa si la URL usa http o https y, si el certificado es autofirmado, desactiva la verificación en la conexión. |
 | `bad_response` | La respuesta no es la esperada. Revisa que la URL sea la de este servicio. |
 | `secret_unreadable` | No se puede descifrar la credencial. Vuelve a escribirla en la conexión. |
 | `internal` | Error inesperado al consultar el servicio. Revisa los registros de Talaia. |

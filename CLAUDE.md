@@ -30,6 +30,6 @@ make docs-check
 
 ## Convenciones
 
-- Una rama y un pull request por hito.
+- Una rama y un pull request por hito; si el anterior no está fusionado, la rama parte de él.
 - Mensajes de commit en español.
 - Integraciones de solo lectura; los datos que devuelven son públicos, sin URL ni credenciales.

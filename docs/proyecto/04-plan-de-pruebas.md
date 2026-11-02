@@ -77,6 +77,19 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestConnectionFailures` | Clasifica servicio caído y TLS no válido; admite la excepción de TLS | RF-21 |
 | `TestRedirectIsNotFollowed` | No sigue redirecciones, para no enviar credenciales a otro destino | RNF-03 |
 
+### `internal/integrations/proxmox`
+
+| Prueba | Verifica | Requisitos |
+|---|---|---|
+| `TestClusterAggregates` | Quórum, nodos, VM, LXC sin plantillas, CPU ponderada y RAM; ignora los nodos caídos | RF-40, RNF-02 |
+| `TestNodesAndGuests` | Nodos ordenados con consumos y sus invitados; nodo caído sin consumos | RF-41 |
+| `TestGuestsAreOptional` | Sin la opción no hay invitados ni IP, y se conservan los contadores | RF-42 |
+| `TestStandaloneNode` | Un nodo independiente no tiene datos de clúster | RF-40 |
+| `TestLostQuorum` | Detecta la pérdida de quórum | RF-40 |
+| `TestErrors` | Token incorrecto, token sin permisos y respuestas ajenas a Proxmox. También en AdGuard | RF-21 |
+| `TestSelfSignedCertificate` | Clasifica un certificado autofirmado como TLS | RF-21 |
+| `TestHTTPSAgainstPlainHTTP` | Clasifica una URL `https` contra un servidor HTTP como TLS | RF-21 |
+
 ## Pruebas E2E
 
 | ID | Escenario | Requisitos |
@@ -96,19 +109,27 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-13 | Móvil y modo oscuro sin desbordamiento | RF-06 |
 | E2E-14 | La API pública no expone configuración ni credenciales | RNF-03 |
 | E2E-15 | Sin errores de JavaScript durante el recorrido | RF-01 |
+| E2E-16 | Alta de Proxmox con validación del token | RF-10, RF-13 |
+| E2E-17 | Clúster en el panel: agregados, nodos y detalle | RF-40, RF-41 |
+| E2E-18 | Nodo caído en el clúster | RF-21, RF-41 |
+| E2E-19 | Detalle de VM y LXC opcional y excluido de la API pública | RF-42 |
 
-El AdGuard simulado reproduce las rutas y la forma de respuesta usadas. Las discrepancias con el servicio real las cubren las verificaciones manuales.
+Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las discrepancias con el servicio real las cubren las verificaciones manuales.
 
 ## Verificaciones manuales
 
 | Fecha | Versión de Talaia | Servicio | Resultado |
 |---|---|---|---|
 | 2026-11-02 | Hito 2 | AdGuard Home v0.107.79 real en local, con DNS y reglas de bloqueo reales | Correcto: credenciales erróneas, datos, protección desactivada, caída y recuperación, y actualización en vivo durante más de 35 s |
+| 2026-11-02 | Hito 2 | Validación del cliente | Correcto: catálogo de servicios y opción de ocultar el top de dominios |
+| 2026-11-02 | Hito 3 (`a33fbed`) | Proxmox VE 9.2.20 y AdGuard Home v0.107.77 del cliente, con el clúster en marcha | Correcto: validado por el cliente. Revisión adicional del panel y de la API pública: datos coherentes (totales de CPU, RAM, VM y LXC iguales a la suma por nodo), actualización en vivo, sin errores en la consola y sin URL, usuarios ni credenciales en la respuesta |
 
-También se ha contrastado la integración con la especificación OpenAPI oficial de AdGuard Home.
+**Contraste con fuentes oficiales:**
+- AdGuard Home: especificación OpenAPI.
+- Proxmox VE: fuente de la API en `PVE/API2/Cluster.pm`, de `pve-manager`, y documentación de API tokens.
 
 **Aún sin verificar:**
-- El AdGuard del laboratorio del cliente.
+- **Proxmox VE real, casos no probados:** nodo caído, pérdida de quórum y nodo independiente. Solo se han probado con el simulador.
 - La instalación y el consumo en un LXC real de Proxmox.
 - Otros navegadores además de Chromium.
 - Compatibilidad con otras versiones de AdGuard Home.
@@ -136,8 +157,11 @@ Los requisitos pendientes se probarán en su hito.
 | RF-30 | `TestCollect`, E2E-06, E2E-08 |
 | RF-31 | `TestCollect`, E2E-06 |
 | RF-32 | `TestTopDomainsAreOptional`, `TestChangingOptionsDropsOldData`, `TestOptionsArePersisted`, `TestConnectionOptionsRoundTrip`, E2E-07 |
+| RF-40 | `TestClusterAggregates`, `TestStandaloneNode`, `TestLostQuorum`, E2E-17 |
+| RF-41 | `TestNodesAndGuests`, E2E-17, E2E-18 |
+| RF-42 | `TestGuestsAreOptional`, E2E-19 |
 | RNF-01 | Por diseño: el modelo de datos no tiene tablas de métricas |
-| RNF-02 | `TestCollect` usa solo lecturas; por diseño, el cliente solo ofrece `GetJSON` |
+| RNF-02 | `TestCollect` y `TestClusterAggregates` usan solo lecturas; por diseño, el cliente solo ofrece `GetJSON` |
 | RNF-03 | `TestDashboardIsPublicAndHidesConfiguration`, `TestCollectsAndPassesDecryptedSecret`, `TestRedirectIsNotFollowed`, E2E-14 |
 | RNF-04 | `TestSealOpen`, `TestKeyIsStableAndProtected`, `TestConnectionSecretIsEncryptedAndKept` |
 | RNF-05 | `TestReopenKeepsData`, `TestMigratesExistingDatabase`; el binario se compila con `CGO_ENABLED=0` |

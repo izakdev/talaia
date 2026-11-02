@@ -5,13 +5,26 @@
 | Hito | Contenido | Estado |
 |---|---|---|
 | 1 | Base: repositorio, CI, autenticación, SQLite y conexiones | Terminado, en `main` |
-| 2 | AdGuard y flujo completo, catálogo de servicios y documentación | Terminado, pendiente de aceptar en el [PR #1](https://github.com/izakdev/talaia/pull/1) |
-| 3 | Proxmox: visión agregada y detalle por nodo | Pendiente |
+| 2 | AdGuard y flujo completo, catálogo de servicios y documentación | Terminado y validado por el cliente, en `main` |
+| 3 | Proxmox: visión agregada y detalle por nodo | Terminado y verificado con un clúster real, en `main` |
 | 4 | Home Assistant: estado, entidades y consumos | Pendiente |
 | 5 | Editor: rejilla, varias páginas, temas y login opcional | Pendiente |
 | 6 | Distribución: instalador LXC, actualización y documentación final | Pendiente |
 
 ## Historial
+
+### Hito 3 (2026-11-02)
+
+**Añadido:**
+- Integración de Proxmox VE, con clúster o nodo independiente.
+- Bloque con quórum, nodos, VM, LXC, CPU y RAM.
+- Consumos por nodo y detalle desplegable de VM y LXC.
+- Opción por conexión para ocultar el detalle.
+
+**Cambiado:**
+- Cada integración tiene su propio widget en `web/src/widgets`.
+- El token de Proxmox se valida con el formato completo.
+- Una URL `https` contra un servidor HTTP se clasifica como error de TLS, con un mensaje que lo indica.
 
 ### Hito 2 (2026-11-02)
 
@@ -43,7 +56,9 @@
 |---|---|---|
 | No se puede cambiar ni recuperar la contraseña | Olvidarla obliga a empezar de cero | RF-08, sin hito asignado |
 | Sin instalador | Hay que compilar o copiar el binario y crear el servicio a mano | Hito 6 |
-| Proxmox y Home Assistant no se consultan | Se pueden guardar, pero no aparecen en el dashboard | Hitos 3 y 4 |
+| Home Assistant no se consulta | Se puede guardar, pero no aparece en el dashboard | Hito 4 |
+| Nodo caído, pérdida de quórum y nodo independiente solo probados con simulador | Puede haber diferencias en esos casos | Al darse la ocasión |
+| Sin almacenamiento en la vista de Proxmox | Solo se ve el disco de cada nodo | Bajo demanda |
 | El dashboard muestra todas las conexiones con integración, en orden alfabético | No se puede elegir ni colocar | Hito 5 |
 | Dashboard sin login | Cualquiera con acceso al puerto ve el estado | Hito 5 |
 | Bloqueo de login por IP detrás de un proxy inverso | Los fallos cuentan para todos los clientes | Sin hito asignado |

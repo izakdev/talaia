@@ -2,7 +2,7 @@
 
 Talaia es un panel para ver de un vistazo el estado de los servicios de tu laboratorio doméstico. Está pensado para usarlo como página inicial del navegador.
 
-> **Versión de este manual:** hito 2, en desarrollo. Hoy solo AdGuard Home muestra datos. Proxmox y Home Assistant se pueden configurar, pero todavía no aparecen en el panel. Consulta las [limitaciones actuales](#limitaciones-actuales).
+> **Versión de este manual:** hito 3, en desarrollo. Hoy muestran datos AdGuard Home y Proxmox VE. Home Assistant se puede configurar, pero todavía no aparece en el panel. Consulta las [limitaciones actuales](#limitaciones-actuales).
 
 ## Índice
 
@@ -85,6 +85,30 @@ Cuando hay servicios, cada uno tiene su propio bloque:
 
 El porcentaje puede ser algo mayor que el dato «bloqueadas por filtros» de AdGuard, porque incluye también los otros dos motivos.
 
+**Estado de Proxmox:**
+
+| Indicador | Significado |
+|---|---|
+| Círculo verde: **Clúster correcto** o **Nodo en línea** | Todos los nodos responden |
+| Triángulo ámbar: **N de M nodos en línea** | Algún nodo está sin conexión |
+| Cuadrado rojo: **Clúster sin quórum** | No hay mayoría de nodos para tomar decisiones |
+| Cuadrado rojo: **Con fallos** | Talaia no puede consultar el servicio |
+
+**Datos de Proxmox:**
+
+![Panel con un clúster de Proxmox](img/11-panel-proxmox.png)
+
+| Dato | Significado |
+|---|---|
+| Nodos | Nodos en línea sobre el total |
+| VM y LXC en marcha | En marcha sobre el total, sin contar plantillas |
+| CPU y RAM | Uso conjunto de los nodos en línea |
+| Por nodo | Uso de CPU, RAM y disco. Con un 90 % o más, el valor se resalta |
+
+Si tienes activo el detalle, pulsa un nodo para ver sus VM y LXC:
+
+![Detalle de las VM y LXC de un nodo](img/12-proxmox-detalle.png)
+
 **Si un servicio falla,** su bloque indica el motivo y mantiene atenuado el último dato conocido, junto con su antigüedad. Se recupera solo cuando el servicio vuelve.
 
 ![Bloque de un servicio con fallos](img/09-panel-con-fallos.png)
@@ -142,7 +166,31 @@ Las listas de dominios están desactivadas por defecto porque añaden detalle a 
 
 ### Proxmox VE
 
-Se puede guardar, pero todavía no se muestran datos. Usa un API token con el formato `usuario@pam!nombre=valor`. Basta con el rol `PVEAuditor`.
+Talaia solo necesita permisos de lectura. Crea un usuario y un token específicos ejecutando esto en un nodo:
+
+```sh
+pveum user add talaia@pve
+pveum acl modify / --users talaia@pve --roles PVEAuditor
+pveum user token add talaia@pve dashboard --privsep 1
+pveum acl modify / --tokens 'talaia@pve!dashboard' --roles PVEAuditor
+```
+
+El tercer comando muestra el valor del token una sola vez. Cópialo.
+
+| Campo | Qué poner |
+|---|---|
+| URL | La de cualquier nodo, por ejemplo `https://proxmox.local:8006` |
+| API token de Proxmox | `talaia@pve!dashboard=VALOR`, con el valor que has copiado |
+| Mostrar el detalle de cada VM y LXC | Activado por defecto. Desactívalo para ver solo los consumos por nodo |
+| No verificar el certificado TLS | Márcalo si usas el certificado autofirmado de Proxmox |
+
+**Clúster:** basta con una conexión a cualquiera de sus nodos. Si ese nodo se cae, Talaia no podrá consultar el clúster.
+
+**Nodos independientes:** añade una conexión por nodo.
+
+**Datos visibles:** cualquiera que pueda abrir el panel verá los nombres de los nodos y, con el detalle activo, los de las VM y LXC.
+
+**Si actualizas desde una versión anterior:** las conexiones de Proxmox ya guardadas tienen el detalle desactivado hasta que lo actives al editarlas.
 
 ### Home Assistant
 
@@ -190,10 +238,10 @@ Toda la configuración está en la carpeta de datos:
 
 | Mensaje | Qué hacer |
 |---|---|
-| Credenciales rechazadas por el servicio | Revisa el usuario y la credencial. Confirma que son los de ese servicio |
+| Credenciales rechazadas por el servicio | Revisa el usuario y la credencial. En Proxmox, comprueba también que el token tenga el rol `PVEAuditor` en `/`: con la separación de privilegios, tanto el usuario como el token lo necesitan |
 | El servicio no ha respondido a tiempo | Comprueba que el servicio funciona y no está saturado |
 | No se puede conectar con el servicio | Revisa la URL y el puerto, y que el equipo de Talaia tenga acceso, incluidas las reglas del firewall entre redes |
-| Certificado TLS no válido | Instala un certificado válido o, si es autofirmado, marca **No verificar el certificado TLS** |
+| Error de TLS | Revisa si la URL usa `http` o `https`. Si el certificado es autofirmado, marca **No verificar el certificado TLS** |
 | La respuesta no es la esperada | Revisa que la URL sea la del servicio correcto. Algunos proxies redirigen: usa la URL final |
 | No se puede descifrar la credencial | `secret.key` ha cambiado o se ha perdido. Restáurala o vuelve a escribir la credencial |
 | Error inesperado al consultar el servicio | Revisa los registros de Talaia, en su salida estándar de error |
@@ -210,7 +258,8 @@ Toda la configuración está en la carpeta de datos:
 
 ## Limitaciones actuales
 
-- Solo AdGuard Home muestra datos.
+- Home Assistant todavía no muestra datos.
+- La vista de Proxmox no incluye el almacenamiento.
 - No se puede elegir qué aparece en el panel ni colocarlo: se muestran todas las conexiones con integración, por orden alfabético.
 - El panel no tiene inicio de sesión.
 - No se puede cambiar ni recuperar la contraseña.
