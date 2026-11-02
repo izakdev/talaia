@@ -5,8 +5,8 @@
 | Hito | Contenido | Estado |
 |---|---|---|
 | 1 | Base: repositorio, CI, autenticación, SQLite y conexiones | Terminado, en `main` |
-| 2 | AdGuard y flujo completo, catálogo de servicios y documentación | Validado por el cliente, pendiente de fusionar el [PR #1](https://github.com/izakdev/talaia/pull/1) |
-| 3 | Proxmox: visión agregada y detalle por nodo | Verificado con un clúster real, pendiente de fusionar el [PR #2](https://github.com/izakdev/talaia/pull/2) |
+| 2 | AdGuard y flujo completo, catálogo de servicios y documentación | Terminado y validado por el cliente, en `main` |
+| 3 | Proxmox: visión agregada y detalle por nodo | Terminado y verificado con un clúster real, en `main` |
 | 4 | Home Assistant: estado, entidades y consumos | Pendiente |
 | 5 | Editor: rejilla, varias páginas, temas y login opcional | Pendiente |
 | 6 | Distribución: instalador LXC, actualización y documentación final | Pendiente |
