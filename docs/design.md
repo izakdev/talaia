@@ -35,14 +35,16 @@ Navegador ──HTTP/SSE──> Binario Go (LXC) ──> Proxmox / Home Assistan
 |---|---|---|---|
 | Proxmox | API token de solo lectura (`PVEAuditor`) | `/cluster/status`, `/cluster/resources` | Resumen agregado; nodo con sus VM y LXC, y CPU, RAM y disco |
 | Home Assistant | Token de larga duración | `/api/`, `/api/config`, `/api/states` | Estado; entidades elegidas; consumos |
-| AdGuard | Basic Auth | `/control/status`, `/control/stats` | Protección, consultas, % de bloqueo y top de dominios |
+| AdGuard | Basic Auth | `/control/status`, `/control/stats` | Protección, consultas, % de bloqueo y tiempo medio; top de dominios opcional |
 
 Hasta el editor del hito 5, el dashboard muestra todas las conexiones con una integración disponible. Las URL, los usuarios y las credenciales nunca se envían a la API pública.
+
+Las conexiones se añaden desde un catálogo con iconos y búsqueda, definido en `web/src/catalog.ts`.
 
 ## Modelo de datos
 
 - `users`: administradores.
-- `connections`: tipo, URL, secreto cifrado, intervalo de refresco y opciones TLS.
+- `connections`: tipo, URL, secreto cifrado, intervalo de refresco, opciones TLS y opciones de la integración.
 - `pages`: páginas del dashboard.
 - `widgets`: tipo, conexión, configuración JSON y posición por tamaño de pantalla.
 - `settings`: tema, idioma y exigencia de login en el dashboard.

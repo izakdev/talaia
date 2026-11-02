@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -22,6 +23,7 @@ import (
 	"github.com/izakdev/talaia/internal/auth"
 	"github.com/izakdev/talaia/internal/collector"
 	"github.com/izakdev/talaia/internal/integrations"
+	"github.com/izakdev/talaia/internal/integrations/adguard"
 	"github.com/izakdev/talaia/internal/store"
 )
 
@@ -310,35 +312,40 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 }
 
 // connectionTypes define qué credenciales exige cada integración.
-var connectionTypes = map[string]struct{ needsUsername bool }{
+var connectionTypes = map[string]struct {
+	needsUsername bool
+	options       []string
+}{
 	"proxmox":       {},
 	"homeassistant": {},
-	"adguard":       {needsUsername: true},
+	"adguard":       {needsUsername: true, options: []string{adguard.OptionShowTopDomains}},
 }
 
 type connectionIn struct {
-	Name            string  `json:"name"`
-	Type            string  `json:"type"`
-	BaseURL         string  `json:"base_url"`
-	Username        string  `json:"username"`
-	Secret          *string `json:"secret"`
-	IntervalSeconds int     `json:"interval_seconds"`
-	TLSSkipVerify   bool    `json:"tls_skip_verify"`
+	Name            string          `json:"name"`
+	Type            string          `json:"type"`
+	BaseURL         string          `json:"base_url"`
+	Username        string          `json:"username"`
+	Secret          *string         `json:"secret"`
+	IntervalSeconds int             `json:"interval_seconds"`
+	TLSSkipVerify   bool            `json:"tls_skip_verify"`
+	Options         map[string]bool `json:"options"`
 }
 
 type connectionOut struct {
-	ID              string    `json:"id"`
-	Name            string    `json:"name"`
-	Type            string    `json:"type"`
-	BaseURL         string    `json:"base_url"`
-	Username        string    `json:"username"`
-	IntervalSeconds int       `json:"interval_seconds"`
-	TLSSkipVerify   bool      `json:"tls_skip_verify"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID              string          `json:"id"`
+	Name            string          `json:"name"`
+	Type            string          `json:"type"`
+	BaseURL         string          `json:"base_url"`
+	Username        string          `json:"username"`
+	IntervalSeconds int             `json:"interval_seconds"`
+	TLSSkipVerify   bool            `json:"tls_skip_verify"`
+	Options         map[string]bool `json:"options"`
+	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
 func toOut(c store.Connection) connectionOut {
-	return connectionOut{c.ID, c.Name, c.Type, c.BaseURL, c.Username, c.IntervalSeconds, c.TLSSkipVerify, c.UpdatedAt}
+	return connectionOut{c.ID, c.Name, c.Type, c.BaseURL, c.Username, c.IntervalSeconds, c.TLSSkipVerify, c.Options, c.UpdatedAt}
 }
 
 func validateConnection(in *connectionIn) string {
@@ -361,6 +368,11 @@ func validateConnection(in *connectionIn) string {
 	}
 	if !spec.needsUsername {
 		in.Username = ""
+	}
+	for key := range in.Options {
+		if !slices.Contains(spec.options, key) {
+			return "invalid_options"
+		}
 	}
 	if in.IntervalSeconds < 5 || in.IntervalSeconds > 3600 {
 		return "invalid_interval"
@@ -412,7 +424,7 @@ func (s *Server) createConnection(w http.ResponseWriter, r *http.Request) {
 	}
 	c, err := s.store.CreateConnection(r.Context(), store.Connection{
 		Name: in.Name, Type: in.Type, BaseURL: in.BaseURL, Username: in.Username,
-		IntervalSeconds: in.IntervalSeconds, TLSSkipVerify: in.TLSSkipVerify,
+		IntervalSeconds: in.IntervalSeconds, TLSSkipVerify: in.TLSSkipVerify, Options: in.Options,
 	}, *in.Secret)
 	if err != nil {
 		s.internal(w, err)
@@ -448,7 +460,7 @@ func (s *Server) updateConnection(w http.ResponseWriter, r *http.Request) {
 	}
 	c, err := s.store.UpdateConnection(r.Context(), store.Connection{
 		ID: id, Name: in.Name, BaseURL: in.BaseURL, Username: in.Username,
-		IntervalSeconds: in.IntervalSeconds, TLSSkipVerify: in.TLSSkipVerify,
+		IntervalSeconds: in.IntervalSeconds, TLSSkipVerify: in.TLSSkipVerify, Options: in.Options,
 	}, in.Secret)
 	if s.storeError(w, err) {
 		return
@@ -511,7 +523,7 @@ func (s *Server) testConnection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	integration := factory(integrations.Config{
-		BaseURL: in.BaseURL, Username: in.Username, Secret: secret, TLSSkipVerify: in.TLSSkipVerify,
+		BaseURL: in.BaseURL, Username: in.Username, Secret: secret, TLSSkipVerify: in.TLSSkipVerify, Options: in.Options,
 	})
 	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 	defer cancel()

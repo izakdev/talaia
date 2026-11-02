@@ -146,7 +146,6 @@ function AdGuard({ data }: { data: AdGuardData }) {
   const integer = new Intl.NumberFormat(lang);
   const compact = new Intl.NumberFormat(lang, { notation: "compact", maximumFractionDigits: 1 });
   const percent = new Intl.NumberFormat(lang, { maximumFractionDigits: 1 });
-  const duration = new Intl.NumberFormat(lang, { maximumSignificantDigits: 2 });
   const period =
     data.period_length > 0 && data.period_unit
       ? t(`adguard.period.${data.period_unit}`, { n: data.period_length })
@@ -164,13 +163,15 @@ function AdGuard({ data }: { data: AdGuardData }) {
         </div>
         <div>
           <dt>{t("adguard.avg")}</dt>
-          <dd>{duration.format(data.avg_processing_ms)} ms</dd>
+          <dd>{data.avg_processing_ms < 1 ? "< 1" : percent.format(data.avg_processing_ms)} ms</dd>
         </div>
       </dl>
-      <div className="tops">
-        <TopDomains title={t("adguard.topQueried")} domains={data.top_queried} />
-        <TopDomains title={t("adguard.topBlocked")} domains={data.top_blocked} />
-      </div>
+      {data.top_queried && data.top_blocked && (
+        <div className="tops">
+          <TopDomains title={t("adguard.topQueried")} domains={data.top_queried} />
+          <TopDomains title={t("adguard.topBlocked")} domains={data.top_blocked} />
+        </div>
+      )}
       {period && <p className="service-foot">{period}</p>}
     </>
   );

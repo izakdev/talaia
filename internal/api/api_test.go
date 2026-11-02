@@ -107,7 +107,7 @@ func (c *client) want(status int, method, path string, body any) string {
 
 func creds() map[string]string { return map[string]string{"username": "admin", "password": password} }
 
-func adguard(secret string) map[string]any {
+func adguardConn(secret string) map[string]any {
 	return map[string]any{"name": "AdGuard", "type": "adguard", "base_url": "http://192.0.2.1:3000/", "username": "admin", "secret": secret, "interval_seconds": 30}
 }
 
@@ -155,7 +155,7 @@ func TestConnectionsNeverExposeSecret(t *testing.T) {
 	c, st := newServer(t)
 	c.want(200, "POST", "/api/setup", creds())
 	const secret = "valor-secreto-123"
-	body := c.want(201, "POST", "/api/admin/connections", adguard(secret))
+	body := c.want(201, "POST", "/api/admin/connections", adguardConn(secret))
 	var out connectionOut
 	if err := json.Unmarshal([]byte(body), &out); err != nil {
 		t.Fatal(err)
@@ -198,12 +198,15 @@ func TestConnectionValidation(t *testing.T) {
 	}
 	for name, mutate := range cases {
 		t.Run(name, func(t *testing.T) {
-			m := adguard("s")
+			m := adguardConn("s")
 			mutate(m)
 			c.want(400, "POST", "/api/admin/connections", m)
 		})
 	}
-	m := adguard("sin-formato")
+	unknown := adguardConn("s")
+	unknown["options"] = map[string]bool{"otra": true}
+	c.want(400, "POST", "/api/admin/connections", unknown)
+	m := adguardConn("sin-formato")
 	m["type"] = "proxmox"
 	c.want(400, "POST", "/api/admin/connections", m)
 }
@@ -244,7 +247,7 @@ func TestWebFallback(t *testing.T) {
 
 func createCorrect(t *testing.T, c *client) connectionOut {
 	t.Helper()
-	body := c.want(201, "POST", "/api/admin/connections", adguard("correcta"))
+	body := c.want(201, "POST", "/api/admin/connections", adguardConn("correcta"))
 	var out connectionOut
 	if err := json.Unmarshal([]byte(body), &out); err != nil {
 		t.Fatal(err)
@@ -278,6 +281,16 @@ func TestDashboardIsPublicAndHidesConfiguration(t *testing.T) {
 		if strings.Contains(body, leak) {
 			t.Fatalf("el dashboard público filtra %q: %s", leak, body)
 		}
+	}
+}
+
+func TestConnectionOptionsRoundTrip(t *testing.T) {
+	c, _ := newServer(t)
+	c.want(200, "POST", "/api/setup", creds())
+	m := adguardConn("correcta")
+	m["options"] = map[string]bool{"show_top_domains": true}
+	if got := c.want(201, "POST", "/api/admin/connections", m); !strings.Contains(got, `"show_top_domains":true`) {
+		t.Fatal(got)
 	}
 }
 
@@ -330,7 +343,7 @@ func TestDashboardEvents(t *testing.T) {
 func TestConnectionTest(t *testing.T) {
 	c, _ := newServer(t)
 	body := func(secret any) map[string]any {
-		m := adguard("")
+		m := adguardConn("")
 		delete(m, "secret")
 		if secret != nil {
 			m["secret"] = secret

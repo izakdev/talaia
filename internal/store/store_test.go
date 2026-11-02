@@ -98,3 +98,46 @@ func TestReopenKeepsData(t *testing.T) {
 		t.Fatalf("need = %v, %v", need, err)
 	}
 }
+
+func TestOptionsArePersisted(t *testing.T) {
+	s, _ := newStore(t)
+	ctx := context.Background()
+	c, err := s.CreateConnection(ctx, Connection{Name: "a", Type: "adguard", BaseURL: "http://x", IntervalSeconds: 30}, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(c.Options) != 0 {
+		t.Fatalf("opciones por defecto = %v", c.Options)
+	}
+	c.Options = map[string]bool{"show_top_domains": true}
+	c, err = s.UpdateConnection(ctx, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !c.Options["show_top_domains"] {
+		t.Fatalf("opciones = %v", c.Options)
+	}
+}
+
+func TestMigratesExistingDatabase(t *testing.T) {
+	s, path := newStore(t)
+	ctx := context.Background()
+	if _, err := s.db.Exec(`ALTER TABLE connections DROP COLUMN options; PRAGMA user_version = 1;`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.db.Exec(`INSERT INTO connections(id, name, type, base_url, secret, interval_seconds, created_at, updated_at)
+		VALUES ('v1', 'antigua', 'adguard', 'http://x', x'00', 30, 1, 1)`); err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+	box, _ := secrets.New(bytes.Repeat([]byte{7}, 32))
+	s2, err := Open(path, box)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s2.Close()
+	c, err := s2.GetConnection(ctx, "v1")
+	if err != nil || c.Name != "antigua" || c.Options["show_top_domains"] {
+		t.Fatalf("c = %+v, err = %v", c, err)
+	}
+}

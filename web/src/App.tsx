@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, type Connection, type ConnectionInput, type ConnectionType, type ConnectionState } from "./api";
-import { Horizon, LanguageSwitch } from "./chrome";
+import { CATALOG, catalogEntry } from "./catalog";
+import { Horizon, IntegrationIcon, LanguageSwitch } from "./chrome";
 import Dashboard from "./Dashboard";
 import { useI18n } from "./i18n";
 
@@ -43,7 +44,7 @@ export default function App() {
   if (state.data.setup_required) return <Credentials mode="setup" />;
   if (path.startsWith("/admin")) {
     return state.data.user ? (
-      <Admin user={state.data.user} version={state.data.version} navigate={navigate} />
+      <Admin user={state.data.user} version={state.data.version} path={path} navigate={navigate} />
     ) : (
       <Credentials mode="login" />
     );
@@ -103,7 +104,17 @@ function Credentials({ mode }: { mode: "setup" | "login" }) {
   );
 }
 
-function Admin({ user, version, navigate }: { user: string; version: string; navigate: (path: string) => void }) {
+function Admin({
+  user,
+  version,
+  path,
+  navigate,
+}: {
+  user: string;
+  version: string;
+  path: string;
+  navigate: (path: string) => void;
+}) {
   const { t } = useI18n();
   const client = useQueryClient();
   const logout = useMutation({
@@ -145,7 +156,7 @@ function Admin({ user, version, navigate }: { user: string; version: string; nav
           </button>
         </nav>
       </header>
-      <Connections />
+      {path === NEW_CONNECTION_PATH ? <NewConnection navigate={navigate} /> : <Connections navigate={navigate} />}
       <footer>Talaia {version}</footer>
     </div>
   );
@@ -153,18 +164,85 @@ function Admin({ user, version, navigate }: { user: string; version: string; nav
 
 function ConnectionHealth({ type, state }: { type: ConnectionType; state?: ConnectionState }) {
   const { t, collectError } = useI18n();
-  if (!TESTABLE.includes(type)) return <span>{t("connections.notAvailable")}</span>;
+  if (!catalogEntry(type).readable) return <span>{t("connections.notAvailable")}</span>;
   if (!state || state.status === "pending") return <span>{t("status.checking")}</span>;
   if (state.status === "error") return <span className="warn">{collectError(state.error)}</span>;
   return <span>{t("connections.working")}</span>;
 }
 
-type Editing = { kind: "new" } | { kind: "edit"; connection: Connection } | null;
+const NEW_CONNECTION_PATH = "/admin/connections/new";
 
-function Connections() {
+function normalize(text: string) {
+  return text
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
+}
+
+function NewConnection({ navigate }: { navigate: (path: string) => void }) {
+  const { t } = useI18n();
+  const [query, setQuery] = useState("");
+  const [chosen, setChosen] = useState<ConnectionType | null>(null);
+  const terms = normalize(query).trim();
+  const matches = CATALOG.filter((entry) =>
+    normalize(`${t(`type.${entry.type}`)} ${t(`catalog.desc.${entry.type}`)}`).includes(terms),
+  );
+  return (
+    <main className="panel">
+      <a
+        className="back"
+        href="/admin"
+        onClick={(event) => {
+          event.preventDefault();
+          navigate("/admin");
+        }}
+      >
+        {t("catalog.back")}
+      </a>
+      <div>
+        <h1>{t("catalog.title")}</h1>
+        <p className="lead">{t("catalog.lead")}</p>
+      </div>
+      <label className="catalog-search">
+        {t("catalog.search")}
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          // En pantallas táctiles abriría el teclado y taparía el catálogo.
+          autoFocus={window.matchMedia("(pointer: fine)").matches}
+        />
+      </label>
+      {matches.length === 0 && <p className="lead">{t("catalog.empty", { query })}</p>}
+      <ul className="catalog">
+        {matches.map((entry) => (
+          <li key={entry.type}>
+            <button onClick={() => setChosen(entry.type)}>
+              <IntegrationIcon icon={entry.icon} />
+              <strong>{t(`type.${entry.type}`)}</strong>
+              <span>{t(`catalog.desc.${entry.type}`)}</span>
+              {!entry.readable && <em>{t("catalog.soon")}</em>}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {chosen && (
+        <ConnectionDialog
+          key={chosen}
+          connection={null}
+          initialType={chosen}
+          onClose={() => setChosen(null)}
+          onSaved={() => navigate("/admin")}
+        />
+      )}
+    </main>
+  );
+}
+
+function Connections({ navigate }: { navigate: (path: string) => void }) {
   const { t, errorText } = useI18n();
   const client = useQueryClient();
-  const [editing, setEditing] = useState<Editing>(null);
+  const [editing, setEditing] = useState<Connection | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
   const connections = useQuery({
     queryKey: ["connections"],
@@ -193,9 +271,16 @@ function Connections() {
           <h1>{t("connections.title")}</h1>
           <p>{t("connections.lead")}</p>
         </div>
-        <button className="primary" onClick={() => setEditing({ kind: "new" })}>
+        <a
+          className="button primary"
+          href={NEW_CONNECTION_PATH}
+          onClick={(event) => {
+            event.preventDefault();
+            navigate(NEW_CONNECTION_PATH);
+          }}
+        >
           {t("connections.add")}
-        </button>
+        </a>
       </div>
 
       {connections.isError && <p role="alert" className="error">{t("connections.loadError")}</p>}
@@ -242,7 +327,7 @@ function Connections() {
                   </>
                 ) : (
                   <>
-                    <button className="quiet" onClick={() => setEditing({ kind: "edit", connection })}>
+                    <button className="quiet" onClick={() => setEditing(connection)}>
                       {t("connections.edit")}
                     </button>
                     <button className="quiet" onClick={() => setConfirming(connection.id)}>
@@ -258,36 +343,41 @@ function Connections() {
 
       {editing && (
         <ConnectionDialog
-          key={editing.kind === "edit" ? editing.connection.id : "new"}
-          connection={editing.kind === "edit" ? editing.connection : null}
+          key={editing.id}
+          connection={editing}
+          initialType={editing.type}
           onClose={() => setEditing(null)}
+          onSaved={() => setEditing(null)}
         />
       )}
     </main>
   );
 }
 
-const TYPES: ConnectionType[] = ["proxmox", "homeassistant", "adguard"];
-// Integraciones ya disponibles. Las demás se pueden guardar, pero aún no se consultan.
-const TESTABLE: ConnectionType[] = ["adguard"];
-const PLACEHOLDERS: Record<ConnectionType, string> = {
-  proxmox: "https://proxmox.example:8006",
-  homeassistant: "http://homeassistant.local:8123",
-  adguard: "http://adguard.local:3000",
-};
-
-function ConnectionDialog({ connection, onClose }: { connection: Connection | null; onClose: () => void }) {
+function ConnectionDialog({
+  connection,
+  initialType,
+  onClose,
+  onSaved,
+}: {
+  connection: Connection | null;
+  initialType: ConnectionType;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   const { t, errorText, collectError } = useI18n();
   const client = useQueryClient();
   const form = useRef<HTMLFormElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
-  const [type, setType] = useState<ConnectionType>(connection?.type ?? "proxmox");
+  const type = initialType;
+  const entry = catalogEntry(type);
   const [name, setName] = useState(connection?.name ?? "");
   const [url, setUrl] = useState(connection?.base_url ?? "");
   const [username, setUsername] = useState(connection?.username ?? "");
   const [secret, setSecret] = useState("");
   const [interval, setIntervalValue] = useState(String(connection?.interval_seconds ?? 30));
   const [skipTls, setSkipTls] = useState(connection?.tls_skip_verify ?? false);
+  const [options, setOptions] = useState<Record<string, boolean>>(connection?.options ?? {});
 
   useEffect(() => {
     dialog.current?.showModal();
@@ -308,6 +398,7 @@ function ConnectionDialog({ connection, onClose }: { connection: Connection | nu
     username,
     interval_seconds: Number(interval),
     tls_skip_verify: skipTls,
+    options,
     ...(secret ? { secret } : {}),
   });
   const save = useMutation({
@@ -316,7 +407,7 @@ function ConnectionDialog({ connection, onClose }: { connection: Connection | nu
       setSecret("");
       client.invalidateQueries({ queryKey: ["dashboard"] });
       await client.invalidateQueries({ queryKey: ["connections"] });
-      onClose();
+      onSaved();
     },
   });
   const test = useMutation({
@@ -336,24 +427,14 @@ function ConnectionDialog({ connection, onClose }: { connection: Connection | nu
           save.mutate();
         }}
       >
-        <h2>{connection ? t("form.editTitle", { name: connection.name }) : t("form.addTitle")}</h2>
-        {!connection && (
-          <fieldset className="types">
-            <legend>{t("form.type")}</legend>
-            {TYPES.map((value) => (
-              <label key={value}>
-                <input
-                  type="radio"
-                  name="type"
-                  value={value}
-                  checked={type === value}
-                  onChange={() => setType(value)}
-                />
-                {t(`type.${value}`)}
-              </label>
-            ))}
-          </fieldset>
-        )}
+        <div className="dialog-title">
+          <IntegrationIcon icon={entry.icon} />
+          <h2>
+            {connection
+              ? t("form.editTitle", { name: connection.name })
+              : t("form.addTitle", { name: t(`type.${type}`) })}
+          </h2>
+        </div>
         <label>
           {t("form.name")}
           <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required autoFocus />
@@ -364,7 +445,7 @@ function ConnectionDialog({ connection, onClose }: { connection: Connection | nu
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder={PLACEHOLDERS[type]}
+            placeholder={entry.urlPlaceholder}
             required
           />
         </label>
@@ -396,6 +477,24 @@ function ConnectionDialog({ connection, onClose }: { connection: Connection | nu
             required
           />
         </label>
+        {entry.options.length > 0 && (
+          <fieldset className="options">
+            <legend>{t("form.display")}</legend>
+            {entry.options.map((option) => (
+              <label key={option} className="check">
+                <input
+                  type="checkbox"
+                  checked={!!options[option]}
+                  onChange={(e) => setOptions({ ...options, [option]: e.target.checked })}
+                />
+                <span>
+                  {t(`form.option.${option}`)}
+                  <small>{t(`form.option.${option}.hint`)}</small>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+        )}
         <label className="check">
           <input type="checkbox" checked={skipTls} onChange={(e) => setSkipTls(e.target.checked)} />
           <span>
@@ -411,7 +510,7 @@ function ConnectionDialog({ connection, onClose }: { connection: Connection | nu
           </p>
         )}
         <div className="dialog-actions">
-          {TESTABLE.includes(type) && (
+          {entry.readable && (
             <button
               type="button"
               className="secondary"

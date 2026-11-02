@@ -14,6 +14,7 @@ export interface Connection {
   username: string;
   interval_seconds: number;
   tls_skip_verify: boolean;
+  options: Record<string, boolean> | null;
   updated_at: string;
 }
 
@@ -25,6 +26,7 @@ export interface ConnectionInput {
   secret?: string;
   interval_seconds: number;
   tls_skip_verify: boolean;
+  options: Record<string, boolean>;
 }
 
 export interface DomainCount {
@@ -42,8 +44,8 @@ export interface AdGuardData {
   avg_processing_ms: number;
   period_unit: "hours" | "days" | "";
   period_length: number;
-  top_queried: DomainCount[];
-  top_blocked: DomainCount[];
+  top_queried?: DomainCount[];
+  top_blocked?: DomainCount[];
 }
 
 export interface ConnectionState {

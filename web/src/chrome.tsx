@@ -1,6 +1,14 @@
 import type { ReactNode } from "react";
 import { useI18n } from "./i18n";
 
+export function IntegrationIcon({ icon }: { icon: { path: string; hex: string; title: string } }) {
+  return (
+    <svg className="integration-icon" viewBox="0 0 24 24" aria-hidden="true" fill={`#${icon.hex}`}>
+      <path d={icon.path} />
+    </svg>
+  );
+}
+
 export function LanguageSwitch() {
   const { lang, setLang } = useI18n();
   const next = lang === "es" ? "en" : "es";

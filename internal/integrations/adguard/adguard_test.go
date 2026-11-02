@@ -2,9 +2,11 @@ package adguard
 
 import (
 	"context"
+	"encoding/json"
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/izakdev/talaia/internal/integrations"
@@ -37,7 +39,10 @@ func server(t *testing.T, status, stats string) *httptest.Server {
 
 func TestCollect(t *testing.T) {
 	ts := server(t, `{"version":"v0.107.1","running":true,"protection_enabled":false}`, statsBody)
-	got, err := New(integrations.Config{BaseURL: ts.URL, Username: "admin", Secret: "clave"}).Collect(context.Background())
+	got, err := New(integrations.Config{
+		BaseURL: ts.URL, Username: "admin", Secret: "clave",
+		Options: map[string]bool{OptionShowTopDomains: true},
+	}).Collect(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,6 +58,31 @@ func TestCollect(t *testing.T) {
 	}
 	if len(d.TopQueried) != topLimit || d.TopQueried[0].Domain != "b.example" || d.TopQueried[4].Domain != "d.example" {
 		t.Fatalf("top incorrecto: %+v", d.TopQueried)
+	}
+}
+
+func TestTopDomainsAreOptional(t *testing.T) {
+	ts := server(t, `{"version":"v","running":true,"protection_enabled":true}`, statsBody)
+	got, err := New(integrations.Config{BaseURL: ts.URL, Username: "admin", Secret: "clave"}).Collect(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := json.Marshal(got)
+	if strings.Contains(string(raw), "example") || strings.Contains(string(raw), "top_") {
+		t.Fatalf("incluye dominios sin haberlos pedido: %s", raw)
+	}
+
+	empty := server(t, `{"version":"v","running":true,"protection_enabled":true}`, `{"num_dns_queries":0}`)
+	got, err = New(integrations.Config{
+		BaseURL: empty.URL, Username: "admin", Secret: "clave",
+		Options: map[string]bool{OptionShowTopDomains: true},
+	}).Collect(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ = json.Marshal(got)
+	if !strings.Contains(string(raw), `"top_queried":[]`) {
+		t.Fatalf("activado y sin datos debe enviar una lista vacía: %s", raw)
 	}
 }
 

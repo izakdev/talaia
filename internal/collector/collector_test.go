@@ -146,6 +146,23 @@ func TestChangingTargetDropsOldData(t *testing.T) {
 	}
 }
 
+func TestChangingOptionsDropsOldData(t *testing.T) {
+	e := setup(t)
+	c := e.create(t, "adguard")
+	e.waitFor(t, func(s Snapshot) bool { return s.Status == StatusOK })
+	e.fail.Store(true)
+	c.Options = map[string]bool{"show_top_domains": true}
+	if _, err := e.st.UpdateConnection(context.Background(), c, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.m.Refresh(context.Background(), c.ID); err != nil {
+		t.Fatal(err)
+	}
+	if s := e.waitFor(t, func(s Snapshot) bool { return s.Status == StatusError }); s.Data != nil {
+		t.Fatalf("conserva datos de otras opciones: %+v", s)
+	}
+}
+
 func TestRemoveAndUnsupported(t *testing.T) {
 	e := setup(t)
 	c := e.create(t, "adguard")

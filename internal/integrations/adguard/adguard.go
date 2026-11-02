@@ -12,6 +12,9 @@ import (
 
 const topLimit = 5
 
+// OptionShowTopDomains incluye el top de dominios en los datos públicos.
+const OptionShowTopDomains = "show_top_domains"
+
 // DomainCount es un dominio con su número de consultas.
 type DomainCount struct {
 	Domain string `json:"domain"`
@@ -29,8 +32,8 @@ type Data struct {
 	AvgProcessingMs   float64       `json:"avg_processing_ms"`
 	PeriodUnit        string        `json:"period_unit"`
 	PeriodLength      int           `json:"period_length"`
-	TopQueried        []DomainCount `json:"top_queried"`
-	TopBlocked        []DomainCount `json:"top_blocked"`
+	TopQueried        []DomainCount `json:"top_queried,omitzero"`
+	TopBlocked        []DomainCount `json:"top_blocked,omitzero"`
 }
 
 type client struct {
@@ -87,7 +90,7 @@ func (c *client) Collect(ctx context.Context) (any, error) {
 	if *stats.NumDNSQueries > 0 {
 		percent = float64(blocked) / float64(*stats.NumDNSQueries) * 100
 	}
-	return Data{
+	data := Data{
 		Version:           status.Version,
 		Running:           status.Running,
 		ProtectionEnabled: *status.ProtectionEnabled,
@@ -97,9 +100,12 @@ func (c *client) Collect(ctx context.Context) (any, error) {
 		AvgProcessingMs:   stats.AvgProcessingTime * 1000,
 		PeriodUnit:        stats.TimeUnits,
 		PeriodLength:      len(stats.DNSQueries),
-		TopQueried:        top(stats.TopQueriedDomains),
-		TopBlocked:        top(stats.TopBlockedDomains),
-	}, nil
+	}
+	if c.cfg.Options[OptionShowTopDomains] {
+		data.TopQueried = top(stats.TopQueriedDomains)
+		data.TopBlocked = top(stats.TopBlockedDomains)
+	}
+	return data, nil
 }
 
 func top(entries []map[string]int64) []DomainCount {

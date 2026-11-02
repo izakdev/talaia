@@ -35,6 +35,7 @@ type Config struct {
 	Username      string
 	Secret        string
 	TLSSkipVerify bool
+	Options       map[string]bool
 }
 
 // Integration lee el estado de un servicio. El resultado se envía al dashboard
