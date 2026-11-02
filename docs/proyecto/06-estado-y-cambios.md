@@ -7,7 +7,7 @@
 | 1 | Base: repositorio, CI, autenticación, SQLite y conexiones | Terminado, en `main` |
 | 2 | AdGuard y flujo completo, catálogo de servicios y documentación | Terminado y validado por el cliente, en `main` |
 | 3 | Proxmox: visión agregada y detalle por nodo | Terminado y verificado con un clúster real, en `main` |
-| 4 | Home Assistant: estado, entidades, consumos, recursos y resumen; enlace a cada servicio | Estado y entidades verificados con la instalación del cliente; recursos pendientes de verificar; pendiente de fusionar el [PR #3](https://github.com/izakdev/talaia/pull/3) |
+| 4 | Home Assistant: estado, entidades, consumos, recursos y resumen; enlace a cada servicio | Verificado con la instalación del cliente; pendiente de fusionar el [PR #3](https://github.com/izakdev/talaia/pull/3) |
 | 5 | Editor: rejilla, varias páginas y temas; login opcional; cambio y recuperación de contraseña | Pendiente |
 | 6 | Distribución: instalador LXC, actualización y documentación final | Pendiente |
 
@@ -72,7 +72,7 @@
 | No se puede cambiar ni recuperar la contraseña | Olvidarla obliga a empezar de cero | RF-08, hito 5 |
 | Sin instalador | Hay que compilar o copiar el binario y crear el servicio a mano | Hito 6 |
 | CPU, memoria y disco de Home Assistant requieren Supervisor y token de administrador | Otras instalaciones no los muestran; pueden elegir sensores de System Monitor | Por diseño de Home Assistant |
-| Recursos sin verificar con un Supervisor real | Puede haber diferencias con el simulador | Antes de cerrar el hito 4 |
+| El disco de Home Assistant se muestra en GiB | Las cifras son algo menores que los GB que muestra Home Assistant, aunque el porcentaje coincide | Bajo demanda |
 | Home Assistant sin probar con miles de entidades | Cada ciclo descarga todas las entidades, y podría tardar | Si se da el caso, subir el refresco |
 | Estados de Home Assistant sin traducir | Salvo encendido, apagado y sin datos, se muestran como llegan, por ejemplo `heat` | Bajo demanda |
 | Los consumos no se suman | No hay un total automático | Por diseño: se puede crear un sensor agregado en Home Assistant |

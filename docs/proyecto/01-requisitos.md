@@ -79,10 +79,10 @@ Verificado con un clúster real. Los casos aún sin probar en real están en el 
 | RF-50 | Muestra el estado del servicio: en marcha, arrancando, modo seguro o de recuperación | 4 | Implementado |
 | RF-51 | Muestra solo las entidades elegidas en la administración, hasta 200; las demás no salen por la API pública | 4 | Implementado |
 | RF-52 | Muestra por separado los consumos, a partir de los sensores elegidos con clase de potencia o energía | 4 | Implementado |
-| RF-53 | Muestra CPU y memoria de Home Assistant, y disco y arranque del equipo, si hay Supervisor y token de administrador | 4 | Parcial: probado con simulador, sin verificar con Supervisor real |
+| RF-53 | Muestra CPU y memoria de Home Assistant, y disco y arranque del equipo, si hay Supervisor y token de administrador | 4 | Implementado |
 | RF-54 | Muestra un resumen opcional, activado por defecto: luces, interruptores y otros elementos activos, entidades, no disponibles, actualizaciones e integraciones. No incluye personas, cerraduras, alarmas ni puertas | 4 | Implementado |
 
-Verificado con un Home Assistant real en local y con la instalación del cliente. Los casos aún sin probar en real están en el [plan de pruebas](04-plan-de-pruebas.md#verificaciones-manuales).
+Verificado con un Home Assistant real en local y con la instalación del cliente, con Supervisor. Los casos aún sin probar en real están en el [plan de pruebas](04-plan-de-pruebas.md#verificaciones-manuales).
 
 ### Instalación
 
