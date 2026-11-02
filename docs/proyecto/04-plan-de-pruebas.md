@@ -122,13 +122,14 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 |---|---|---|---|
 | 2026-11-02 | Hito 2 | AdGuard Home v0.107.79 real en local, con DNS y reglas de bloqueo reales | Correcto: credenciales erróneas, datos, protección desactivada, caída y recuperación, y actualización en vivo durante más de 35 s |
 | 2026-11-02 | Hito 2 | Validación del cliente | Correcto: catálogo de servicios y opción de ocultar el top de dominios |
+| 2026-11-02 | Hito 3 (`a33fbed`) | Proxmox VE 9.2.20 y AdGuard Home v0.107.77 del cliente, con el clúster en marcha | Correcto: validado por el cliente. Revisión adicional del panel y de la API pública: datos coherentes (totales de CPU, RAM, VM y LXC iguales a la suma por nodo), actualización en vivo, sin errores en la consola y sin URL, usuarios ni credenciales en la respuesta |
 
 **Contraste con fuentes oficiales:**
 - AdGuard Home: especificación OpenAPI.
 - Proxmox VE: fuente de la API en `PVE/API2/Cluster.pm`, de `pve-manager`, y documentación de API tokens.
 
 **Aún sin verificar:**
-- **Un Proxmox VE real.** Es necesario para dar por cerrado el hito 3. En especial: formato real de las respuestas, permisos de `PVEAuditor`, clúster y nodo independiente, y certificado autofirmado.
+- **Proxmox VE real, casos no probados:** nodo caído, pérdida de quórum y nodo independiente. Solo se han probado con el simulador.
 - La instalación y el consumo en un LXC real de Proxmox.
 - Otros navegadores además de Chromium.
 - Compatibilidad con otras versiones de AdGuard Home.

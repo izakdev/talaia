@@ -6,7 +6,7 @@
 |---|---|---|
 | 1 | Base: repositorio, CI, autenticación, SQLite y conexiones | Terminado, en `main` |
 | 2 | AdGuard y flujo completo, catálogo de servicios y documentación | Validado por el cliente, pendiente de fusionar el [PR #1](https://github.com/izakdev/talaia/pull/1) |
-| 3 | Proxmox: visión agregada y detalle por nodo | Implementado, pendiente de verificar con un Proxmox real |
+| 3 | Proxmox: visión agregada y detalle por nodo | Verificado con un clúster real, pendiente de fusionar el [PR #2](https://github.com/izakdev/talaia/pull/2) |
 | 4 | Home Assistant: estado, entidades y consumos | Pendiente |
 | 5 | Editor: rejilla, varias páginas, temas y login opcional | Pendiente |
 | 6 | Distribución: instalador LXC, actualización y documentación final | Pendiente |
@@ -57,7 +57,7 @@
 | No se puede cambiar ni recuperar la contraseña | Olvidarla obliga a empezar de cero | RF-08, sin hito asignado |
 | Sin instalador | Hay que compilar o copiar el binario y crear el servicio a mano | Hito 6 |
 | Home Assistant no se consulta | Se puede guardar, pero no aparece en el dashboard | Hito 4 |
-| Proxmox sin verificar con un servicio real | Puede haber diferencias con un clúster real | Antes de cerrar el hito 3 |
+| Nodo caído, pérdida de quórum y nodo independiente solo probados con simulador | Puede haber diferencias en esos casos | Al darse la ocasión |
 | Sin almacenamiento en la vista de Proxmox | Solo se ve el disco de cada nodo | Bajo demanda |
 | El dashboard muestra todas las conexiones con integración, en orden alfabético | No se puede elegir ni colocar | Hito 5 |
 | Dashboard sin login | Cualquiera con acceso al puerto ve el estado | Hito 5 |

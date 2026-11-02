@@ -259,7 +259,6 @@ Toda la configuración está en la carpeta de datos:
 ## Limitaciones actuales
 
 - Home Assistant todavía no muestra datos.
-- La integración de Proxmox aún no se ha verificado con un servidor real.
 - La vista de Proxmox no incluye el almacenamiento.
 - No se puede elegir qué aparece en el panel ni colocarlo: se muestran todas las conexiones con integración, por orden alfabético.
 - El panel no tiene inicio de sesión.
