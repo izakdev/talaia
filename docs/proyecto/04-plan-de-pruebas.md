@@ -26,10 +26,14 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestConnectionOptionsRoundTrip` | Las opciones se guardan y se devuelven | RF-32 |
 | `TestWritesRequireJSONAndSameOrigin` | Rechaza formularios y peticiones de otro origen | RF-02 |
 | `TestWebFallback` | Las rutas de la web sirven la aplicación; archivos y API inexistentes dan 404 | RF-01 |
-| `TestDashboardIsPublicAndHidesConfiguration` | El dashboard es público y sin URL, usuarios ni credenciales | RF-01, RNF-03 |
+| `TestDashboardIsPublicAndHidesConfiguration` | El dashboard es público, con enlace y sin usuarios ni credenciales | RF-01, RF-25, RNF-03 |
+| `TestConnectionLink` | Rechaza enlaces con otro esquema o con credenciales; uno propio sustituye a la URL de conexión en la API pública | RF-25 |
+| `TestConnectionTestReportsNotes` | La prueba de conexión devuelve los avisos de la integración | RF-53 |
 | `TestMultipleConnectionsOfSameService` | Admite varias conexiones del mismo servicio, ordenadas por nombre | RF-11 |
 | `TestDashboardFollowsConnectionChanges` | Editar y eliminar se refleja; un fallo conserva el último dato | RF-20, RF-21 |
 | `TestDashboardEvents` | El flujo SSE envía el estado inicial y los cambios | RF-20 |
+| `TestListEntitiesEndpoint` | Exige sesión, usa la credencial guardada solo con la misma URL y rechaza tipos sin entidades | RF-51, RF-14 |
+| `TestEntitySelectionValidation` | Rechaza formatos no válidos, repetidas, más de 200 y selección en otro tipo de servicio | RF-51 |
 | `TestConnectionTest` | Exige sesión, no guarda nada, reutiliza la credencial solo con la misma URL y rechaza tipos sin integración | RF-13, RF-14 |
 
 ### `internal/auth`
@@ -54,6 +58,8 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestConnectionSecretIsEncryptedAndKept` | La credencial no está en claro en la base de datos y se actualiza solo si se pide | RNF-04, RF-14 |
 | `TestReopenKeepsData` | Los datos persisten al reabrir | RNF-05 |
 | `TestOptionsArePersisted` | Las opciones se guardan | RF-32 |
+| `TestLinkFallsBackToConnectionURL` | Sin enlace propio se usa la URL de conexión | RF-25 |
+| `TestEntitiesArePersisted` | La selección de entidades se guarda y se puede vaciar | RF-51 |
 | `TestMigratesExistingDatabase` | Una base de datos anterior migra y conserva sus conexiones | RNF-05 |
 
 ### `internal/collector`
@@ -64,6 +70,8 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestErrorKeepsLastDataAndRecovers` | Un fallo conserva el último dato y su fecha; luego se recupera | RF-21 |
 | `TestChangingTargetDropsOldData` | Cambiar de destino descarta los datos anteriores | RF-21 |
 | `TestChangingOptionsDropsOldData` | Cambiar opciones descarta los datos anteriores | RF-32 |
+| `TestChangingLinkKeepsData` | Cambiar solo el enlace conserva los datos y lo actualiza | RF-25 |
+| `TestChangingEntitiesDropsOldData` | Cambiar la selección descarta los datos anteriores | RF-51 |
 | `TestRemoveAndUnsupported` | Eliminar detiene la conexión; un tipo sin integración no aparece | RF-10, RNF-07 |
 | `TestSubscribersAreNotified` | Los suscriptores reciben los cambios | RF-20 |
 
@@ -90,6 +98,20 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestSelfSignedCertificate` | Clasifica un certificado autofirmado como TLS | RF-21 |
 | `TestHTTPSAgainstPlainHTTP` | Clasifica una URL `https` contra un servidor HTTP como TLS | RF-21 |
 
+### `internal/integrations/homeassistant`
+
+| Prueba | Verifica | Requisitos |
+|---|---|---|
+| `TestStatusWithoutEntitiesSkipsStates` | Sin selección solo consulta el estado | RF-50 |
+| `TestOnlySelectedEntitiesArePublished` | Publica solo lo elegido, sin ubicación, atributos ni otras entidades | RF-51, RF-52, RNF-02 |
+| `TestMissingEntityIsReported` | Una entidad eliminada se publica como no encontrada | RF-51 |
+| `TestStartingAndDegradedModes` | Detecta arranque, modo seguro y modo de recuperación | RF-50 |
+| `TestListEntities` | Lista las entidades con nombre, unidad y clase | RF-51 |
+| `TestSystemFromSupervisor` | Lee CPU, memoria, disco y arranque por WebSocket, sin publicar el nombre del equipo | RF-53 |
+| `TestSystemIsOptional` | Sin Supervisor o sin permisos, el servicio sigue funcionando y lo indica | RF-53 |
+| `TestSummary` | Cuenta por dominio, excluye grupos, puertas y garajes, y no publica personas, cerraduras ni alarmas | RF-54 |
+| `TestErrors` | Token incorrecto y respuestas ajenas a Home Assistant. También en AdGuard y Proxmox | RF-21 |
+
 ## Pruebas E2E
 
 | ID | Escenario | Requisitos |
@@ -103,16 +125,20 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-07 | Top de dominios opcional y excluido de la API pública | RF-32 |
 | E2E-08 | Cambio de estado visible en vivo y sin recargar | RF-20, RF-30 |
 | E2E-09 | Caída y recuperación del servicio | RF-21 |
-| E2E-10 | Servicio sin integración disponible | RF-11, RF-12 |
+| E2E-10 | Conexión guardada con un servicio inaccesible | RF-10, RF-21 |
 | E2E-11 | Editar y eliminar conexiones | RF-10, RF-14 |
 | E2E-12 | Cambio de idioma recordado | RF-05 |
 | E2E-13 | Móvil y modo oscuro sin desbordamiento | RF-06 |
 | E2E-14 | La API pública no expone configuración ni credenciales | RNF-03 |
+| E2E-23 | Enlace a cada servicio desde su bloque | RF-25 |
 | E2E-15 | Sin errores de JavaScript durante el recorrido | RF-01 |
 | E2E-16 | Alta de Proxmox con validación del token | RF-10, RF-13 |
 | E2E-17 | Clúster en el panel: agregados, nodos y detalle | RF-40, RF-41 |
 | E2E-18 | Nodo caído en el clúster | RF-21, RF-41 |
 | E2E-19 | Detalle de VM y LXC opcional y excluido de la API pública | RF-42 |
+| E2E-20 | Alta de Home Assistant con selección de entidades | RF-13, RF-51 |
+| E2E-21 | Home Assistant en el panel: consumos, entidades y cambios en vivo | RF-20, RF-50, RF-51, RF-52, RF-53, RF-54 |
+| E2E-22 | Solo las entidades elegidas salen por la API pública | RF-51 |
 
 Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las discrepancias con el servicio real las cubren las verificaciones manuales.
 
@@ -123,12 +149,19 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 | 2026-11-02 | Hito 2 | AdGuard Home v0.107.79 real en local, con DNS y reglas de bloqueo reales | Correcto: credenciales erróneas, datos, protección desactivada, caída y recuperación, y actualización en vivo durante más de 35 s |
 | 2026-11-02 | Hito 2 | Validación del cliente | Correcto: catálogo de servicios y opción de ocultar el top de dominios |
 | 2026-11-02 | Hito 3 (`a33fbed`) | Proxmox VE 9.2.20 y AdGuard Home v0.107.77 del cliente, con el clúster en marcha | Correcto: validado por el cliente. Revisión adicional del panel y de la API pública: datos coherentes (totales de CPU, RAM, VM y LXC iguales a la suma por nodo), actualización en vivo, sin errores en la consola y sin URL, usuarios ni credenciales en la respuesta |
+| 2026-11-02 | Hito 4 | Home Assistant 2026.2.3 real en local, con 117 entidades, sensores de plantilla de potencia y energía, y un interruptor | Correcto: token erróneo, listado y filtro de entidades, datos en el panel, entidad no disponible, cambio real visto en vivo y sin ubicación ni token en la API pública |
+| 2026-11-02 | Hito 4 (`73d815b`) | Home Assistant 2026.10.1 del cliente, junto a sus conexiones de AdGuard y Proxmox | Correcto en la revisión del panel y de la API pública: estado en marcha, consumos reales de potencia, entidades elegidas sin datos caídos, sin errores en la consola y sin URL, ubicación ni credenciales en la respuesta. No se han comparado los valores con la interfaz de Home Assistant |
+| 2026-11-02 | Hito 4, recursos y resumen | Home Assistant 2026.2.3 real en local, sin Supervisor | Correcto: el resumen coincide con los estados reales (117 entidades, 1 no disponible, 5 de 6 luces), la falta de Supervisor se indica sin afectar al resto y el enlace propio se publica |
+| 2026-11-02 | Hito 4 (`dd3706c`) | Home Assistant 2026.10.1 del cliente, con Supervisor y token de administrador | Correcto: validado por el cliente. Revisión adicional: CPU, memoria, disco y arranque reales y coherentes (porcentajes iguales a usado sobre total), resumen por dominio, enlaces en los tres servicios con `noopener` y sin usuarios, credenciales, nombre del equipo, personas ni cerraduras en la API pública. Reconexión de la actualización en vivo tras reiniciar Talaia. No se han comparado los recuentos con la interfaz de Home Assistant |
 
 **Contraste con fuentes oficiales:**
 - AdGuard Home: especificación OpenAPI.
+- Home Assistant: documentación de la API de Supervisor y código de `hassio/http.py` y del comando `supervisor/api`.
 - Proxmox VE: fuente de la API en `PVE/API2/Cluster.pm`, de `pve-manager`, y documentación de API tokens.
 
 **Aún sin verificar:**
+- **Recursos con un token sin permisos de administrador.** La falta de Supervisor se ha probado en real; el rechazo por permisos, solo por el código de Home Assistant.
+- **Home Assistant real, casos no probados:** instalaciones con miles de entidades, sensores de energía físicos, modo de recuperación y acceso por HTTPS.
 - **Proxmox VE real, casos no probados:** nodo caído, pérdida de quórum y nodo independiente. Solo se han probado con el simulador.
 - La instalación y el consumo en un LXC real de Proxmox.
 - Otros navegadores además de Chromium.
@@ -148,8 +181,8 @@ Los requisitos pendientes se probarán en su hito.
 | RF-05 | E2E-12 |
 | RF-06 | E2E-13 |
 | RF-10 | `TestConnectionValidation`, `TestConnectionsNeverExposeSecret`, E2E-06, E2E-11 |
-| RF-11 | `TestMultipleConnectionsOfSameService`, E2E-10 |
-| RF-12 | E2E-04, E2E-10 |
+| RF-11 | `TestMultipleConnectionsOfSameService` |
+| RF-12 | E2E-04 |
 | RF-13 | `TestConnectionTest`, E2E-05 |
 | RF-14 | `TestConnectionsNeverExposeSecret`, `TestConnectionTest`, `TestConnectionSecretIsEncryptedAndKept`, E2E-11 |
 | RF-20 | `TestDashboardEvents`, `TestDashboardFollowsConnectionChanges`, `TestSubscribersAreNotified`, E2E-08 |
@@ -160,6 +193,12 @@ Los requisitos pendientes se probarán en su hito.
 | RF-40 | `TestClusterAggregates`, `TestStandaloneNode`, `TestLostQuorum`, E2E-17 |
 | RF-41 | `TestNodesAndGuests`, E2E-17, E2E-18 |
 | RF-42 | `TestGuestsAreOptional`, E2E-19 |
+| RF-50 | `TestStatusWithoutEntitiesSkipsStates`, `TestStartingAndDegradedModes`, E2E-21 |
+| RF-51 | `TestOnlySelectedEntitiesArePublished`, `TestMissingEntityIsReported`, `TestListEntities`, `TestListEntitiesEndpoint`, `TestEntitySelectionValidation`, `TestEntitiesArePersisted`, `TestChangingEntitiesDropsOldData`, E2E-20, E2E-21, E2E-22 |
+| RF-52 | `TestOnlySelectedEntitiesArePublished`, E2E-21 |
+| RF-25 | `TestConnectionLink`, `TestLinkFallsBackToConnectionURL`, `TestChangingLinkKeepsData`, E2E-23 |
+| RF-53 | `TestSystemFromSupervisor`, `TestSystemIsOptional`, `TestConnectionTestReportsNotes`, E2E-21 |
+| RF-54 | `TestSummary`, E2E-21 |
 | RNF-01 | Por diseño: el modelo de datos no tiene tablas de métricas |
 | RNF-02 | `TestCollect` y `TestClusterAggregates` usan solo lecturas; por diseño, el cliente solo ofrece `GetJSON` |
 | RNF-03 | `TestDashboardIsPublicAndHidesConfiguration`, `TestCollectsAndPassesDecryptedSecret`, `TestRedirectIsNotFollowed`, E2E-14 |

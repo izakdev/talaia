@@ -25,6 +25,7 @@ import (
 	"github.com/izakdev/talaia/internal/collector"
 	"github.com/izakdev/talaia/internal/integrations"
 	"github.com/izakdev/talaia/internal/integrations/adguard"
+	"github.com/izakdev/talaia/internal/integrations/homeassistant"
 	"github.com/izakdev/talaia/internal/integrations/proxmox"
 	"github.com/izakdev/talaia/internal/store"
 )
@@ -35,6 +36,7 @@ const (
 	maxBody         = 64 << 10
 	maxFailures     = 10
 	failureWindow   = 15 * time.Minute
+	maxEntities     = 200
 	sseHeartbeat    = 25 * time.Second
 	sseWriteTimeout = 10 * time.Second
 )
@@ -89,6 +91,7 @@ func (s *Server) Handler() http.Handler {
 			r.Get("/connections", s.listConnections)
 			r.Post("/connections", s.createConnection)
 			r.Post("/connections/test", s.testConnection)
+			r.Post("/connections/entities", s.listEntities)
 			r.Get("/connections/{id}", s.getConnection)
 			r.Put("/connections/{id}", s.updateConnection)
 			r.Delete("/connections/{id}", s.deleteConnection)
@@ -317,14 +320,18 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 var connectionTypes = map[string]struct {
 	needsUsername bool
 	options       []string
+	hasEntities   bool
 }{
 	"proxmox":       {options: []string{proxmox.OptionShowGuests}},
-	"homeassistant": {},
+	"homeassistant": {hasEntities: true, options: []string{homeassistant.OptionShowSummary}},
 	"adguard":       {needsUsername: true, options: []string{adguard.OptionShowTopDomains}},
 }
 
 // proxmoxToken valida el formato usuario@reino!nombre=valor.
 var proxmoxToken = regexp.MustCompile(`^[^\s!=]+@[^\s!=]+![^\s!=]+=[^\s]+$`)
+
+// entityID valida el formato dominio.objeto de Home Assistant.
+var entityID = regexp.MustCompile(`^[a-z0-9_]+\.[a-z0-9_]+$`)
 
 type connectionIn struct {
 	Name            string          `json:"name"`
@@ -335,6 +342,8 @@ type connectionIn struct {
 	IntervalSeconds int             `json:"interval_seconds"`
 	TLSSkipVerify   bool            `json:"tls_skip_verify"`
 	Options         map[string]bool `json:"options"`
+	Entities        []string        `json:"entities"`
+	LinkURL         string          `json:"link_url"`
 }
 
 type connectionOut struct {
@@ -346,11 +355,13 @@ type connectionOut struct {
 	IntervalSeconds int             `json:"interval_seconds"`
 	TLSSkipVerify   bool            `json:"tls_skip_verify"`
 	Options         map[string]bool `json:"options"`
+	Entities        []string        `json:"entities"`
+	LinkURL         string          `json:"link_url"`
 	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
 func toOut(c store.Connection) connectionOut {
-	return connectionOut{c.ID, c.Name, c.Type, c.BaseURL, c.Username, c.IntervalSeconds, c.TLSSkipVerify, c.Options, c.UpdatedAt}
+	return connectionOut{c.ID, c.Name, c.Type, c.BaseURL, c.Username, c.IntervalSeconds, c.TLSSkipVerify, c.Options, c.Entities, c.LinkURL, c.UpdatedAt}
 }
 
 func validateConnection(in *connectionIn) string {
@@ -368,6 +379,14 @@ func validateConnection(in *connectionIn) string {
 		return "invalid_url"
 	}
 	in.BaseURL = strings.TrimRight(u.String(), "/")
+	in.LinkURL = strings.TrimSpace(in.LinkURL)
+	if in.LinkURL != "" {
+		// El enlace se muestra en el panel: solo http o https, nunca javascript: ni similares.
+		link, err := url.Parse(in.LinkURL)
+		if err != nil || (link.Scheme != "http" && link.Scheme != "https") || link.Host == "" || link.User != nil || len(in.LinkURL) > 2048 {
+			return "invalid_link"
+		}
+	}
 	if spec.needsUsername && in.Username == "" {
 		return "invalid_username"
 	}
@@ -378,6 +397,19 @@ func validateConnection(in *connectionIn) string {
 		if !slices.Contains(spec.options, key) {
 			return "invalid_options"
 		}
+	}
+	if len(in.Entities) > 0 && !spec.hasEntities {
+		return "invalid_entities"
+	}
+	if len(in.Entities) > maxEntities {
+		return "too_many_entities"
+	}
+	seen := make(map[string]bool, len(in.Entities))
+	for _, id := range in.Entities {
+		if !entityID.MatchString(id) || seen[id] {
+			return "invalid_entities"
+		}
+		seen[id] = true
 	}
 	if in.IntervalSeconds < 5 || in.IntervalSeconds > 3600 {
 		return "invalid_interval"
@@ -429,7 +461,7 @@ func (s *Server) createConnection(w http.ResponseWriter, r *http.Request) {
 	}
 	c, err := s.store.CreateConnection(r.Context(), store.Connection{
 		Name: in.Name, Type: in.Type, BaseURL: in.BaseURL, Username: in.Username,
-		IntervalSeconds: in.IntervalSeconds, TLSSkipVerify: in.TLSSkipVerify, Options: in.Options,
+		IntervalSeconds: in.IntervalSeconds, TLSSkipVerify: in.TLSSkipVerify, Options: in.Options, Entities: in.Entities, LinkURL: in.LinkURL,
 	}, *in.Secret)
 	if err != nil {
 		s.internal(w, err)
@@ -465,7 +497,7 @@ func (s *Server) updateConnection(w http.ResponseWriter, r *http.Request) {
 	}
 	c, err := s.store.UpdateConnection(r.Context(), store.Connection{
 		ID: id, Name: in.Name, BaseURL: in.BaseURL, Username: in.Username,
-		IntervalSeconds: in.IntervalSeconds, TLSSkipVerify: in.TLSSkipVerify, Options: in.Options,
+		IntervalSeconds: in.IntervalSeconds, TLSSkipVerify: in.TLSSkipVerify, Options: in.Options, Entities: in.Entities, LinkURL: in.LinkURL,
 	}, in.Secret)
 	if s.storeError(w, err) {
 		return
@@ -480,14 +512,15 @@ func (s *Server) refresh(r *http.Request, id string) {
 	}
 }
 
-// testConnection consulta el servicio una vez, sin guardar nada.
-func (s *Server) testConnection(w http.ResponseWriter, r *http.Request) {
+// connectionFromRequest prepara una integración con los datos del formulario, sin
+// guardar nada. Solo reutiliza la credencial guardada si la URL no ha cambiado.
+func (s *Server) connectionFromRequest(w http.ResponseWriter, r *http.Request) (integrations.Integration, bool) {
 	var in struct {
 		ID string `json:"id"`
 		connectionIn
 	}
 	if !decode(w, r, &in) {
-		return
+		return nil, false
 	}
 	if in.Secret != nil && *in.Secret == "" {
 		in.Secret = nil
@@ -497,13 +530,13 @@ func (s *Server) testConnection(w http.ResponseWriter, r *http.Request) {
 		var err error
 		current, err = s.store.GetConnection(r.Context(), in.ID)
 		if s.storeError(w, err) {
-			return
+			return nil, false
 		}
 		in.Type = current.Type
 	}
 	if code := validateConnection(&in.connectionIn); code != "" {
 		writeError(w, http.StatusBadRequest, code)
-		return
+		return nil, false
 	}
 	var secret string
 	switch {
@@ -511,33 +544,71 @@ func (s *Server) testConnection(w http.ResponseWriter, r *http.Request) {
 		secret = *in.Secret
 	case in.ID == "":
 		writeError(w, http.StatusBadRequest, "invalid_secret")
-		return
+		return nil, false
 	case in.BaseURL != current.BaseURL:
 		writeError(w, http.StatusBadRequest, "secret_required_for_url_change")
-		return
+		return nil, false
 	default:
 		var err error
 		secret, err = s.store.ConnectionSecret(r.Context(), in.ID)
 		if s.storeError(w, err) {
-			return
+			return nil, false
 		}
 	}
 	factory, supported := s.registry[in.Type]
 	if !supported {
 		writeError(w, http.StatusBadRequest, "not_supported")
+		return nil, false
+	}
+	return factory(integrations.Config{
+		BaseURL: in.BaseURL, Username: in.Username, Secret: secret, TLSSkipVerify: in.TLSSkipVerify,
+		Options: in.Options, Entities: in.Entities,
+	}), true
+}
+
+// testConnection consulta el servicio una vez, sin guardar nada.
+func (s *Server) testConnection(w http.ResponseWriter, r *http.Request) {
+	integration, ok := s.connectionFromRequest(w, r)
+	if !ok {
 		return
 	}
-	integration := factory(integrations.Config{
-		BaseURL: in.BaseURL, Username: in.Username, Secret: secret, TLSSkipVerify: in.TLSSkipVerify, Options: in.Options,
-	})
 	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 	defer cancel()
-	if _, err := integration.Collect(ctx); err != nil {
+	data, err := integration.Collect(ctx)
+	if err != nil {
 		s.log.Info("prueba de conexión fallida", "error", err)
 		writeJSON(w, http.StatusOK, map[string]any{"ok": false, "error": integrations.Code(err)})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+	response := map[string]any{"ok": true}
+	if noter, ok := data.(integrations.Noter); ok {
+		if notes := noter.Notes(); len(notes) > 0 {
+			response["notes"] = notes
+		}
+	}
+	writeJSON(w, http.StatusOK, response)
+}
+
+// listEntities devuelve las entidades que se pueden elegir en una conexión.
+func (s *Server) listEntities(w http.ResponseWriter, r *http.Request) {
+	integration, ok := s.connectionFromRequest(w, r)
+	if !ok {
+		return
+	}
+	lister, ok := integration.(integrations.EntityLister)
+	if !ok {
+		writeError(w, http.StatusBadRequest, "not_supported")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	defer cancel()
+	entities, err := lister.ListEntities(ctx)
+	if err != nil {
+		s.log.Info("no se pudieron listar las entidades", "error", err)
+		writeJSON(w, http.StatusOK, map[string]any{"ok": false, "error": integrations.Code(err)})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "entities": entities})
 }
 
 func (s *Server) dashboard(w http.ResponseWriter, _ *http.Request) {

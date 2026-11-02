@@ -4,10 +4,15 @@ import { api, type ConnectionState, type ConnectionType, type DashboardState } f
 import { Horizon, LanguageSwitch, Tower } from "./chrome";
 import { useI18n, type Language } from "./i18n";
 import { adguardWidget } from "./widgets/adguard";
+import { homeAssistantWidget } from "./widgets/homeassistant";
 import { proxmoxWidget } from "./widgets/proxmox";
 import type { Tone, Widget } from "./widgets/types";
 
-const WIDGETS: Partial<Record<ConnectionType, unknown>> = { adguard: adguardWidget, proxmox: proxmoxWidget };
+const WIDGETS: Partial<Record<ConnectionType, unknown>> = {
+  adguard: adguardWidget,
+  homeassistant: homeAssistantWidget,
+  proxmox: proxmoxWidget,
+};
 
 function useLiveDashboard() {
   const client = useQueryClient();
@@ -125,7 +130,21 @@ function Service({ connection }: { connection: ConnectionState }) {
   return (
     <section className={failed ? "service stale" : "service"}>
       <div className="service-head">
-        <h2>{connection.name}</h2>
+        <h2>
+          <a
+            className="service-link"
+            href={connection.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={t("service.open", { name: connection.name })}
+            title={connection.link}
+          >
+            {connection.name}
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M6 3H3v10h10v-3M9 3h4v4M13 3 7.5 8.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+          </a>
+        </h2>
         <StateLabel tone={state.tone}>{state.label}</StateLabel>
       </div>
       {failed && <p role="status" className="service-notice">{collectError(connection.error)}</p>}

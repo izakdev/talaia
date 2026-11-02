@@ -2,7 +2,7 @@
 
 Talaia es un panel para ver de un vistazo el estado de los servicios de tu laboratorio doméstico. Está pensado para usarlo como página inicial del navegador.
 
-> **Versión de este manual:** hito 3, en desarrollo. Hoy muestran datos AdGuard Home y Proxmox VE. Home Assistant se puede configurar, pero todavía no aparece en el panel. Consulta las [limitaciones actuales](#limitaciones-actuales).
+> **Versión de este manual:** hito 4, en desarrollo. Hoy muestran datos AdGuard Home, Proxmox VE y Home Assistant. Consulta las [limitaciones actuales](#limitaciones-actuales).
 
 ## Índice
 
@@ -61,7 +61,7 @@ Si aún no hay servicios, te lleva a la administración para añadirlos:
 
 ![Panel sin servicios](img/02-panel-vacio.png)
 
-Cuando hay servicios, cada uno tiene su propio bloque:
+Cuando hay servicios, cada uno tiene su propio bloque. Su nombre es un enlace que abre el servicio en una pestaña nueva:
 
 ![Panel con un servicio de AdGuard](img/07-panel.png)
 
@@ -109,6 +109,31 @@ Si tienes activo el detalle, pulsa un nodo para ver sus VM y LXC:
 
 ![Detalle de las VM y LXC de un nodo](img/12-proxmox-detalle.png)
 
+**Estado de Home Assistant:**
+
+| Indicador | Significado |
+|---|---|
+| Círculo verde: **En marcha** | Funciona y las entidades elegidas tienen datos |
+| Triángulo ámbar: **Entidades sin datos: N** | Alguna entidad está no disponible, es desconocida o ya no existe |
+| Triángulo ámbar: **Arrancando** | Home Assistant no ha terminado de arrancar o se está deteniendo |
+| Triángulo ámbar: **Modo seguro** | Se ha iniciado con las integraciones personalizadas desactivadas |
+| Cuadrado rojo: **Modo de recuperación** | La configuración tiene errores y funciona con lo mínimo |
+| Cuadrado rojo: **Con fallos** | Talaia no puede consultar el servicio |
+
+**Datos de Home Assistant:**
+
+![Panel con Home Assistant](img/14-panel-home-assistant.png)
+
+| Sección | Contenido |
+|---|---|
+| Recursos | CPU y RAM de Home Assistant, y disco y último arranque del equipo. Requiere [Supervisor y un token de administrador](#home-assistant) |
+| Resumen | Luces, interruptores y otros elementos activos sobre el total, y número de entidades, no disponibles, actualizaciones pendientes e integraciones |
+| Consumos y Entidades | Las entidades que elijas |
+
+La CPU y la RAM son las de Home Assistant, no las del equipo completo.
+
+Solo aparecen las entidades que elijas. Los sensores de potencia y energía van en **Consumos** y el resto en **Entidades**. Los consumos no se suman, para no contar dos veces un medidor general y sus enchufes: si quieres un total, crea un sensor agregado en Home Assistant y elígelo aquí.
+
 **Si un servicio falla,** su bloque indica el motivo y mantiene atenuado el último dato conocido, junto con su antigüedad. Se recupera solo cuando el servicio vuelve.
 
 ![Bloque de un servicio con fallos](img/09-panel-con-fallos.png)
@@ -130,12 +155,12 @@ En **Conexiones** ves tus servicios, su configuración y si funcionan:
 ## Añadir una conexión
 
 1. En **Conexiones**, pulsa **Añadir conexión**.
-2. Busca o elige el servicio. Los marcados con **Sin datos todavía** se pueden guardar, pero aún no aparecen en el panel.
+2. Busca o elige el servicio.
 
    ![Catálogo de servicios](img/04-catalogo.png)
 
 3. Rellena el formulario.
-4. Pulsa **Probar conexión**, si está disponible. No guarda nada.
+4. Pulsa **Probar conexión**. No guarda nada.
 5. Pulsa **Guardar**.
 
 ![Formulario de conexión de AdGuard](img/05-formulario-adguard.png)
@@ -147,6 +172,7 @@ En **Conexiones** ves tus servicios, su configuración y si funcionan:
 | Nombre | Cómo quieres verlo en el panel |
 | URL | Dirección del servicio con `http://` o `https://` y su puerto |
 | Refresco | Cada cuántos segundos se consulta, de 5 a 3600 |
+| Enlace para abrir el servicio | Opcional. La dirección que usas en el navegador, si es distinta de la URL. Vacío, se usa la URL |
 | No verificar el certificado TLS | Solo para certificados autofirmados en una red de confianza |
 
 Talaia, no tu navegador, es quien se conecta al servicio. La URL debe ser accesible desde el equipo donde se ejecuta Talaia.
@@ -194,7 +220,33 @@ El tercer comando muestra el valor del token una sola vez. Cópialo.
 
 ### Home Assistant
 
-Se puede guardar, pero todavía no se muestran datos. Usa un token de larga duración, que se crea en tu perfil de Home Assistant, en **Seguridad**.
+Crea el token en Home Assistant: entra en tu perfil, abre **Seguridad** y, en **Tokens de acceso de larga duración**, pulsa **Crear token**. Se muestra una sola vez, así que cópialo.
+
+| Campo | Qué poner |
+|---|---|
+| URL | La de tu Home Assistant, por ejemplo `http://homeassistant.local:8123` |
+| Token de larga duración | El que has copiado |
+| Entidades en el panel | Las que quieras ver |
+| Mostrar el resumen | Activado por defecto. Solo cuenta elementos, sin personas, cerraduras, alarmas ni puertas |
+
+**Para elegir las entidades:**
+
+1. Rellena la URL y el token, y pulsa **Cargar entidades**.
+2. Busca por nombre o identificador, o filtra por **Consumos** o **Seleccionadas**.
+3. Marca las que quieras ver, hasta 200.
+
+![Selector de entidades](img/13-selector-entidades.png)
+
+**Datos visibles:** cualquiera que pueda abrir el panel verá el nombre y el estado de las entidades elegidas. Ten cuidado con las que revelen información personal, como la ubicación de una persona o una alarma. Las que no elijas no salen de Talaia.
+
+**CPU, memoria y disco:** Home Assistant solo los ofrece con estas dos condiciones:
+
+- Una instalación con Supervisor, como Home Assistant OS.
+- Un token de un usuario administrador. Talaia solo lee, pero ese token tiene todos los permisos de administración, así que protégelo.
+
+Si no se cumplen, **Probar conexión** te lo indica y el resto del bloque funciona igual. Si no quieres usar un token de administrador, o tu instalación no tiene Supervisor, activa la integración System Monitor en Home Assistant y elige sus sensores como entidades.
+
+**Si actualizas desde una versión anterior:** las conexiones ya guardadas tienen el resumen desactivado hasta que lo actives al editarlas.
 
 ## Editar y eliminar conexiones
 
@@ -213,6 +265,7 @@ Se puede guardar, pero todavía no se muestran datos. Usa un token de larga dura
 ## Seguridad y acceso remoto
 
 - **El panel es público:** cualquiera que llegue a su puerto puede ver el estado de tus servicios. **No lo publiques en Internet** sin protegerlo con otra capa, como una VPN o la autenticación de un proxy inverso.
+- **Enlaces:** cualquiera que abra el panel ve la dirección de cada servicio. Si no quieres mostrar la URL interna, configura un enlace propio en la conexión.
 - **Credenciales:** se guardan cifradas y nunca se muestran.
 - **HTTPS:** Talaia sirve HTTP. Para usar HTTPS, ponlo detrás de un proxy inverso, como Nginx Proxy Manager, que envíe la cabecera `X-Forwarded-Proto`.
 - **Detrás de un proxy:** Talaia ve la IP del proxy, de modo que los inicios de sesión fallidos cuentan para todos los clientes.
@@ -254,11 +307,13 @@ Toda la configuración está en la carpeta de datos:
 | «Demasiados intentos fallidos» | Espera 15 minutos o reinicia Talaia |
 | He olvidado la contraseña | Aún no se puede recuperar. Para Talaia, borra la carpeta de datos y empieza de cero: perderás las conexiones |
 | El panel no se actualiza detrás de un proxy | Comprueba que el proxy no retenga las respuestas de `/api/dashboard/events` |
-| Un servicio no aparece en el panel | Si en **Conexiones** indica «Lectura de datos aún no disponible», su integración todavía no existe |
+| No aparecen CPU, memoria ni disco | Pulsa **Probar conexión**. Requieren Supervisor y un token de administrador |
+| El enlace de un servicio no abre | Talaia usa la URL de conexión, que puede no ser accesible desde tu navegador. Configura un enlace propio en la conexión |
+| Una entidad aparece como **No encontrada** | Ya no existe en Home Assistant o ha cambiado de identificador. Edita la conexión y actualiza la selección |
+| Home Assistant tarda mucho o da error de tiempo de espera | En instalaciones muy grandes, sube el refresco, por ejemplo a 60 segundos |
 
 ## Limitaciones actuales
 
-- Home Assistant todavía no muestra datos.
 - La vista de Proxmox no incluye el almacenamiento.
 - No se puede elegir qué aparece en el panel ni colocarlo: se muestran todas las conexiones con integración, por orden alfabético.
 - El panel no tiene inicio de sesión.

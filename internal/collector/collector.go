@@ -29,11 +29,13 @@ const (
 	CodeSecretUnreadable = "secret_unreadable"
 )
 
-// Snapshot es el estado público de una conexión: sin URL, usuario ni credenciales.
+// Snapshot es el estado público de una conexión: sin usuario ni credenciales. Link es
+// la dirección para abrir el servicio, que el administrador puede sustituir.
 type Snapshot struct {
 	ID            string     `json:"id"`
 	Name          string     `json:"name"`
 	Type          string     `json:"type"`
+	Link          string     `json:"link"`
 	Status        string     `json:"status"`
 	Error         string     `json:"error,omitempty"`
 	Data          any        `json:"data"`
@@ -126,19 +128,19 @@ func (m *Manager) start(c store.Connection) {
 	}
 
 	// Los datos de otro destino no pertenecen a esta configuración.
-	// Tampoco los que una opción acaba de ocultar.
+	// Tampoco los que una opción o selección acaba de ocultar.
 	options, err := json.Marshal(c.Options)
 	if err != nil {
 		m.log.Error("no se pueden leer las opciones", "conexion", c.ID, "error", err)
 		return
 	}
-	target := strings.Join([]string{c.BaseURL, c.Username, string(options)}, "\x00")
-	snapshot := Snapshot{ID: c.ID, Name: c.Name, Type: c.Type, Status: StatusPending}
+	target := strings.Join(append([]string{c.BaseURL, c.Username, string(options)}, c.Entities...), "\x00")
+	snapshot := Snapshot{ID: c.ID, Name: c.Name, Type: c.Type, Link: c.Link(), Status: StatusPending}
 	if old, ok := m.items[c.ID]; ok {
 		old.cancel()
 		if old.target == target {
 			snapshot = old.snapshot
-			snapshot.Name = c.Name
+			snapshot.Name, snapshot.Link = c.Name, c.Link()
 		}
 	}
 	ctx, cancel := context.WithCancel(m.base)
@@ -165,7 +167,7 @@ func (m *Manager) run(ctx context.Context, c store.Connection, factory func(inte
 		return
 	}
 	integration := factory(integrations.Config{
-		BaseURL: c.BaseURL, Username: c.Username, Secret: secret, TLSSkipVerify: c.TLSSkipVerify, Options: c.Options,
+		BaseURL: c.BaseURL, Username: c.Username, Secret: secret, TLSSkipVerify: c.TLSSkipVerify, Options: c.Options, Entities: c.Entities,
 	})
 	ticker := time.NewTicker(time.Duration(c.IntervalSeconds) * time.Second)
 	defer ticker.Stop()

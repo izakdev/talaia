@@ -8,6 +8,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import { fakeAdGuard, PASSWORD, USER } from "./fake-adguard.mjs";
+import { fakeHomeAssistant, HA_TOKEN } from "./fake-homeassistant.mjs";
 import { fakeProxmox, TOKEN } from "./fake-proxmox.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -17,6 +18,7 @@ const ADMIN = { user: "admin", password: "una-clave-bien-larga" };
 
 const adguard = fakeAdGuard(13000);
 const proxmox = fakeProxmox(13001);
+const homeAssistant = fakeHomeAssistant(13002);
 const dataDir = mkdtempSync(join(tmpdir(), "talaia-e2e-"));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -180,17 +182,15 @@ const scenarios = [
     await adguard.start();
     await page.getByText("Protección activa").waitFor();
   }],
-  ["E2E-10", "Servicio sin integración disponible", async () => {
+  ["E2E-10", "Conexión guardada con un servicio inaccesible", async () => {
     await toAdmin();
     await page.getByRole("link", { name: "Añadir conexión" }).click();
     await page.getByRole("button", { name: /Home Assistant/ }).click();
-    assert.equal(await page.getByRole("button", { name: "Probar conexión" }).count(), 0);
     await page.getByLabel("Nombre", { exact: true }).fill("Casa");
-    await page.getByLabel("URL", { exact: true }).fill("http://homeassistant.example:8123");
+    await page.getByLabel("URL", { exact: true }).fill("http://127.0.0.1:9");
     await page.locator("dialog input[type=password]").fill("token-de-larga-duracion");
     await page.getByRole("button", { name: "Guardar" }).click();
-    await row("Casa").getByText("aún no disponible").waitFor();
-    assert.doesNotMatch(await publicDashboard(), /Casa/);
+    await row("Casa").getByText("No se puede conectar").waitFor();
   }],
   ["E2E-11", "Editar y eliminar conexiones", async () => {
     await row("Casa").getByRole("button", { name: "Editar" }).click();
@@ -272,6 +272,114 @@ const scenarios = [
     assert.equal(await block.locator(".nodes > li").count(), 3);
     await toAdmin();
   }],
+  ["E2E-20", "Alta de Home Assistant con selección de entidades", async () => {
+    await page.getByRole("link", { name: "Añadir conexión" }).click();
+    await page.getByRole("button", { name: /Home Assistant/ }).click();
+    await page.getByLabel("Nombre", { exact: true }).fill("Domótica");
+    await page.getByLabel("URL", { exact: true }).fill(homeAssistant.url);
+    await page.locator("dialog input[type=number]").fill("5");
+    const secret = page.locator("dialog input[type=password]");
+    await secret.fill("token-incorrecto");
+    await page.getByRole("button", { name: "Cargar entidades" }).click();
+    await page.getByRole("alert").getByText("Credenciales rechazadas").waitFor();
+    await secret.fill(HA_TOKEN);
+    await page.getByRole("button", { name: "Cargar entidades" }).click();
+    const list = page.locator(".picker-list");
+    await list.getByText("Potencia de casa").waitFor();
+    assert.equal(await list.locator("li").count(), 11);
+    assert.equal(await page.getByLabel(/resumen de luces/).isChecked(), true);
+    await page.getByRole("radio", { name: "Consumos" }).check();
+    assert.equal(await list.locator("li").count(), 2);
+    await list.getByLabel(/Potencia de casa/).check();
+    await list.getByLabel(/Energía de casa/).check();
+    await page.getByRole("radio", { name: "Todas" }).check();
+    await page.getByLabel("Buscar entidad").fill("salon");
+    assert.equal(await list.locator("li").count(), 1);
+    await list.getByLabel(/Luz del salón/).check();
+    await page.getByLabel("Buscar entidad").fill("");
+    await list.getByLabel(/Sensor de puerta/).check();
+    await page.getByLabel("Buscar entidad").fill("");
+    await page.getByRole("status").getByText("4 seleccionadas").waitFor();
+    await list.evaluate((el) => el.scrollIntoView({ block: "center" }));
+    await shot(page, "13-selector-entidades");
+    await page.getByRole("button", { name: "Probar conexión" }).click();
+    await page.locator("dialog p[role=status]").getByText("Conexión correcta").waitFor();
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await row("Domótica").getByText("Funciona").waitFor();
+  }],
+  ["E2E-21", "Home Assistant en el panel: consumos, entidades y cambios en vivo", async () => {
+    await toDashboard();
+    const block = page.locator(".service", { hasText: "Domótica" });
+    const state = block.locator(".service-state");
+    await state.getByText("En marcha").waitFor();
+    await block.getByText("412,5 W").waitFor();
+    await block.getByText(/1\.?204,3 kWh/).waitFor();
+    const resources = await block.locator(".ha-section", { hasText: "Recursos" }).innerText();
+    assert.match(resources, /CPU\s+12 %/);
+    assert.match(resources, /RAM\s+25 %/);
+    assert.match(resources, /Disco\s+25 %/);
+    assert.match(resources, /Equipo encendido hace 3 días/);
+    const summary = await block.locator(".ha-section", { hasText: "Resumen" }).innerText();
+    assert.match(summary, /Luces encendidas\s+1\/1/);
+    assert.match(summary, /Interruptores activos\s+1\/1/);
+    assert.match(summary, /Automatizaciones activas\s+1\/1/);
+    assert.match(summary, /Actualizaciones pendientes\s+1/);
+    const light = block.locator(".ha-entities li", { hasText: "Luz del salón" });
+    await light.getByText("Encendido").waitFor();
+    await shot(block, "14-panel-home-assistant");
+    homeAssistant.state.light = "off";
+    await light.getByText("Apagado").waitFor();
+    homeAssistant.state.light = "on";
+    homeAssistant.state.door = "unavailable";
+    await block.getByText("Entidades sin datos: 1").waitFor();
+    await block.locator(".ha-entities li", { hasText: "Sensor de puerta" }).getByText("No disponible").waitFor();
+    homeAssistant.state.door = "off";
+    await state.getByText("En marcha").waitFor();
+    homeAssistant.state.starting = true;
+    await state.getByText("Arrancando").waitFor();
+    homeAssistant.state.starting = false;
+    await state.getByText("En marcha").waitFor();
+  }],
+  ["E2E-22", "Solo las entidades elegidas salen por la API pública", async () => {
+    let body = await publicDashboard();
+    assert.match(body, /Potencia de casa/);
+    assert.doesNotMatch(body, /Persona privada|person\.|Casa privada|latitude|Cerradura privada|lock\.|nombre-privado/);
+    await toAdmin();
+    await row("Domótica").getByRole("button", { name: "Editar" }).click();
+    await page.getByRole("status").getByText("4 seleccionadas").waitFor();
+    await page.getByRole("button", { name: "Cargar entidades" }).click();
+    const list = page.locator(".picker-list");
+    await page.getByRole("radio", { name: "Seleccionadas" }).check();
+    assert.equal(await list.locator("li").count(), 4);
+    await list.getByLabel(/Potencia de casa/).click();
+    await page.getByRole("status").getByText("3 seleccionadas").waitFor();
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await page.locator("dialog").waitFor({ state: "detached" });
+    body = await publicDashboard();
+    assert.doesNotMatch(body, /Potencia de casa/);
+  }],
+  ["E2E-23", "Enlace a cada servicio desde su bloque", async () => {
+    await toDashboard();
+    const adguardLink = page.locator(".service", { hasText: "AdGuard principal" }).locator(".service-link");
+    assert.equal(await adguardLink.getAttribute("href"), adguard.url);
+    assert.equal(await adguardLink.getAttribute("target"), "_blank");
+    assert.match(await adguardLink.getAttribute("rel"), /noopener/);
+    await toAdmin();
+    await row("Domótica").getByRole("button", { name: "Editar" }).click();
+    const link = page.getByLabel(/Enlace para abrir/);
+    await link.fill("javascript:alert(1)");
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await page.getByRole("alert").getByText("El enlace debe empezar").waitFor();
+    await link.fill("https://domotica.example/inicio");
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await page.locator("dialog").waitFor({ state: "detached" });
+    await toDashboard();
+    const homeLink = page.locator(".service", { hasText: "Domótica" }).locator(".service-link");
+    await homeLink.waitFor();
+    assert.equal(await homeLink.getAttribute("href"), "https://domotica.example/inicio");
+    assert.doesNotMatch(await publicDashboard(), /localhost:13002/);
+    await toAdmin();
+  }],
   ["E2E-12", "Cambio de idioma recordado", async () => {
     await page.getByRole("button", { name: "English" }).click();
     await page.getByRole("heading", { name: "Connections", exact: true }).waitFor();
@@ -301,7 +409,7 @@ const scenarios = [
   }],
   ["E2E-14", "La API pública no expone configuración ni credenciales", async () => {
     const body = await publicDashboard();
-    for (const leak of [USER, PASSWORD, TOKEN, "localhost:13000", "localhost:13001", "192.0.2.11", "base_url", "secret"]) {
+    for (const leak of [USER, PASSWORD, TOKEN, HA_TOKEN, "localhost:13002", "192.0.2.11", "base_url", "link_url", "secret"]) {
       assert.equal(body.includes(leak), false, leak);
     }
     const headers = (await fetch(BASE)).headers;
@@ -317,6 +425,7 @@ let failed = 0;
 try {
   await adguard.start();
   await proxmox.start();
+  await homeAssistant.start();
   await waitForServer();
   for (const [id, title, run] of scenarios) {
     try {
@@ -333,6 +442,7 @@ try {
   talaia.kill("SIGTERM");
   await adguard.stop().catch(() => {});
   await proxmox.stop().catch(() => {});
+  await homeAssistant.stop().catch(() => {});
   rmSync(dataDir, { recursive: true, force: true });
 }
 if (failed) process.exit(1);

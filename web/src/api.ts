@@ -15,6 +15,8 @@ export interface Connection {
   interval_seconds: number;
   tls_skip_verify: boolean;
   options: Record<string, boolean> | null;
+  entities: string[] | null;
+  link_url: string;
   updated_at: string;
 }
 
@@ -27,6 +29,50 @@ export interface ConnectionInput {
   interval_seconds: number;
   tls_skip_verify: boolean;
   options: Record<string, boolean>;
+  entities: string[];
+  link_url: string;
+}
+
+export interface EntityOption {
+  entity_id: string;
+  name: string;
+  state: string;
+  unit?: string;
+  device_class?: string;
+}
+
+export interface EntitiesResult {
+  ok: boolean;
+  error?: string;
+  entities?: EntityOption[];
+}
+
+export interface HomeAssistantSystem {
+  cpu_percent: number;
+  memory_percent: number;
+  memory_used: number;
+  memory_limit: number;
+  disk_used: number;
+  disk_total: number;
+  booted_at?: number;
+}
+
+export interface HomeAssistantSummary {
+  domains: { domain: string; active: number; total: number }[];
+  entities: number;
+  unavailable: number;
+  updates: number;
+  integrations: number;
+}
+
+export interface HomeAssistantData {
+  version: string;
+  state: string;
+  safe_mode: boolean;
+  recovery_mode: boolean;
+  entities: EntityOption[];
+  system?: HomeAssistantSystem;
+  summary?: HomeAssistantSummary;
 }
 
 export interface DomainCount {
@@ -97,6 +143,7 @@ export interface ConnectionState {
   id: string;
   name: string;
   type: ConnectionType;
+  link: string;
   status: "pending" | "ok" | "error";
   error?: string;
   data: unknown;
@@ -111,6 +158,7 @@ export interface DashboardState {
 export interface TestResult {
   ok: boolean;
   error?: string;
+  notes?: string[];
 }
 
 export class ApiError extends Error {
@@ -151,6 +199,8 @@ export const api = {
     request<Connection>("PUT", `/api/admin/connections/${encodeURIComponent(id)}`, input),
   testConnection: (input: ConnectionInput & { id?: string }) =>
     request<TestResult>("POST", "/api/admin/connections/test", input),
+  listEntities: (input: ConnectionInput & { id?: string }) =>
+    request<EntitiesResult>("POST", "/api/admin/connections/entities", input),
   dashboard: () => request<DashboardState>("GET", "/api/dashboard"),
   deleteConnection: (id: string) => request("DELETE", `/api/admin/connections/${encodeURIComponent(id)}`),
 };

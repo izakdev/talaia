@@ -73,3 +73,34 @@ Cada decisión recoge su motivo y sus consecuencias. Si una decisión cambia, se
 - **Contexto:** el cliente puede aprobar la continuación sin fusionar todavía el pull request anterior.
 - **Decisión:** la rama del hito parte de la anterior, y su pull request apunta a ella para que muestre solo los cambios nuevos.
 - **Consecuencias:** hay que fusionar los pull requests por orden.
+
+## DEC-15: entidades de Home Assistant elegidas una a una
+- **Contexto:** una instalación puede tener miles de entidades, y algunas revelan datos personales, como la ubicación de una persona.
+- **Decisión:** por defecto no se muestra ninguna. Se eligen en un selector con búsqueda y filtros, y solo las elegidas salen por la API pública.
+- **Consecuencias:** configurarlo lleva algo más de trabajo, a cambio de una vista rápida y sin exponer datos por sorpresa. En el hito 5 habrá que decidir si la selección pasa al widget, como en DEC-08.
+
+## DEC-16: consumos sin sumar
+- **Contexto:** sumar todos los sensores de potencia contaría dos veces un medidor general y los enchufes que cuelgan de él. Además, un sensor de energía puede ser acumulado o diario.
+- **Decisión:** cada sensor elegido se muestra con su valor y su unidad, sin totales.
+- **Consecuencias:** las cifras coinciden siempre con Home Assistant. Quien quiera un total puede crear un sensor agregado allí y elegirlo aquí.
+
+## DEC-17: consultar todos los estados de una vez
+- **Contexto:** se podría pedir cada entidad con `/api/states/<entity_id>`, pero con 200 entidades serían 200 peticiones por ciclo.
+- **Decisión:** una sola consulta a `/api/states`, solo si hay selección, y límite de respuesta ampliado a 32 MiB.
+- **Consecuencias:** en instalaciones muy grandes, cada ciclo descarga todas las entidades. Se puede aliviar con un intervalo de refresco mayor.
+
+## DEC-18: recursos de Home Assistant por WebSocket
+- **Contexto:** el cliente quiere ver CPU y memoria. La API REST no las ofrece, y su proxy hacia Supervisor no permite esas rutas.
+- **Decisión:** usar el comando `supervisor/api` del WebSocket de Home Assistant, con `/core/stats` y `/host/info`, sin que su fallo afecte al resto del bloque.
+- **Alternativa:** los sensores de System Monitor se pueden elegir como entidades, y sirven en instalaciones sin Supervisor.
+- **Consecuencias:** nueva dependencia, `coder/websocket`, y conviene dar a Talaia un token de administrador si se quieren los recursos. Sustituye la recomendación de usar un usuario sin permisos cuando se necesiten estos datos.
+
+## DEC-19: enlace al servicio en la API pública
+- **Contexto:** el cliente quiere abrir cada servicio desde su bloque. Hasta ahora la API pública no exponía ninguna URL.
+- **Decisión:** cada estado incluye un enlace: una dirección propia si se configura, o la URL de conexión. Se admiten solo `http` y `https`, sin credenciales.
+- **Consecuencias:** cualquiera que abra el panel ve esas direcciones, y una dirección propia evita mostrar la URL interna. Sigue sin publicarse ningún usuario ni credencial.
+
+## DEC-20: resumen de Home Assistant sin datos de seguridad
+- **Contexto:** el panel no exige inicio de sesión, y un contador puede revelar si hay alguien en casa o si una puerta está abierta.
+- **Decisión:** el resumen excluye personas, cerraduras, alarmas, y puertas, garajes y verjas. Los grupos tampoco cuentan, para no contar dos veces a sus miembros.
+- **Consecuencias:** quien quiera ver esos datos puede elegir las entidades concretas, bajo su responsabilidad.

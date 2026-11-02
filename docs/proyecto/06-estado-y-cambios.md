@@ -7,11 +7,26 @@
 | 1 | Base: repositorio, CI, autenticación, SQLite y conexiones | Terminado, en `main` |
 | 2 | AdGuard y flujo completo, catálogo de servicios y documentación | Terminado y validado por el cliente, en `main` |
 | 3 | Proxmox: visión agregada y detalle por nodo | Terminado y verificado con un clúster real, en `main` |
-| 4 | Home Assistant: estado, entidades y consumos | Pendiente |
-| 5 | Editor: rejilla, varias páginas, temas y login opcional | Pendiente |
+| 4 | Home Assistant: estado, entidades, consumos, recursos y resumen; enlace a cada servicio | Terminado y verificado con la instalación del cliente, en `main` |
+| 5 | Editor: rejilla, varias páginas y temas; login opcional; cambio y recuperación de contraseña | Pendiente |
 | 6 | Distribución: instalador LXC, actualización y documentación final | Pendiente |
 
 ## Historial
+
+### Hito 4 (2026-11-02)
+
+**Añadido:**
+- Integración de Home Assistant con estado, consumos y entidades elegidas.
+- Selector de entidades con búsqueda y filtros.
+- Detección de arranque, modo seguro y modo de recuperación.
+- CPU, memoria, disco y arranque desde Supervisor, a petición del cliente.
+- Resumen de luces, interruptores y otros elementos activos, a petición del cliente.
+- Enlace al servicio en todos los bloques, con dirección propia opcional, a petición del cliente.
+
+**Cambiado:**
+- Desaparece el aviso «Sin datos todavía» del catálogo, porque todos los servicios ya leen datos.
+- El límite de respuesta de los servicios sube de 8 a 32 MiB.
+- El cambio y la recuperación de contraseña se planifican en el hito 5, a petición del cliente.
 
 ### Hito 3 (2026-11-02)
 
@@ -54,9 +69,13 @@
 
 | Limitación | Impacto | Previsión |
 |---|---|---|
-| No se puede cambiar ni recuperar la contraseña | Olvidarla obliga a empezar de cero | RF-08, sin hito asignado |
+| No se puede cambiar ni recuperar la contraseña | Olvidarla obliga a empezar de cero | RF-08, hito 5 |
 | Sin instalador | Hay que compilar o copiar el binario y crear el servicio a mano | Hito 6 |
-| Home Assistant no se consulta | Se puede guardar, pero no aparece en el dashboard | Hito 4 |
+| CPU, memoria y disco de Home Assistant requieren Supervisor y token de administrador | Otras instalaciones no los muestran; pueden elegir sensores de System Monitor | Por diseño de Home Assistant |
+| El disco de Home Assistant se muestra en GiB | Las cifras son algo menores que los GB que muestra Home Assistant, aunque el porcentaje coincide | Bajo demanda |
+| Home Assistant sin probar con miles de entidades | Cada ciclo descarga todas las entidades, y podría tardar | Si se da el caso, subir el refresco |
+| Estados de Home Assistant sin traducir | Salvo encendido, apagado y sin datos, se muestran como llegan, por ejemplo `heat` | Bajo demanda |
+| Los consumos no se suman | No hay un total automático | Por diseño: se puede crear un sensor agregado en Home Assistant |
 | Nodo caído, pérdida de quórum y nodo independiente solo probados con simulador | Puede haber diferencias en esos casos | Al darse la ocasión |
 | Sin almacenamiento en la vista de Proxmox | Solo se ve el disco de cada nodo | Bajo demanda |
 | El dashboard muestra todas las conexiones con integración, en orden alfabético | No se puede elegir ni colocar | Hito 5 |

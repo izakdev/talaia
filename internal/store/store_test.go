@@ -119,10 +119,41 @@ func TestOptionsArePersisted(t *testing.T) {
 	}
 }
 
+func TestEntitiesArePersisted(t *testing.T) {
+	s, _ := newStore(t)
+	ctx := context.Background()
+	c, err := s.CreateConnection(ctx, Connection{Name: "a", Type: "homeassistant", BaseURL: "http://x", IntervalSeconds: 30, Entities: []string{"light.salon"}}, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(c.Entities) != 1 || c.Entities[0] != "light.salon" {
+		t.Fatalf("entidades = %v", c.Entities)
+	}
+	c.Entities = nil
+	if c, err = s.UpdateConnection(ctx, c, nil); err != nil || len(c.Entities) != 0 {
+		t.Fatalf("entidades = %v, err = %v", c.Entities, err)
+	}
+}
+
+func TestLinkFallsBackToConnectionURL(t *testing.T) {
+	s, _ := newStore(t)
+	c, err := s.CreateConnection(context.Background(), Connection{Name: "a", Type: "adguard", BaseURL: "http://interna", IntervalSeconds: 30}, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Link() != "http://interna" {
+		t.Fatalf("enlace = %s", c.Link())
+	}
+	c.LinkURL = "https://servicio.example/panel"
+	if c, err = s.UpdateConnection(context.Background(), c, nil); err != nil || c.Link() != "https://servicio.example/panel" {
+		t.Fatalf("enlace = %s, err = %v", c.Link(), err)
+	}
+}
+
 func TestMigratesExistingDatabase(t *testing.T) {
 	s, path := newStore(t)
 	ctx := context.Background()
-	if _, err := s.db.Exec(`ALTER TABLE connections DROP COLUMN options; PRAGMA user_version = 1;`); err != nil {
+	if _, err := s.db.Exec(`ALTER TABLE connections DROP COLUMN link_url; ALTER TABLE connections DROP COLUMN entities; ALTER TABLE connections DROP COLUMN options; PRAGMA user_version = 1;`); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.db.Exec(`INSERT INTO connections(id, name, type, base_url, secret, interval_seconds, created_at, updated_at)
@@ -137,7 +168,7 @@ func TestMigratesExistingDatabase(t *testing.T) {
 	}
 	defer s2.Close()
 	c, err := s2.GetConnection(ctx, "v1")
-	if err != nil || c.Name != "antigua" || c.Options["show_top_domains"] {
+	if err != nil || c.Name != "antigua" || c.Options["show_top_domains"] || len(c.Entities) != 0 {
 		t.Fatalf("c = %+v, err = %v", c, err)
 	}
 }
