@@ -50,7 +50,7 @@ export default function App() {
       </Horizon>
     );
   }
-  if (state.data.setup_required) return <Credentials mode="setup" />;
+  if (state.data.setup_required) return <Credentials mode="setup" tokenRequired={state.data.setup_token_required} />;
   if (path.startsWith("/admin")) {
     return state.data.user ? (
       <Admin user={state.data.user} version={state.data.version} path={path} navigate={navigate} />
@@ -62,13 +62,25 @@ export default function App() {
   return <Dashboard path={path} navigate={navigate} />;
 }
 
-function Credentials({ mode, title }: { mode: "setup" | "login"; title?: string }) {
+// El instalador da un enlace con el código, que se quita de la barra de direcciones.
+function takeSetupTokenFromUrl() {
+  const url = new URL(window.location.href);
+  const token = url.searchParams.get("setup") ?? "";
+  if (token) {
+    url.searchParams.delete("setup");
+    window.history.replaceState(null, "", url);
+  }
+  return token;
+}
+
+function Credentials({ mode, title, tokenRequired }: { mode: "setup" | "login"; title?: string; tokenRequired?: boolean }) {
   const { t, errorText } = useI18n();
   const client = useQueryClient();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [token, setToken] = useState(takeSetupTokenFromUrl);
   const submit = useMutation({
-    mutationFn: () => (mode === "setup" ? api.setup(username, password) : api.login(username, password)),
+    mutationFn: () => (mode === "setup" ? api.setup(username, password, token) : api.login(username, password)),
     onSuccess: () => {
       setPassword("");
       return client.invalidateQueries({ queryKey: ["state"] });
@@ -83,6 +95,13 @@ function Credentials({ mode, title }: { mode: "setup" | "login"; title?: string 
       <h1>{title ?? t(mode === "setup" ? "setup.title" : "login.title")}</h1>
       {mode === "setup" && <p>{t("setup.lead")}</p>}
       <form className="stack" onSubmit={onSubmit}>
+        {tokenRequired && (
+          <label>
+            {t("setup.token")}
+            <input value={token} onChange={(e) => setToken(e.target.value)} autoComplete="off" required />
+            <small>{t("setup.token.hint")}</small>
+          </label>
+        )}
         <label>
           {t("field.username")}
           <input

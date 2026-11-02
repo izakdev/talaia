@@ -100,6 +100,7 @@ func run(log *slog.Logger) error {
 	addr := flag.String("listen", env("TALAIA_LISTEN", ":8080"), "dirección de escucha")
 	dataDir := flag.String("data", env("TALAIA_DATA_DIR", "data"), "directorio de datos")
 	keyFile := flag.String("key-file", env("TALAIA_KEY_FILE", ""), "archivo de la clave de cifrado (por defecto, dentro del directorio de datos)")
+	setupToken := flag.String("setup-token-file", env("TALAIA_SETUP_TOKEN_FILE", ""), "archivo con el código que protege el primer arranque")
 	showVersion := flag.Bool("version", false, "muestra la versión")
 	flag.Parse()
 	if *showVersion {
@@ -119,6 +120,7 @@ func run(log *slog.Logger) error {
 	if err != nil {
 		return err
 	}
+	server.SetupTokenFile = *setupToken
 	httpServer := &http.Server{
 		Addr:              *addr,
 		Handler:           server.Handler(),

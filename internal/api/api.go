@@ -3,6 +3,7 @@ package api
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"regexp"
 	"slices"
@@ -53,6 +55,8 @@ type Server struct {
 	failures  *failureLimiter
 	collector *collector.Manager
 	registry  integrations.Registry
+	// SetupTokenFile, si existe ese archivo, protege el primer arranque con su contenido.
+	SetupTokenFile string
 }
 
 // New crea el servidor. web puede estar vacío si el frontend no se ha compilado.
@@ -180,8 +184,13 @@ func (s *Server) state(w http.ResponseWriter, r *http.Request) {
 		s.internal(w, err)
 		return
 	}
+	tokenRequired, err := s.setupTokenRequired(needSetup)
+	if err != nil {
+		s.internal(w, err)
+		return
+	}
 	resp := map[string]any{
-		"setup_required": needSetup, "version": s.version, "user": nil,
+		"setup_required": needSetup, "setup_token_required": tokenRequired, "version": s.version, "user": nil,
 		"theme": settings.Theme, "accent": settings.Accent, "require_login": settings.RequireLogin,
 	}
 	if u, err := s.currentUser(r); err == nil {
@@ -196,6 +205,29 @@ func (s *Server) state(w http.ResponseWriter, r *http.Request) {
 type credentials struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+	Token    string `json:"token,omitempty"`
+}
+
+func (s *Server) setupTokenRequired(needSetup bool) (bool, error) {
+	if !needSetup || s.SetupTokenFile == "" {
+		return false, nil
+	}
+	_, err := os.Stat(s.SetupTokenFile)
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+// validSetupToken compara el código en tiempo constante. Si no se puede leer o está
+// vacío, nunca coincide.
+func (s *Server) validSetupToken(token string) (bool, error) {
+	raw, err := os.ReadFile(s.SetupTokenFile)
+	if err != nil {
+		return false, err
+	}
+	expected := strings.TrimSpace(string(raw))
+	return expected != "" && subtle.ConstantTimeCompare([]byte(expected), []byte(token)) == 1, nil
 }
 
 func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
@@ -221,6 +253,28 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "already_setup")
 		return
 	}
+	tokenRequired, err := s.setupTokenRequired(needSetup)
+	if err != nil {
+		s.internal(w, err)
+		return
+	}
+	if tokenRequired {
+		ip := clientIP(r)
+		if s.failures.blocked(ip) {
+			writeError(w, http.StatusTooManyRequests, "too_many_attempts")
+			return
+		}
+		valid, err := s.validSetupToken(in.Token)
+		if err != nil {
+			s.internal(w, err)
+			return
+		}
+		if !valid {
+			s.failures.record(ip)
+			writeError(w, http.StatusForbidden, "invalid_setup_token")
+			return
+		}
+	}
 	if !s.acquireHash(w, r) {
 		return
 	}
@@ -238,6 +292,11 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.internal(w, err)
 		return
+	}
+	if tokenRequired {
+		if err := os.Remove(s.SetupTokenFile); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			s.log.Warn("no se pudo eliminar el código de instalación", "error", err)
+		}
 	}
 	s.startSession(w, r, id, in.Username)
 }

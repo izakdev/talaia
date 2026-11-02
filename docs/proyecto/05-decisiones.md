@@ -124,3 +124,24 @@ Cada decisión recoge su motivo y sus consecuencias. Si una decisión cambia, se
 - **Contexto:** los colores libres permitirían combinaciones sin contraste suficiente y valores no controlados en el CSS.
 - **Decisión:** tres temas y cinco acentos validados en el servidor, todos con texto oscuro legible encima.
 - **Consecuencias:** menos libertad, sin riesgo de un panel ilegible. El idioma sigue siendo de cada navegador.
+
+## DEC-25: el host descarga y el contenedor no necesita Internet
+- **Contexto:** muchos laboratorios limitan la salida de los contenedores, y verificar antes de crear nada evita dejar restos.
+- **Decisión:** el host descarga y comprueba el binario, y lo empuja con `pct push`. La salud se comprueba desde dentro, sin `curl`.
+- **Alternativa descartada:** instalar paquetes dentro del contenedor, como otros scripts, que añade dependencias y puntos de fallo.
+- **Consecuencias:** el contenedor es mínimo, pero sus actualizaciones de sistema quedan a cargo del usuario.
+
+## DEC-26: código de un solo uso en el primer arranque
+- **Contexto:** con una instalación pensada para cualquiera, el servicio puede quedar accesible sin administrador durante mucho tiempo.
+- **Decisión:** el instalador genera un código, lo guarda con permisos `600` y muestra un enlace que lo incluye. Ejecutar el binario a mano no lo exige, salvo que se indique `-setup-token-file`.
+- **Consecuencias:** nadie más en la red puede tomar la instalación. El código viaja en la URL por HTTP una vez, y deja de valer al usarlo.
+
+## DEC-27: pruebas del instalador con Docker
+- **Contexto:** la CI no dispone de Proxmox, y el script no se puede dar por bueno solo con análisis estático.
+- **Decisión:** ejecutar el script real con `pct` y similares simulados sobre un contenedor Docker con systemd.
+- **Consecuencias:** cubre el flujo, el servicio, la actualización y la marcha atrás. No cubre el comportamiento propio de Proxmox ni de un LXC no privilegiado, que requiere verificación manual.
+
+## DEC-28: marcha atrás automática al actualizar
+- **Contexto:** las migraciones de la base de datos no se pueden deshacer, y una versión nueva podría no arrancar.
+- **Decisión:** copiar base de datos y binario antes de actualizar, y restaurar ambos si `/healthz` no responde.
+- **Consecuencias:** no se queda sin servicio. No detecta fallos que no impidan arrancar, por lo que se conservan las 3 últimas copias.

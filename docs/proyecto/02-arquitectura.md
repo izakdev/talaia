@@ -64,7 +64,9 @@ Los motivos detallados están en [Decisiones](05-decisiones.md).
 | `web/src/PanelEditor.tsx` | Editor de páginas y bloques |
 | `web/src/Settings.tsx` | Tema, acento, acceso y contraseña |
 | `e2e` | Pruebas de extremo a extremo y generación de capturas |
-| `scripts` | Comprobaciones de la documentación |
+| `scripts/talaia-proxmox.sh` | Instalador y actualizador para Proxmox VE, en un solo archivo |
+| `scripts/test` | Prueba del instalador con systemd real y comandos de Proxmox simulados |
+| `scripts/check_docs.py` | Comprobaciones de la documentación |
 
 ## Flujos principales
 
@@ -252,7 +254,8 @@ erDiagram
 | Contraseñas | Argon2id con 64 MiB, 3 iteraciones y 2 hilos; mínimo de 12 caracteres |
 | Coste del hash | Máximo de 2 cálculos simultáneos, para proteger la memoria de un LXC pequeño |
 | Enumeración de usuarios | Un usuario inexistente tiene el mismo coste de verificación |
-| Fuerza bruta | 10 fallos por IP bloquean durante 15 minutos; el contador está en memoria |
+| Fuerza bruta | 10 fallos por IP bloquean durante 15 minutos, incluidos los del código de instalación; el contador está en memoria |
+| Código de instalación | De 192 bits, comparado en tiempo constante y eliminado al usarse |
 | Sesiones | Token aleatorio de 32 bytes en una cookie `HttpOnly` y `SameSite=Lax`; en la base de datos solo se guarda su hash; duran 30 días |
 | Cookie `Secure` | Se activa con TLS o con `X-Forwarded-Proto: https` |
 | Credenciales | AES-256-GCM, vinculadas al ID de la conexión para que no se puedan intercambiar entre filas |
@@ -272,7 +275,7 @@ erDiagram
 - **Recuperación por acceso al equipo:** quien pueda ejecutar `talaia reset-password` puede tomar la cuenta. Es el mismo nivel de acceso que ya da leer la carpeta de datos.
 - **Enlaces visibles:** quien abra el panel ve la dirección de cada servicio, que puede ser interna. Una dirección propia evita mostrar la URL de conexión.
 - **Token de administrador para los recursos:** Home Assistant solo da CPU y memoria a un administrador, de modo que quien quiera verlas debe dar a Talaia un token con todos esos permisos, aunque solo lea.
-- **Primer arranque abierto:** hasta crear el administrador, cualquiera en la red puede hacerlo.
+- **Primer arranque abierto sin el instalador:** al ejecutar el binario sin `-setup-token-file`, cualquiera en la red puede crear el administrador hasta que exista. El instalador siempre usa el código.
 - **Bloqueo por IP detrás de un proxy inverso:** Talaia ve la IP del proxy, de modo que los fallos cuentan para todos los clientes. No se confía en `X-Forwarded-For` porque se podría falsificar.
 - **Sin TLS propio:** Talaia sirve HTTP y delega el cifrado en un proxy inverso.
 - **Acceso de administrador:** una sesión de administrador puede hacer que Talaia envíe peticiones a cualquier URL, necesario para probar conexiones.
@@ -286,10 +289,38 @@ erDiagram
 | `-listen` | `TALAIA_LISTEN` | `:8080` | Dirección de escucha |
 | `-data` | `TALAIA_DATA_DIR` | `data` | Directorio de datos |
 | `-key-file` | `TALAIA_KEY_FILE` | `<datos>/secret.key` | Clave de cifrado |
+| `-setup-token-file` | `TALAIA_SETUP_TOKEN_FILE` | Ninguno | Archivo con el código que protege el primer arranque |
 | `-version` | | | Muestra la versión |
 
 **Recuperar la contraseña:** `talaia reset-password -data <datos>` genera una contraseña aleatoria, la muestra y revoca las sesiones. Admite `-key-file` y puede ejecutarse con Talaia en marcha.
 
-**Objetivo del hito 6:** un comando en el host Proxmox crea un LXC no privilegiado con Debian estable, 1 vCPU, 512 MB de RAM y 4 GB de disco, y un servicio `systemd` que verifica el checksum del binario descargado.
+### Instalación en Proxmox VE
+
+`talaia-proxmox.sh` se ejecuta como root en el host, con las herramientas de Proxmox (`pct`, `pveam`, `pvesh` y `pvesm`).
+
+```mermaid
+sequenceDiagram
+    participant H as Host Proxmox
+    participant R as Versiones publicadas
+    participant C as Contenedor LXC
+
+    H->>R: Descarga el binario y SHA256SUMS
+    H->>H: Comprueba la suma; si falla, no crea nada
+    H->>C: pct create, sin privilegios y con arranque automático
+    H->>C: pct push del binario y del código de instalación
+    H->>C: Crea usuario, carpeta de datos y servicio
+    H->>C: Arranca y comprueba /healthz desde dentro
+    Note over H,C: Si algo falla, elimina el contenedor recién creado
+```
+
+| Aspecto | Detalle |
+|---|---|
+| Contenedor | No privilegiado, con `nesting=1`, Debian estable y arranque automático. Por defecto, 1 vCPU, 512 MB de RAM, 256 MB de intercambio y 4 GB de disco |
+| Sin red dentro | El host descarga y empuja el binario, de modo que el contenedor no necesita acceso a Internet para instalar |
+| Servicio | Usuario `talaia`, sin privilegios ni capacidades, con el sistema de archivos protegido salvo `/var/lib/talaia`, y `GOMEMLIMIT=400MiB` |
+| Rutas | Binario en `/usr/local/bin/talaia`, configuración en `/etc/talaia/talaia.env` y datos en `/var/lib/talaia` |
+| Actualización | Para el servicio, copia la base de datos y el binario en `backups/`, y arranca la versión nueva. Si no responde, restaura ambos. Conserva 3 copias |
+
+**Publicación del instalador:** cada versión incluye también el script.
 
 **Publicación:** una etiqueta `v*` genera en GitHub Actions los binarios de Linux para amd64 y arm64, con `SHA256SUMS`.

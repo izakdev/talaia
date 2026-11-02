@@ -2,6 +2,7 @@ export type ConnectionType = "proxmox" | "homeassistant" | "adguard";
 
 export interface AppState {
   setup_required: boolean;
+  setup_token_required: boolean;
   version: string;
   user: string | null;
   theme: string;
@@ -215,7 +216,8 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
 export const api = {
   state: () => request<AppState>("GET", "/api/state"),
-  setup: (username: string, password: string) => request("POST", "/api/setup", { username, password }),
+  setup: (username: string, password: string, token: string) =>
+    request("POST", "/api/setup", { username, password, ...(token ? { token } : {}) }),
   login: (username: string, password: string) => request("POST", "/api/auth/login", { username, password }),
   logout: () => request("POST", "/api/auth/logout"),
   connections: () => request<Connection[]>("GET", "/api/admin/connections"),

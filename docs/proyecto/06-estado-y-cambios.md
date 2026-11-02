@@ -9,9 +9,22 @@
 | 3 | Proxmox: visión agregada y detalle por nodo | Terminado y verificado con un clúster real, en `main` |
 | 4 | Home Assistant: estado, entidades, consumos, recursos y resumen; enlace a cada servicio | Terminado y verificado con la instalación del cliente, en `main` |
 | 5 | Editor: rejilla, varias páginas y temas; login opcional; cambio y recuperación de contraseña | Terminado y validado por el cliente, en `main` |
-| 6 | Distribución: instalador LXC, actualización y documentación final | Pendiente |
+| 6 | Distribución: instalador LXC, actualización y documentación final | Implementado, pendiente de verificar en un Proxmox real |
 
 ## Historial
+
+### Hito 6 (2026-11-02)
+
+**Añadido:**
+- Instalador y actualizador para Proxmox VE en un solo script.
+- Servicio con usuario propio y sistema de archivos protegido.
+- Código de un solo uso para proteger el primer arranque.
+- Actualización con copia de seguridad y marcha atrás automática.
+- Pruebas del instalador en CI, con systemd real.
+
+**Cambiado:**
+- Las versiones con guion, como `v1.0.0-rc.1`, se publican como preliminares.
+- Cada versión publicada incluye el instalador.
 
 ### Hito 5 (2026-11-02)
 
@@ -84,7 +97,6 @@
 
 | Limitación | Impacto | Previsión |
 |---|---|---|
-| Sin instalador | Hay que compilar o copiar el binario y crear el servicio a mano | Hito 6 |
 | CPU, memoria y disco de Home Assistant requieren Supervisor y token de administrador | Otras instalaciones no los muestran; pueden elegir sensores de System Monitor | Por diseño de Home Assistant |
 | El disco de Home Assistant se muestra en GiB | Las cifras son algo menores que los GB que muestra Home Assistant, aunque el porcentaje coincide | Bajo demanda |
 | Home Assistant sin probar con miles de entidades | Cada ciclo descarga todas las entidades, y podría tardar | Si se da el caso, subir el refresco |
@@ -95,7 +107,9 @@
 | Bloqueo de login por IP detrás de un proxy inverso | Los fallos cuentan para todos los clientes | Sin hito asignado |
 | Una conexión tiene un solo contenido | No se pueden mostrar dos vistas distintas de un servicio | Bajo demanda, ver DEC-21 |
 | Arrastrar sin probar en pantallas táctiles | Puede no ir fino en un móvil; hay controles alternativos | Al darse la ocasión |
-| Primer arranque abierto hasta crear el administrador | Alguien en la red podría crearlo primero | Revisar en el hito 6 |
+| Instalador sin verificar en un Proxmox real | Puede haber diferencias con la plantilla o el LXC real | Antes de cerrar el hito 6 |
+| Repositorio privado | El comando de instalación solo funciona con `--binary` hasta hacerlo público | Decisión del cliente |
+| Sistema del contenedor sin actualizaciones automáticas | Hay que actualizarlo con `apt` | Bajo demanda |
 
 ## Consumo medido
 

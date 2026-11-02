@@ -8,11 +8,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"net"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -665,4 +667,75 @@ func TestChangePassword(t *testing.T) {
 	fresh := newClient(t, c.base)
 	fresh.want(401, "POST", "/api/auth/login", creds())
 	fresh.want(200, "POST", "/api/auth/login", map[string]string{"username": "admin", "password": "otra-contraseña-larga"})
+}
+
+func newServerWithSetupToken(t *testing.T, token string) (*client, string) {
+	t.Helper()
+	box, err := secrets.New(bytes.Repeat([]byte{1}, 32))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	st, err := store.Open(filepath.Join(dir, "t.db"), box)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	manager := collector.New(st, integrations.Registry{}, logger)
+	ctx, cancel := context.WithCancel(context.Background())
+	if err := manager.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	srv, err := New(st, manager, integrations.Registry{}, logger, "test", fstest.MapFS{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	file := filepath.Join(dir, "setup.token")
+	if err := os.WriteFile(file, []byte(token+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	srv.SetupTokenFile = file
+	ts := httptest.NewServer(srv.Handler())
+	t.Cleanup(func() { cancel(); ts.Close(); manager.Wait(); st.Close() })
+	return newClient(t, ts.URL), file
+}
+
+func TestSetupRequiresTokenWhenConfigured(t *testing.T) {
+	c, file := newServerWithSetupToken(t, "codigo-secreto")
+	if got := c.want(200, "GET", "/api/state", nil); !strings.Contains(got, `"setup_token_required":true`) || strings.Contains(got, "codigo-secreto") {
+		t.Fatal(got)
+	}
+	c.want(403, "POST", "/api/setup", creds())
+	bad := creds()
+	bad["token"] = "incorrecto"
+	c.want(403, "POST", "/api/setup", bad)
+	if got := c.want(200, "GET", "/api/state", nil); !strings.Contains(got, `"setup_required":true`) {
+		t.Fatalf("un intento fallido no debe crear el administrador: %s", got)
+	}
+	good := creds()
+	good["token"] = "codigo-secreto"
+	c.want(200, "POST", "/api/setup", good)
+	if _, err := os.Stat(file); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("el código debe eliminarse tras usarlo: %v", err)
+	}
+	if got := c.want(200, "GET", "/api/state", nil); !strings.Contains(got, `"setup_token_required":false`) {
+		t.Fatal(got)
+	}
+}
+
+func TestSetupTokenAttemptsAreLimited(t *testing.T) {
+	c, _ := newServerWithSetupToken(t, "codigo-secreto")
+	bad := creds()
+	bad["token"] = "incorrecto"
+	for i := 0; i < maxFailures; i++ {
+		c.want(403, "POST", "/api/setup", bad)
+	}
+	good := creds()
+	good["token"] = "codigo-secreto"
+	c.want(429, "POST", "/api/setup", good)
+}
+
+func TestEmptySetupTokenNeverMatches(t *testing.T) {
+	c, _ := newServerWithSetupToken(t, "")
+	c.want(403, "POST", "/api/setup", creds())
 }

@@ -37,6 +37,7 @@ Mientras no exista un administrador, todas las rutas muestran el asistente de pr
 ### Crear administrador
 
 - **Campos:** usuario, de 1 a 64 caracteres, y contraseña, de 12 a 1024 bytes.
+- **Código de instalación:** se pide solo si la instalación lo define. El enlace del instalador lo rellena y lo quita de la barra de direcciones.
 - **Resultado:** crea la cuenta, inicia sesión y muestra el dashboard.
 - **Regla:** solo se puede usar una vez.
 

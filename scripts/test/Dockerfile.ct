@@ -1,0 +1,6 @@
+# Imagen parecida a la plantilla de Debian, con systemd como proceso principal.
+# curl solo lo usan las pruebas: el instalador no lo necesita dentro del contenedor.
+FROM debian:trixie-slim
+RUN apt-get update && apt-get install -y --no-install-recommends systemd systemd-sysv curl ca-certificates \
+    && systemctl mask getty.target console-getty.service systemd-firstboot.service
+CMD ["/lib/systemd/systemd"]
