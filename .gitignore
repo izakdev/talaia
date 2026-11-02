@@ -1,9 +1,10 @@
 /bin/
-/dist/
+/data/
 *.db
 *.db-*
 *.key
 .env
 node_modules/
-web/dist/
+web/dist/*
+!web/dist/.gitkeep
 .DS_Store

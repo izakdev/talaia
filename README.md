@@ -15,6 +15,16 @@ Dashboard autoalojado para ver el estado de tus servicios de un vistazo.
 
 El diseño está en [docs/design.md](docs/design.md).
 
+## Desarrollo
+
+Requiere Go y Node.js 22.
+
+```sh
+make build   # compila la web y el binario en bin/talaia
+make test    # ejecuta go vet y los tests
+./bin/talaia -listen :8080 -data ./data
+```
+
 ## Licencia
 
 [MIT](LICENSE)
