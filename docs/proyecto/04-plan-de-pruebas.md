@@ -142,13 +142,14 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 | 2026-11-02 | Hito 2 | Validación del cliente | Correcto: catálogo de servicios y opción de ocultar el top de dominios |
 | 2026-11-02 | Hito 3 (`a33fbed`) | Proxmox VE 9.2.20 y AdGuard Home v0.107.77 del cliente, con el clúster en marcha | Correcto: validado por el cliente. Revisión adicional del panel y de la API pública: datos coherentes (totales de CPU, RAM, VM y LXC iguales a la suma por nodo), actualización en vivo, sin errores en la consola y sin URL, usuarios ni credenciales en la respuesta |
 | 2026-11-02 | Hito 4 | Home Assistant 2026.2.3 real en local, con 117 entidades, sensores de plantilla de potencia y energía, y un interruptor | Correcto: token erróneo, listado y filtro de entidades, datos en el panel, entidad no disponible, cambio real visto en vivo y sin ubicación ni token en la API pública |
+| 2026-11-02 | Hito 4 (`73d815b`) | Home Assistant 2026.10.1 del cliente, junto a sus conexiones de AdGuard y Proxmox | Correcto en la revisión del panel y de la API pública: estado en marcha, consumos reales de potencia, entidades elegidas sin datos caídos, sin errores en la consola y sin URL, ubicación ni credenciales en la respuesta. No se han comparado los valores con la interfaz de Home Assistant |
 
 **Contraste con fuentes oficiales:**
 - AdGuard Home: especificación OpenAPI.
 - Proxmox VE: fuente de la API en `PVE/API2/Cluster.pm`, de `pve-manager`, y documentación de API tokens.
 
 **Aún sin verificar:**
-- **Home Assistant del cliente.** Es necesario para dar por cerrado el hito 4. En especial: instalaciones con miles de entidades, sensores físicos de consumo, modo de recuperación real y acceso por HTTPS.
+- **Home Assistant real, casos no probados:** instalaciones con miles de entidades, sensores de energía físicos, modo de recuperación y acceso por HTTPS.
 - **Proxmox VE real, casos no probados:** nodo caído, pérdida de quórum y nodo independiente. Solo se han probado con el simulador.
 - La instalación y el consumo en un LXC real de Proxmox.
 - Otros navegadores además de Chromium.

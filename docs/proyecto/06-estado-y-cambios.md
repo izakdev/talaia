@@ -7,7 +7,7 @@
 | 1 | Base: repositorio, CI, autenticación, SQLite y conexiones | Terminado, en `main` |
 | 2 | AdGuard y flujo completo, catálogo de servicios y documentación | Terminado y validado por el cliente, en `main` |
 | 3 | Proxmox: visión agregada y detalle por nodo | Terminado y verificado con un clúster real, en `main` |
-| 4 | Home Assistant: estado, entidades y consumos | Implementado y verificado con un Home Assistant real en local, pendiente de validar con el del cliente |
+| 4 | Home Assistant: estado, entidades y consumos | Verificado con Home Assistant real, en local y con la instalación del cliente; pendiente de fusionar el [PR #3](https://github.com/izakdev/talaia/pull/3) |
 | 5 | Editor: rejilla, varias páginas y temas; login opcional; cambio y recuperación de contraseña | Pendiente |
 | 6 | Distribución: instalador LXC, actualización y documentación final | Pendiente |
 
@@ -68,7 +68,8 @@
 |---|---|---|
 | No se puede cambiar ni recuperar la contraseña | Olvidarla obliga a empezar de cero | RF-08, hito 5 |
 | Sin instalador | Hay que compilar o copiar el binario y crear el servicio a mano | Hito 6 |
-| Home Assistant sin validar con la instalación del cliente | Puede haber diferencias con sensores físicos o muchas entidades | Antes de cerrar el hito 4 |
+| Home Assistant sin probar con miles de entidades | Cada ciclo descarga todas las entidades, y podría tardar | Si se da el caso, subir el refresco |
+| Estados de Home Assistant sin traducir | Salvo encendido, apagado y sin datos, se muestran como llegan, por ejemplo `heat` | Bajo demanda |
 | Los consumos no se suman | No hay un total automático | Por diseño: se puede crear un sensor agregado en Home Assistant |
 | Nodo caído, pérdida de quórum y nodo independiente solo probados con simulador | Puede haber diferencias en esos casos | Al darse la ocasión |
 | Sin almacenamiento en la vista de Proxmox | Solo se ve el disco de cada nodo | Bajo demanda |
