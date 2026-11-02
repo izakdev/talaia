@@ -2,7 +2,7 @@
 
 Talaia es un panel para ver de un vistazo el estado de los servicios de tu laboratorio doméstico. Está pensado para usarlo como página inicial del navegador.
 
-> **Versión de este manual:** hito 4, en desarrollo. Hoy muestran datos AdGuard Home, Proxmox VE y Home Assistant. Consulta las [limitaciones actuales](#limitaciones-actuales).
+> **Versión de este manual:** hito 5, en desarrollo. Hoy muestran datos AdGuard Home, Proxmox VE y Home Assistant. Consulta las [limitaciones actuales](#limitaciones-actuales).
 
 ## Índice
 
@@ -12,11 +12,13 @@ Talaia es un panel para ver de un vistazo el estado de los servicios de tu labor
 4. [La administración](#la-administración)
 5. [Añadir una conexión](#añadir-una-conexión)
 6. [Editar y eliminar conexiones](#editar-y-eliminar-conexiones)
-7. [Idioma y apariencia](#idioma-y-apariencia)
-8. [Seguridad y acceso remoto](#seguridad-y-acceso-remoto)
-9. [Copias de seguridad](#copias-de-seguridad)
-10. [Solución de problemas](#solución-de-problemas)
-11. [Limitaciones actuales](#limitaciones-actuales)
+7. [Organizar el panel](#organizar-el-panel)
+8. [Ajustes](#ajustes)
+9. [Idioma y apariencia](#idioma-y-apariencia)
+10. [Seguridad y acceso remoto](#seguridad-y-acceso-remoto)
+11. [Copias de seguridad](#copias-de-seguridad)
+12. [Solución de problemas](#solución-de-problemas)
+13. [Limitaciones actuales](#limitaciones-actuales)
 
 ## Instalación
 
@@ -51,11 +53,11 @@ La primera vez, Talaia te pide crear el administrador. Hazlo nada más arrancar,
 2. Escribe una contraseña de al menos 12 caracteres.
 3. Pulsa **Crear administrador**.
 
-Guarda bien la contraseña: todavía no se puede cambiar ni recuperar.
+Podrás cambiarla en **Ajustes**. Si la olvidas, consulta [Solución de problemas](#solución-de-problemas).
 
 ## El panel
 
-El panel es la página principal y no necesita iniciar sesión. Se actualiza solo, sin recargar la página.
+El panel es la página principal. Por defecto no necesita iniciar sesión, salvo que lo [exijas en los ajustes](#ajustes). Se actualiza solo, sin recargar la página.
 
 Si aún no hay servicios, te lleva a la administración para añadirlos:
 
@@ -254,17 +256,52 @@ Si no se cumplen, **Probar conexión** te lo indica y el resto del bloque funcio
 
 **Eliminar:** pulsa **Eliminar** y confirma en la misma fila. No se puede deshacer, y el servicio desaparece del panel.
 
+## Organizar el panel
+
+En la administración, abre **Panel**. Cada conexión nueva se añade sola a la primera página, y aquí decides qué se ve y dónde.
+
+![Editor del panel](img/15-editor-panel.png)
+
+**Colocar los servicios:**
+- **Mover:** arrastra la barra superior del bloque.
+- **Cambiar el tamaño:** arrastra su esquina inferior derecha.
+- **Sin arrastrar:** usa **Antes**, **Después**, **Más estrecho** y **Más ancho**.
+- **Quitar:** deja de mostrarlo en esa página. La conexión no se elimina, y puedes volver a añadirla con **Añadir a esta página**.
+
+**Páginas:** pulsa **Añadir página**, ponle nombre y añade sus servicios. Si hay más de una, el panel muestra pestañas. Un servicio puede estar en varias páginas.
+
+![Editor con varias páginas](img/16-editor-paginas.png)
+
+**Pulsa Guardar panel** para aplicar los cambios, o **Descartar** para deshacerlos.
+
+**Cómo se ve después:** en el panel, cada bloque crece si su contenido lo necesita, aunque en el editor aparezca recortado. En pantallas estrechas, los bloques se apilan en una sola columna.
+
+**Privacidad:** un servicio que no esté en ninguna página no sale por la API pública, aunque Talaia lo siga consultando.
+
+## Ajustes
+
+En la administración, abre **Ajustes**.
+
+![Pantalla de ajustes](img/17-ajustes.png)
+
+- **Tema y color de acento:** se aplican a todos los que abran el panel.
+
+  ![Panel con el tema oscuro y el acento turquesa](img/18-tema-oscuro.png)
+
+- **Exigir inicio de sesión para ver el panel:** los datos dejan de ser públicos, y quien tuviera el panel abierto deja de verlo. Actívalo si el panel es accesible desde fuera de tu red de confianza.
+- **Contraseña:** escribe la actual y dos veces la nueva, de al menos 12 caracteres. Se cierran las demás sesiones.
+
 ## Idioma y apariencia
 
 - **Idioma:** Talaia usa el de tu navegador si es español y, si no, inglés. El botón **English** o **Español** lo cambia y se recuerda en ese navegador.
-- **Modo claro u oscuro:** sigue la configuración de tu sistema.
+- **Modo claro u oscuro:** por defecto sigue tu sistema. Puedes fijarlo en [Ajustes](#ajustes).
 - **Móvil:** la interfaz se adapta a pantallas pequeñas.
 
 ![Panel en móvil y modo oscuro](img/10-movil-oscuro.png)
 
 ## Seguridad y acceso remoto
 
-- **El panel es público:** cualquiera que llegue a su puerto puede ver el estado de tus servicios. **No lo publiques en Internet** sin protegerlo con otra capa, como una VPN o la autenticación de un proxy inverso.
+- **El panel es público por defecto:** cualquiera que llegue a su puerto puede ver el estado de tus servicios. **Para publicarlo en Internet**, exige inicio de sesión en [Ajustes](#ajustes) y usa HTTPS, o protégelo con una VPN.
 - **Enlaces:** cualquiera que abra el panel ve la dirección de cada servicio. Si no quieres mostrar la URL interna, configura un enlace propio en la conexión.
 - **Credenciales:** se guardan cifradas y nunca se muestran.
 - **HTTPS:** Talaia sirve HTTP. Para usar HTTPS, ponlo detrás de un proxy inverso, como Nginx Proxy Manager, que envíe la cabecera `X-Forwarded-Proto`.
@@ -305,7 +342,8 @@ Toda la configuración está en la carpeta de datos:
 |---|---|
 | Talaia no arranca y menciona permisos de la clave | `secret.key` es accesible por otros usuarios. Ejecuta `chmod 600` sobre ese archivo |
 | «Demasiados intentos fallidos» | Espera 15 minutos o reinicia Talaia |
-| He olvidado la contraseña | Aún no se puede recuperar. Para Talaia, borra la carpeta de datos y empieza de cero: perderás las conexiones |
+| He olvidado la contraseña | En el equipo de Talaia, ejecuta `talaia reset-password -data CARPETA_DE_DATOS`. Muestra una contraseña nueva, que puedes cambiar en **Ajustes**, y cierra las sesiones abiertas. Tus datos se conservan |
+| Un servicio no aparece en el panel | Comprueba en **Panel** que esté en esa página. Una conexión nueva se añade a la primera |
 | El panel no se actualiza detrás de un proxy | Comprueba que el proxy no retenga las respuestas de `/api/dashboard/events` |
 | No aparecen CPU, memoria ni disco | Pulsa **Probar conexión**. Requieren Supervisor y un token de administrador |
 | El enlace de un servicio no abre | Talaia usa la URL de conexión, que puede no ser accesible desde tu navegador. Configura un enlace propio en la conexión |
@@ -315,9 +353,7 @@ Toda la configuración está en la carpeta de datos:
 ## Limitaciones actuales
 
 - La vista de Proxmox no incluye el almacenamiento.
-- No se puede elegir qué aparece en el panel ni colocarlo: se muestran todas las conexiones con integración, por orden alfabético.
-- El panel no tiene inicio de sesión.
-- No se puede cambiar ni recuperar la contraseña.
+- Una conexión tiene un solo contenido: si está en dos páginas, se ve igual en ambas.
 - No hay instalador ni actualización automática.
 
 El estado de cada punto está en [Estado y cambios](../proyecto/06-estado-y-cambios.md).

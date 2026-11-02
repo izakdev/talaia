@@ -50,7 +50,31 @@ CREATE TABLE connections (
 );`, `
 ALTER TABLE connections ADD COLUMN options TEXT NOT NULL DEFAULT '{}';`, `
 ALTER TABLE connections ADD COLUMN entities TEXT NOT NULL DEFAULT '[]';`, `
-ALTER TABLE connections ADD COLUMN link_url TEXT NOT NULL DEFAULT '';`}
+ALTER TABLE connections ADD COLUMN link_url TEXT NOT NULL DEFAULT '';`, `
+CREATE TABLE settings (
+	key   TEXT PRIMARY KEY,
+	value TEXT NOT NULL
+);
+CREATE TABLE pages (
+	id       TEXT PRIMARY KEY,
+	name     TEXT NOT NULL,
+	position INTEGER NOT NULL
+);
+CREATE TABLE widgets (
+	id            TEXT PRIMARY KEY,
+	page_id       TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+	connection_id TEXT NOT NULL REFERENCES connections(id) ON DELETE CASCADE,
+	x INTEGER NOT NULL,
+	y INTEGER NOT NULL,
+	w INTEGER NOT NULL,
+	h INTEGER NOT NULL,
+	UNIQUE (page_id, connection_id)
+);
+CREATE INDEX widgets_connection ON widgets(connection_id);
+INSERT INTO pages(id, name, position) VALUES ('inicio', 'Inicio', 0);
+INSERT INTO widgets(id, page_id, connection_id, x, y, w, h)
+	SELECT lower(hex(randomblob(16))), 'inicio', id, ((rn - 1) % 2) * 6, ((rn - 1) / 2) * 10, 6, 10
+	FROM (SELECT id, ROW_NUMBER() OVER (ORDER BY name COLLATE NOCASE, id) AS rn FROM connections);`}
 
 // Store accede a la base de datos.
 type Store struct {
@@ -268,11 +292,26 @@ func (s *Store) CreateConnection(ctx context.Context, c Connection, secret strin
 	if err != nil {
 		return c, err
 	}
+	widgetID := make([]byte, 16)
+	if _, err := rand.Read(widgetID); err != nil {
+		return c, err
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return c, err
+	}
+	defer tx.Rollback()
 	now := time.Now().Unix()
-	if _, err := s.db.ExecContext(ctx,
+	if _, err := tx.ExecContext(ctx,
 		`INSERT INTO connections(id, name, type, base_url, username, secret, interval_seconds, tls_skip_verify, options, entities, link_url, created_at, updated_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		c.ID, c.Name, c.Type, c.BaseURL, c.Username, sealed, c.IntervalSeconds, c.TLSSkipVerify, options, entities, c.LinkURL, now, now); err != nil {
+		return c, err
+	}
+	if err := placeNewConnection(ctx, tx, hex.EncodeToString(widgetID), c.ID); err != nil {
+		return c, err
+	}
+	if err := tx.Commit(); err != nil {
 		return c, err
 	}
 	return s.GetConnection(ctx, c.ID)

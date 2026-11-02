@@ -4,6 +4,30 @@ export interface AppState {
   setup_required: boolean;
   version: string;
   user: string | null;
+  theme: string;
+  accent: string;
+  require_login: boolean;
+}
+
+export interface AppSettings {
+  theme: string;
+  accent: string;
+  require_login: boolean;
+}
+
+export interface PlacedWidget {
+  id: string;
+  connection_id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface Page {
+  id: string;
+  name: string;
+  widgets: PlacedWidget[];
 }
 
 export interface Connection {
@@ -152,6 +176,7 @@ export interface ConnectionState {
 }
 
 export interface DashboardState {
+  pages: Page[];
   connections: ConnectionState[];
 }
 
@@ -202,5 +227,12 @@ export const api = {
   listEntities: (input: ConnectionInput & { id?: string }) =>
     request<EntitiesResult>("POST", "/api/admin/connections/entities", input),
   dashboard: () => request<DashboardState>("GET", "/api/dashboard"),
+  status: () => request<{ connections: ConnectionState[] }>("GET", "/api/admin/status"),
+  panel: () => request<{ pages: Page[] }>("GET", "/api/admin/panel"),
+  savePanel: (pages: Page[]) => request<{ pages: Page[] }>("PUT", "/api/admin/panel", { pages }),
+  settings: () => request<AppSettings>("GET", "/api/admin/settings"),
+  saveSettings: (settings: AppSettings) => request<AppSettings>("PUT", "/api/admin/settings", settings),
+  changePassword: (current: string, next: string) =>
+    request("POST", "/api/admin/password", { current, new: next }),
   deleteConnection: (id: string) => request("DELETE", `/api/admin/connections/${encodeURIComponent(id)}`),
 };

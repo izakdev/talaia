@@ -30,8 +30,8 @@ Talaia es un dashboard autoalojado para ver de un vistazo el estado de los servi
 | RF-04 | El administrador puede iniciar y cerrar sesión; los intentos fallidos repetidos se bloquean | 1 | Implementado |
 | RF-05 | La interfaz está disponible en español e inglés | 1 | Implementado |
 | RF-06 | La interfaz se adapta a móvil y sigue el modo claro u oscuro del sistema | 1 | Implementado |
-| RF-07 | El dashboard puede exigir inicio de sesión si se configura así | 5 | Pendiente |
-| RF-08 | El administrador puede cambiar y recuperar su contraseña | 5 | Pendiente |
+| RF-07 | El dashboard puede exigir inicio de sesión si se configura así, también para quien ya lo tenga abierto | 5 | Implementado |
+| RF-08 | El administrador puede cambiar su contraseña desde la web y recuperarla con acceso al equipo | 5 | Implementado |
 
 ### Conexiones
 
@@ -50,9 +50,9 @@ Talaia es un dashboard autoalojado para ver de un vistazo el estado de los servi
 | RF-20 | El dashboard se actualiza solo, sin recargar la página | 2 | Implementado |
 | RF-21 | Si un servicio falla, solo se degrada su bloque, que indica el fallo y conserva el último dato con su antigüedad | 2 | Implementado |
 | RF-25 | Cada bloque enlaza con su servicio. El enlace es la URL de conexión o una dirección propia, porque Talaia y el navegador pueden llegar al servicio por rutas distintas | 4 | Implementado |
-| RF-22 | El administrador elige qué widgets se muestran, y los coloca y redimensiona arrastrando | 5 | Pendiente |
-| RF-23 | El dashboard admite varias páginas | 5 | Pendiente |
-| RF-24 | El dashboard admite temas configurables | 5 | Pendiente |
+| RF-22 | El administrador elige qué servicios se muestran, y los coloca y redimensiona arrastrando o con controles de teclado. Lo que no está en el panel no sale por la API pública | 5 | Implementado |
+| RF-23 | El dashboard admite varias páginas | 5 | Implementado |
+| RF-24 | El dashboard admite tema claro, oscuro o del sistema, y color de acento | 5 | Implementado |
 
 ### AdGuard Home
 

@@ -17,13 +17,18 @@ flowchart TD
     Conn -->|Editar| Form
     Form -->|Guardar| Conn
     Conn -->|Ver el panel| Dash
+    Conn -->|Panel| Ed[Editor del panel]
+    Conn -->|Ajustes| Set[Ajustes]
 ```
 
 | Ruta | Pantalla |
 |---|---|
 | `/` | Dashboard |
 | `/admin` | Conexiones o inicio de sesión |
+| `/p/<id>` | Una página concreta del dashboard |
 | `/admin/connections/new` | Catálogo de servicios |
+| `/admin/panel` | Editor del panel |
+| `/admin/settings` | Ajustes |
 
 Mientras no exista un administrador, todas las rutas muestran el asistente de primer arranque.
 
@@ -45,7 +50,13 @@ Mientras no exista un administrador, todas las rutas muestran el asistente de pr
 
 **Sin servicios:** muestra un mensaje y un enlace a la administración.
 
-**Con servicios:** hay un bloque por cada conexión con integración disponible, ordenados por nombre.
+**Con servicios:** cada página muestra sus bloques en la posición elegida en el editor. Con más de una página aparecen pestañas.
+
+- **Recuadro:** cada bloque tiene fondo, borde y una sombra ligera, para distinguirlo de los demás. Los bloques de una misma fila igualan su altura.
+- **Altura:** un bloque crece si su contenido lo necesita, sin solaparse.
+- **Pantallas de menos de 900 px:** los bloques se apilan en una columna, de arriba abajo y de izquierda a derecha.
+- **Página vacía:** indica que no tiene servicios.
+- **Sesión obligatoria:** si está activa, sin sesión se muestra el inicio de sesión. Quien tuviera el panel abierto deja de verlo.
 
 | Elemento | Comportamiento |
 |---|---|
@@ -171,6 +182,29 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 - **Rendimiento:** se muestran hasta 200 filas; si hay más, se pide afinar la búsqueda.
 - **Conservación:** una entidad elegida sigue seleccionada aunque desaparezca de Home Assistant, y el panel la muestra como «No encontrada».
 
+### Editor del panel
+
+- **Páginas:** añadir, renombrar (hasta 40 caracteres), mover y eliminar con confirmación. Entre 1 y 20. Eliminar una página no elimina sus conexiones.
+- **Añadir a esta página:** botones con las conexiones que aún no están en ella.
+- **Colocar:** arrastrando la barra de cada bloque y su esquina inferior derecha.
+- **Teclado:** botones **Antes**, **Después**, **Más estrecho** y **Más ancho**, que recolocan por filas, y **Quitar**.
+- **Vista previa:** muestra el contenido real, recortado a su tamaño, y sin interacción.
+- **Guardar:** los cambios no se aplican hasta pulsar **Guardar panel**. **Descartar** vuelve a lo guardado, y el navegador avisa si se cierra la página con cambios.
+
+Una misma conexión puede estar en varias páginas, una vez en cada una. Una conexión fuera de todas las páginas se sigue consultando y su estado se ve en **Conexiones**, pero no sale por la API pública.
+
+### Ajustes
+
+| Ajuste | Valores | Por defecto |
+|---|---|---|
+| Tema | Según el sistema, claro u oscuro | Según el sistema |
+| Color de acento | Ámbar, turquesa, lima, coral o rosa | Ámbar |
+| Exigir inicio de sesión para ver el panel | Sí o no | No |
+
+Se aplican a todos los usuarios del panel. El idioma sigue siendo de cada navegador.
+
+**Contraseña:** pide la actual y dos veces la nueva, de al menos 12 caracteres. Cierra las demás sesiones. Los fallos cuentan para el bloqueo por IP.
+
 ## Mensajes de error de los servicios
 
 | Código | Mensaje |
@@ -186,5 +220,5 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 ## Idioma y apariencia
 
 - **Idioma:** se toma del navegador y, si no es español, se usa inglés. La elección manual se recuerda en ese navegador.
-- **Apariencia:** sigue el modo claro u oscuro del sistema. Los temas configurables llegan en el hito 5.
+- **Apariencia:** tema y acento se eligen en los ajustes.
 - **Movimiento:** al abrir la página, el haz de la torre hace un único barrido, que se omite si el sistema pide reducir el movimiento.

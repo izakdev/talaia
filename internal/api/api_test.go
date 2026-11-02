@@ -527,3 +527,142 @@ func TestConnectionTestReportsNotes(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+func panelOf(t *testing.T, c *client) []store.Page {
+	t.Helper()
+	var out struct {
+		Pages []store.Page `json:"pages"`
+	}
+	if err := json.Unmarshal([]byte(c.want(200, "GET", "/api/admin/panel", nil)), &out); err != nil {
+		t.Fatal(err)
+	}
+	return out.Pages
+}
+
+func TestPanelSaveAndValidation(t *testing.T) {
+	c, _ := newServer(t)
+	newClient(t, c.base).want(401, "GET", "/api/admin/panel", nil)
+	c.want(200, "POST", "/api/setup", creds())
+	conn := createCorrect(t, c)
+	second := createCorrect(t, c)
+	pages := panelOf(t, c)
+	if len(pages) != 1 || pages[0].Name != "Inicio" || len(pages[0].Widgets) != 2 {
+		t.Fatalf("panel inicial: %+v", pages)
+	}
+
+	good := func() []store.Page {
+		return []store.Page{{ID: "a", Name: "Una", Widgets: []store.Widget{
+			{ID: "w1", ConnectionID: conn.ID, X: 0, Y: 0, W: 6, H: 4},
+			{ID: "w2", ConnectionID: second.ID, X: 6, Y: 0, W: 6, H: 4},
+		}}}
+	}
+	cases := map[string]struct {
+		mutate func([]store.Page) []store.Page
+		code   string
+	}{
+		"sin páginas":    {func([]store.Page) []store.Page { return nil }, "invalid_pages"},
+		"nombre vacío":   {func(p []store.Page) []store.Page { p[0].Name = " "; return p }, "invalid_page_name"},
+		"id no válido":   {func(p []store.Page) []store.Page { p[0].ID = "a b"; return p }, "invalid_pages"},
+		"conexión ajena": {func(p []store.Page) []store.Page { p[0].Widgets[0].ConnectionID = "otra"; return p }, "invalid_widget"},
+		"se sale":        {func(p []store.Page) []store.Page { p[0].Widgets[1].X = 8; return p }, "invalid_widget"},
+		"muy estrecho":   {func(p []store.Page) []store.Page { p[0].Widgets[0].W = 1; return p }, "invalid_widget"},
+		"solapados":      {func(p []store.Page) []store.Page { p[0].Widgets[1].X = 5; p[0].Widgets[1].W = 6; return p }, "widgets_overlap"},
+		"repetida":       {func(p []store.Page) []store.Page { p[0].Widgets[1].ConnectionID = conn.ID; return p }, "invalid_widget"},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			got := c.want(400, "PUT", "/api/admin/panel", map[string]any{"pages": tc.mutate(good())})
+			if !strings.Contains(got, tc.code) {
+				t.Fatal(got)
+			}
+		})
+	}
+	c.want(200, "PUT", "/api/admin/panel", map[string]any{"pages": good()})
+	if pages = panelOf(t, c); pages[0].Name != "Una" || pages[0].Widgets[1].X != 6 {
+		t.Fatalf("panel guardado: %+v", pages)
+	}
+}
+
+func TestUnplacedConnectionIsHidden(t *testing.T) {
+	c, _ := newServer(t)
+	c.want(200, "POST", "/api/setup", creds())
+	conn := createCorrect(t, c)
+	waitDashboard(t, c, `"status":"ok"`)
+	empty := []store.Page{{ID: "a", Name: "Vacía", Widgets: []store.Widget{}}}
+	c.want(200, "PUT", "/api/admin/panel", map[string]any{"pages": empty})
+	if got := c.want(200, "GET", "/api/dashboard", nil); strings.Contains(got, conn.ID) || !strings.Contains(got, `"connections":[]`) {
+		t.Fatalf("una conexión fuera del panel no debe publicarse: %s", got)
+	}
+	if got := c.want(200, "GET", "/api/admin/status", nil); !strings.Contains(got, conn.ID) {
+		t.Fatalf("la administración debe ver todas las conexiones: %s", got)
+	}
+	newClient(t, c.base).want(401, "GET", "/api/admin/status", nil)
+}
+
+func TestDashboardCanRequireLogin(t *testing.T) {
+	c, _ := newServer(t)
+	c.want(200, "POST", "/api/setup", creds())
+	anonymous := newClient(t, c.base)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, _ := http.NewRequestWithContext(ctx, "GET", c.base+"/api/dashboard/events", nil)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	lines := bufio.NewScanner(resp.Body)
+	if !lines.Scan() {
+		t.Fatal("sin evento inicial")
+	}
+
+	settings := map[string]any{"theme": "dark", "accent": "teal", "require_login": true}
+	c.want(200, "PUT", "/api/admin/settings", settings)
+
+	// El flujo anónimo que ya estaba abierto debe cerrarse.
+	for lines.Scan() {
+	}
+	if ctx.Err() != nil {
+		t.Fatal("el flujo anónimo sigue abierto")
+	}
+	anonymous.want(401, "GET", "/api/dashboard", nil)
+	anonymous.want(401, "GET", "/api/dashboard/events", nil)
+	c.want(200, "GET", "/api/dashboard", nil)
+	state := anonymous.want(200, "GET", "/api/state", nil)
+	for _, want := range []string{`"require_login":true`, `"theme":"dark"`, `"accent":"teal"`} {
+		if !strings.Contains(state, want) {
+			t.Fatalf("falta %s: %s", want, state)
+		}
+	}
+}
+
+func TestSettingsValidation(t *testing.T) {
+	c, _ := newServer(t)
+	newClient(t, c.base).want(401, "PUT", "/api/admin/settings", map[string]any{"theme": "dark", "accent": "teal"})
+	c.want(200, "POST", "/api/setup", creds())
+	for _, bad := range []map[string]any{
+		{"theme": "otro", "accent": "teal"},
+		{"theme": "dark", "accent": "url(x)"},
+	} {
+		c.want(400, "PUT", "/api/admin/settings", bad)
+	}
+}
+
+func TestChangePassword(t *testing.T) {
+	c, _ := newServer(t)
+	path := "/api/admin/password"
+	newClient(t, c.base).want(401, "POST", path, map[string]string{"current": password, "new": "otra-contraseña-larga"})
+	c.want(200, "POST", "/api/setup", creds())
+	other := newClient(t, c.base)
+	other.want(200, "POST", "/api/auth/login", creds())
+
+	c.want(400, "POST", path, map[string]string{"current": "incorrecta-larga", "new": "otra-contraseña-larga"})
+	c.want(400, "POST", path, map[string]string{"current": password, "new": "corta"})
+	c.want(204, "POST", path, map[string]string{"current": password, "new": "otra-contraseña-larga"})
+
+	c.want(200, "GET", "/api/admin/connections", nil)
+	other.want(401, "GET", "/api/admin/connections", nil)
+	fresh := newClient(t, c.base)
+	fresh.want(401, "POST", "/api/auth/login", creds())
+	fresh.want(200, "POST", "/api/auth/login", map[string]string{"username": "admin", "password": "otra-contraseña-larga"})
+}
