@@ -8,7 +8,7 @@
 | 2 | AdGuard y flujo completo, catálogo de servicios y documentación | Terminado y validado por el cliente, en `main` |
 | 3 | Proxmox: visión agregada y detalle por nodo | Terminado y verificado con un clúster real, en `main` |
 | 4 | Home Assistant: estado, entidades, consumos, recursos y resumen; enlace a cada servicio | Terminado y verificado con la instalación del cliente, en `main` |
-| 5 | Editor: rejilla, varias páginas y temas; login opcional; cambio y recuperación de contraseña | Implementado, pendiente de validar por el cliente |
+| 5 | Editor: rejilla, varias páginas y temas; login opcional; cambio y recuperación de contraseña | Terminado y validado por el cliente, en `main` |
 | 6 | Distribución: instalador LXC, actualización y documentación final | Pendiente |
 
 ## Historial
