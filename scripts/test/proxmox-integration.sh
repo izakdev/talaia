@@ -86,7 +86,7 @@ for option in "--unprivileged 1" "--features nesting=1" "--onboot 1" "--memory 5
 done
 expect "servicio" "$(inside systemctl is-active talaia)" active
 expect "arranque automático" "$(inside systemctl is-enabled talaia)" enabled
-expect "usuario" "$(inside ps -o user= -C talaia)" talaia
+expect "usuario" "$(inside sh -c 'stat -c %U "/proc/$(systemctl show -p MainPID --value talaia)"')" talaia
 expect "versión" "$(inside /usr/local/bin/talaia -version)" v0.0.1
 expect "permisos de datos" "$(inside stat -c '%U %a' /var/lib/talaia)" "talaia 700"
 expect "permisos de la clave" "$(inside stat -c '%U %a' /var/lib/talaia/secret.key)" "talaia 600"
