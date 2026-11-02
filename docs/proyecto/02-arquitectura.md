@@ -37,6 +37,7 @@ flowchart LR
 | Base de datos | SQLite con `modernc.org/sqlite` | Sin CGO ni servicios externos |
 | Criptografía | AES-256-GCM, Argon2id con `golang.org/x/crypto` | Algoritmos actuales |
 | Frontend | React, TypeScript, Vite, TanStack Query | Ecosistema actual, con tipado |
+| Editor | `react-grid-layout`, cargado solo al abrir el editor | Arrastrar y redimensionar sin cargar el panel |
 | WebSocket | `coder/websocket` | Sin dependencias; necesario para consultar Supervisor |
 | Iconos | `simple-icons` | Incluidos en la aplicación, sin depender de Internet |
 | Tipografía | Schibsted Grotesk, servida por Talaia | Sin peticiones a terceros |
@@ -60,6 +61,8 @@ Los motivos detallados están en [Decisiones](05-decisiones.md).
 | `internal/integrations/homeassistant` | Integración con Home Assistant |
 | `web` | Frontend; `web/embed.go` lo incluye en el binario |
 | `web/src/widgets` | Estado, contenido y pie del bloque de cada integración |
+| `web/src/PanelEditor.tsx` | Editor de páginas y bloques |
+| `web/src/Settings.tsx` | Tema, acento, acceso y contraseña |
 | `e2e` | Pruebas de extremo a extremo y generación de capturas |
 | `scripts` | Comprobaciones de la documentación |
 
@@ -166,12 +169,16 @@ Las respuestas son JSON. Las escrituras exigen `Content-Type: application/json` 
 | Método y ruta | Acceso | Función |
 |---|---|---|
 | `GET /healthz` | Público | Comprobación de vida |
-| `GET /api/state` | Público | Si falta el primer arranque, versión y usuario actual |
-| `GET /api/dashboard` | Público | Estado de las conexiones, con el enlace a cada servicio |
-| `GET /api/dashboard/events` | Público | Eventos SSE con el mismo contenido |
+| `GET /api/state` | Público | Si falta el primer arranque, versión, usuario actual, tema, acento y si el panel exige sesión |
+| `GET /api/dashboard` | Público o sesión, según ajustes | Páginas y estado de las conexiones colocadas en ellas, con el enlace a cada servicio |
+| `GET /api/dashboard/events` | Público o sesión, según ajustes | Eventos SSE con el mismo contenido. Se cierran si se pierde el permiso |
 | `POST /api/setup` | Público, solo una vez | Crea el primer administrador e inicia sesión |
 | `POST /api/auth/login` | Público | Inicia sesión |
 | `POST /api/auth/logout` | Público | Cierra la sesión y la revoca en el servidor |
+| `GET /api/admin/status` | Sesión | Estado de todas las conexiones, estén o no en el panel |
+| `GET` y `PUT /api/admin/panel` | Sesión | Lee o sustituye de forma atómica las páginas y sus bloques |
+| `GET` y `PUT /api/admin/settings` | Sesión | Lee o guarda tema, acento y acceso |
+| `POST /api/admin/password` | Sesión | Cambia la contraseña y revoca las demás sesiones |
 | `GET /api/admin/connections` | Sesión | Lista las conexiones |
 | `POST /api/admin/connections` | Sesión | Crea una conexión |
 | `POST /api/admin/connections/test` | Sesión | Prueba una conexión sin guardarla |
@@ -185,6 +192,26 @@ Las respuestas son JSON. Las escrituras exigen `Content-Type: application/json` 
 ```mermaid
 erDiagram
     users ||--o{ sessions : tiene
+    pages ||--o{ widgets : contiene
+    connections ||--o{ widgets : aparece
+    settings {
+        text key PK
+        text value
+    }
+    pages {
+        text id PK
+        text name
+        integer position
+    }
+    widgets {
+        text id PK
+        text page_id FK
+        text connection_id FK
+        integer x
+        integer y
+        integer w
+        integer h
+    }
     users {
         integer id PK
         text username
@@ -214,7 +241,8 @@ erDiagram
 ```
 
 - **Migraciones:** se aplican al arrancar, y `PRAGMA user_version` guarda la versión. Talaia no arranca con una base de datos de una versión posterior.
-- **Planificado:** las tablas `pages`, `widgets` y `settings` llegarán en el hito 5.
+- **Panel inicial:** la migración crea la página «Inicio» con las conexiones existentes. Una conexión nueva se añade a la primera página.
+- **Rejilla:** 12 columnas. Un bloque ocupa de 2 a 12 columnas y de 2 a 60 filas, sin solapes. Las opciones siguen en la conexión, ver [DEC-21](05-decisiones.md).
 - **Estado de los servicios:** se guarda solo en memoria y se reconstruye al arrancar.
 
 ## Seguridad
@@ -234,13 +262,14 @@ erDiagram
 | TLS | Verificación activa por defecto, con excepción explícita por conexión |
 | API pública | Sin usuarios ni credenciales. Incluye el enlace al servicio: la URL de conexión o la dirección propia configurada |
 | Enlaces | Solo `http` y `https`, sin credenciales; se abren con `noopener` y `noreferrer` |
-| Navegador | CSP `default-src 'self'`, `frame-ancestors 'none'`, `nosniff` y `Referrer-Policy: same-origin` |
+| Navegador | Sin `unsafe-inline`: el editor evita el `<style>` que `react-draggable` insertaría. CSP `default-src 'self'`, `frame-ancestors 'none'`, `nosniff` y `Referrer-Policy: same-origin` |
 | CSRF | Cookie `SameSite=Lax`, comprobación de `Origin` y JSON obligatorio |
 | Tamaño de petición | 64 KiB como máximo |
 
 ### Riesgos aceptados
 
-- **Dashboard abierto:** cualquiera que llegue al puerto puede ver el estado de los servicios. No debe publicarse en Internet hasta disponer del login opcional (RF-07), o debe protegerse con otra capa.
+- **Dashboard abierto por defecto:** cualquiera que llegue al puerto puede ver el estado de los servicios. Para publicarlo fuera de la red de confianza hay que exigir inicio de sesión en los ajustes (RF-07) y usar HTTPS.
+- **Recuperación por acceso al equipo:** quien pueda ejecutar `talaia reset-password` puede tomar la cuenta. Es el mismo nivel de acceso que ya da leer la carpeta de datos.
 - **Enlaces visibles:** quien abra el panel ve la dirección de cada servicio, que puede ser interna. Una dirección propia evita mostrar la URL de conexión.
 - **Token de administrador para los recursos:** Home Assistant solo da CPU y memoria a un administrador, de modo que quien quiera verlas debe dar a Talaia un token con todos esos permisos, aunque solo lea.
 - **Primer arranque abierto:** hasta crear el administrador, cualquiera en la red puede hacerlo.
@@ -258,6 +287,8 @@ erDiagram
 | `-data` | `TALAIA_DATA_DIR` | `data` | Directorio de datos |
 | `-key-file` | `TALAIA_KEY_FILE` | `<datos>/secret.key` | Clave de cifrado |
 | `-version` | | | Muestra la versión |
+
+**Recuperar la contraseña:** `talaia reset-password -data <datos>` genera una contraseña aleatoria, la muestra y revoca las sesiones. Admite `-key-file` y puede ejecutarse con Talaia en marcha.
 
 **Objetivo del hito 6:** un comando en el host Proxmox crea un LXC no privilegiado con Debian estable, 1 vCPU, 512 MB de RAM y 4 GB de disco, y un servicio `systemd` que verifica el checksum del binario descargado.
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, type Connection, type ConnectionInput, type ConnectionType, type ConnectionState } from "./api";
 import { CATALOG, catalogEntry } from "./catalog";
@@ -6,6 +6,11 @@ import { Horizon, IntegrationIcon, LanguageSwitch } from "./chrome";
 import EntityPicker, { normalize } from "./EntityPicker";
 import Dashboard from "./Dashboard";
 import { useI18n } from "./i18n";
+import Settings from "./Settings";
+import { applyTheme } from "./theme";
+
+// El editor y la rejilla arrastrable solo se cargan al abrirlos.
+const PanelEditor = lazy(() => import("./PanelEditor"));
 
 function usePath(): [string, (path: string) => void] {
   const [path, setPath] = useState(window.location.pathname);
@@ -29,6 +34,9 @@ export default function App() {
   const [path, navigate] = usePath();
   const { t } = useI18n();
   const state = useQuery({ queryKey: ["state"], queryFn: api.state });
+  useEffect(() => {
+    if (state.data) applyTheme(state.data.theme, state.data.accent);
+  }, [state.data]);
 
   if (state.isPending) return <p className="loading">{t("app.loading")}</p>;
   if (state.isError) {
@@ -50,10 +58,11 @@ export default function App() {
       <Credentials mode="login" />
     );
   }
-  return <Dashboard navigate={navigate} />;
+  if (state.data.require_login && !state.data.user) return <Credentials mode="login" title={t("login.dashboard")} />;
+  return <Dashboard path={path} navigate={navigate} />;
 }
 
-function Credentials({ mode }: { mode: "setup" | "login" }) {
+function Credentials({ mode, title }: { mode: "setup" | "login"; title?: string }) {
   const { t, errorText } = useI18n();
   const client = useQueryClient();
   const [username, setUsername] = useState("");
@@ -71,7 +80,7 @@ function Credentials({ mode }: { mode: "setup" | "login" }) {
   };
   return (
     <Horizon>
-      <h1>{t(mode === "setup" ? "setup.title" : "login.title")}</h1>
+      <h1>{title ?? t(mode === "setup" ? "setup.title" : "login.title")}</h1>
       {mode === "setup" && <p>{t("setup.lead")}</p>}
       <form className="stack" onSubmit={onSubmit}>
         <label>
@@ -157,7 +166,32 @@ function Admin({
           </button>
         </nav>
       </header>
-      {path === NEW_CONNECTION_PATH ? <NewConnection navigate={navigate} /> : <Connections navigate={navigate} />}
+      <nav className="admin-tabs" aria-label={t("admin.sections")}>
+        {ADMIN_SECTIONS.map((section) => (
+          <a
+            key={section.path}
+            href={section.path}
+            aria-current={section.active(path) ? "page" : undefined}
+            onClick={(event) => {
+              event.preventDefault();
+              navigate(section.path);
+            }}
+          >
+            {t(section.label)}
+          </a>
+        ))}
+      </nav>
+      {path === NEW_CONNECTION_PATH ? (
+        <NewConnection navigate={navigate} />
+      ) : path === PANEL_PATH ? (
+        <Suspense fallback={<p className="loading">{t("app.loading")}</p>}>
+          <PanelEditor navigate={navigate} />
+        </Suspense>
+      ) : path === SETTINGS_PATH ? (
+        <Settings />
+      ) : (
+        <Connections navigate={navigate} />
+      )}
       <footer>Talaia {version}</footer>
     </div>
   );
@@ -171,6 +205,13 @@ function ConnectionHealth({ state }: { state?: ConnectionState }) {
 }
 
 const NEW_CONNECTION_PATH = "/admin/connections/new";
+const PANEL_PATH = "/admin/panel";
+const SETTINGS_PATH = "/admin/settings";
+const ADMIN_SECTIONS = [
+  { path: "/admin", label: "connections.title", active: (p: string) => p !== PANEL_PATH && p !== SETTINGS_PATH },
+  { path: PANEL_PATH, label: "panel.title", active: (p: string) => p === PANEL_PATH },
+  { path: SETTINGS_PATH, label: "settings.title", active: (p: string) => p === SETTINGS_PATH },
+] as const;
 
 function NewConnection({ navigate }: { navigate: (path: string) => void }) {
   const { t } = useI18n();
@@ -246,12 +287,13 @@ function Connections({ navigate }: { navigate: (path: string) => void }) {
       client.invalidateQueries({ queryKey: ["state"] });
     }
   }, [connections.error, client]);
-  const states = useQuery({ queryKey: ["dashboard"], queryFn: api.dashboard, refetchInterval: 10000 });
+  const states = useQuery({ queryKey: ["status"], queryFn: api.status, refetchInterval: 10000 });
   const remove = useMutation({
     mutationFn: api.deleteConnection,
     onSuccess: () => {
       setConfirming(null);
       client.invalidateQueries({ queryKey: ["dashboard"] });
+      client.invalidateQueries({ queryKey: ["status"] });
       return client.invalidateQueries({ queryKey: ["connections"] });
     },
   });
@@ -399,6 +441,7 @@ function ConnectionDialog({
     onSuccess: async () => {
       setSecret("");
       client.invalidateQueries({ queryKey: ["dashboard"] });
+      client.invalidateQueries({ queryKey: ["status"] });
       await client.invalidateQueries({ queryKey: ["connections"] });
       onSaved();
     },

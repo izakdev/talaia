@@ -34,6 +34,11 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestDashboardEvents` | El flujo SSE envía el estado inicial y los cambios | RF-20 |
 | `TestListEntitiesEndpoint` | Exige sesión, usa la credencial guardada solo con la misma URL y rechaza tipos sin entidades | RF-51, RF-14 |
 | `TestEntitySelectionValidation` | Rechaza formatos no válidos, repetidas, más de 200 y selección en otro tipo de servicio | RF-51 |
+| `TestPanelSaveAndValidation` | Exige sesión; rechaza páginas y bloques no válidos, fuera de la rejilla, solapados o repetidos | RF-22, RF-23 |
+| `TestUnplacedConnectionIsHidden` | Una conexión fuera del panel no sale por la API pública, pero sí en la de administración | RF-22 |
+| `TestDashboardCanRequireLogin` | Con sesión obligatoria, la API da 401, los flujos abiertos se cierran y el estado público informa | RF-07, RF-24 |
+| `TestSettingsValidation` | Exige sesión y rechaza temas y acentos desconocidos | RF-24 |
+| `TestChangePassword` | Exige sesión y la contraseña actual; revoca otras sesiones | RF-08 |
 | `TestConnectionTest` | Exige sesión, no guarda nada, reutiliza la credencial solo con la misma URL y rechaza tipos sin integración | RF-13, RF-14 |
 
 ### `internal/auth`
@@ -60,7 +65,11 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestOptionsArePersisted` | Las opciones se guardan | RF-32 |
 | `TestLinkFallsBackToConnectionURL` | Sin enlace propio se usa la URL de conexión | RF-25 |
 | `TestEntitiesArePersisted` | La selección de entidades se guarda y se puede vaciar | RF-51 |
-| `TestMigratesExistingDatabase` | Una base de datos anterior migra y conserva sus conexiones | RNF-05 |
+| `TestNewConnectionsFillTwoColumns` | Una conexión nueva se coloca sola en la primera página, sin solapes | RF-22 |
+| `TestPanelSaveAndCascade` | Guarda páginas en orden; eliminar una conexión quita sus bloques | RF-22, RF-23 |
+| `TestSettingsDefaultsAndSave` | Valores por defecto y guardado de los ajustes | RF-07, RF-24 |
+| `TestPasswordChangeAndReset` | El cambio revoca las demás sesiones y la recuperación, todas | RF-08 |
+| `TestMigratesExistingDatabase` | Una base de datos anterior migra, conserva sus conexiones y las coloca en el panel | RNF-05, RF-22 |
 
 ### `internal/collector`
 
@@ -128,6 +137,11 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-10 | Conexión guardada con un servicio inaccesible | RF-10, RF-21 |
 | E2E-11 | Editar y eliminar conexiones | RF-10, RF-14 |
 | E2E-12 | Cambio de idioma recordado | RF-05 |
+| E2E-24 | Editor: arrastrar, controles de teclado, descartar y guardar | RF-22, RNF-08 |
+| E2E-25 | Varias páginas y servicios fuera del panel | RF-22, RF-23 |
+| E2E-26 | Tema y color de acento | RF-24 |
+| E2E-27 | Inicio de sesión opcional para ver el panel | RF-07 |
+| E2E-28 | Cambio y recuperación de contraseña | RF-08 |
 | E2E-13 | Móvil y modo oscuro sin desbordamiento | RF-06 |
 | E2E-14 | La API pública no expone configuración ni credenciales | RNF-03 |
 | E2E-23 | Enlace a cada servicio desde su bloque | RF-25 |
@@ -153,6 +167,7 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 | 2026-11-02 | Hito 4 (`73d815b`) | Home Assistant 2026.10.1 del cliente, junto a sus conexiones de AdGuard y Proxmox | Correcto en la revisión del panel y de la API pública: estado en marcha, consumos reales de potencia, entidades elegidas sin datos caídos, sin errores en la consola y sin URL, ubicación ni credenciales en la respuesta. No se han comparado los valores con la interfaz de Home Assistant |
 | 2026-11-02 | Hito 4, recursos y resumen | Home Assistant 2026.2.3 real en local, sin Supervisor | Correcto: el resumen coincide con los estados reales (117 entidades, 1 no disponible, 5 de 6 luces), la falta de Supervisor se indica sin afectar al resto y el enlace propio se publica |
 | 2026-11-02 | Hito 4 (`dd3706c`) | Home Assistant 2026.10.1 del cliente, con Supervisor y token de administrador | Correcto: validado por el cliente. Revisión adicional: CPU, memoria, disco y arranque reales y coherentes (porcentajes iguales a usado sobre total), resumen por dominio, enlaces en los tres servicios con `noopener` y sin usuarios, credenciales, nombre del equipo, personas ni cerraduras en la API pública. Reconexión de la actualización en vivo tras reiniciar Talaia. No se han comparado los recuentos con la interfaz de Home Assistant |
+| 2026-11-02 | Hito 5 | Base de datos creada por la versión del hito 4, con conexiones | Correcto: conserva el administrador y las conexiones, y las coloca en la página «Inicio» por orden alfabético y sin solapes |
 
 **Contraste con fuentes oficiales:**
 - AdGuard Home: especificación OpenAPI.
@@ -160,6 +175,8 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 - Proxmox VE: fuente de la API en `PVE/API2/Cluster.pm`, de `pve-manager`, y documentación de API tokens.
 
 **Aún sin verificar:**
+- **Hito 5 con la instalación del cliente:** migración de sus datos y uso real del editor.
+- **Arrastrar en pantallas táctiles.** Solo se ha probado con ratón; los controles de teclado funcionan también con toque.
 - **Recursos con un token sin permisos de administrador.** La falta de Supervisor se ha probado en real; el rechazo por permisos, solo por el código de Home Assistant.
 - **Home Assistant real, casos no probados:** instalaciones con miles de entidades, sensores de energía físicos, modo de recuperación y acceso por HTTPS.
 - **Proxmox VE real, casos no probados:** nodo caído, pérdida de quórum y nodo independiente. Solo se han probado con el simulador.
@@ -199,6 +216,11 @@ Los requisitos pendientes se probarán en su hito.
 | RF-25 | `TestConnectionLink`, `TestLinkFallsBackToConnectionURL`, `TestChangingLinkKeepsData`, E2E-23 |
 | RF-53 | `TestSystemFromSupervisor`, `TestSystemIsOptional`, `TestConnectionTestReportsNotes`, E2E-21 |
 | RF-54 | `TestSummary`, E2E-21 |
+| RF-07 | `TestDashboardCanRequireLogin`, `TestSettingsDefaultsAndSave`, E2E-27 |
+| RF-08 | `TestChangePassword`, `TestPasswordChangeAndReset`, E2E-28 |
+| RF-22 | `TestPanelSaveAndValidation`, `TestUnplacedConnectionIsHidden`, `TestNewConnectionsFillTwoColumns`, `TestPanelSaveAndCascade`, E2E-24, E2E-25 |
+| RF-23 | `TestPanelSaveAndValidation`, `TestPanelSaveAndCascade`, E2E-25 |
+| RF-24 | `TestSettingsValidation`, `TestSettingsDefaultsAndSave`, E2E-26 |
 | RNF-01 | Por diseño: el modelo de datos no tiene tablas de métricas |
 | RNF-02 | `TestCollect` y `TestClusterAggregates` usan solo lecturas; por diseño, el cliente solo ofrece `GetJSON` |
 | RNF-03 | `TestDashboardIsPublicAndHidesConfiguration`, `TestCollectsAndPassesDecryptedSecret`, `TestRedirectIsNotFollowed`, E2E-14 |
@@ -206,7 +228,7 @@ Los requisitos pendientes se probarán en su hito.
 | RNF-05 | `TestReopenKeepsData`, `TestMigratesExistingDatabase`; el binario se compila con `CGO_ENABLED=0` |
 | RNF-06 | Medición manual en reposo, ver [Estado y cambios](06-estado-y-cambios.md#consumo-medido) |
 | RNF-07 | `TestRemoveAndUnsupported`; el recolector solo depende de `integrations.Registry` |
-| RNF-08 | Revisión de código y de capturas; sin auditoría formal |
+| RNF-08 | E2E-24 para los controles sin arrastrar; revisión de código y de capturas; sin auditoría formal |
 | RNF-09 | Compilación para arm64 en local; publicación definida en `release.yml`, aún sin ejecutar |
 | RNF-10 | Revisión del repositorio |
 | RNF-11 | `make docs-check` |

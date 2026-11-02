@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/izakdev/talaia/internal/api"
+	"github.com/izakdev/talaia/internal/auth"
 	"github.com/izakdev/talaia/internal/collector"
 	"github.com/izakdev/talaia/internal/integrations"
 	"github.com/izakdev/talaia/internal/integrations/adguard"
@@ -30,7 +31,12 @@ var version = "dev"
 
 func main() {
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	if err := run(log); err != nil {
+	command := run
+	if len(os.Args) > 1 && os.Args[1] == "reset-password" {
+		os.Args = append(os.Args[:1], os.Args[2:]...)
+		command = resetPassword
+	}
+	if err := command(log); err != nil {
 		log.Error("no se pudo arrancar", "error", err)
 		os.Exit(1)
 	}
@@ -41,6 +47,53 @@ func env(name, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func openStore(dataDir, keyFile string) (*store.Store, error) {
+	if err := os.MkdirAll(dataDir, 0o700); err != nil {
+		return nil, fmt.Errorf("crear directorio de datos: %w", err)
+	}
+	if keyFile == "" {
+		keyFile = filepath.Join(dataDir, "secret.key")
+	}
+	key, err := secrets.LoadOrCreateKey(keyFile)
+	if err != nil {
+		return nil, err
+	}
+	box, err := secrets.New(key)
+	if err != nil {
+		return nil, err
+	}
+	return store.Open(filepath.Join(dataDir, "talaia.db"), box)
+}
+
+// resetPassword genera una contraseña nueva para quien tenga acceso al equipo.
+func resetPassword(*slog.Logger) error {
+	dataDir := flag.String("data", env("TALAIA_DATA_DIR", "data"), "directorio de datos")
+	keyFile := flag.String("key-file", env("TALAIA_KEY_FILE", ""), "archivo de la clave de cifrado")
+	flag.Parse()
+	st, err := openStore(*dataDir, *keyFile)
+	if err != nil {
+		return err
+	}
+	defer st.Close()
+	password, err := auth.NewSessionToken()
+	if err != nil {
+		return err
+	}
+	hash, err := auth.HashPassword(password)
+	if err != nil {
+		return err
+	}
+	username, err := st.ResetPassword(context.Background(), hash)
+	if errors.Is(err, store.ErrNotFound) {
+		return errors.New("todavía no hay administrador: créalo desde la web")
+	}
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Usuario: %s\nContraseña nueva: %s\n", username, password)
+	return nil
 }
 
 func run(log *slog.Logger) error {
@@ -54,21 +107,7 @@ func run(log *slog.Logger) error {
 		return nil
 	}
 
-	if err := os.MkdirAll(*dataDir, 0o700); err != nil {
-		return fmt.Errorf("crear directorio de datos: %w", err)
-	}
-	if *keyFile == "" {
-		*keyFile = filepath.Join(*dataDir, "secret.key")
-	}
-	key, err := secrets.LoadOrCreateKey(*keyFile)
-	if err != nil {
-		return err
-	}
-	box, err := secrets.New(key)
-	if err != nil {
-		return err
-	}
-	st, err := store.Open(filepath.Join(*dataDir, "talaia.db"), box)
+	st, err := openStore(*dataDir, *keyFile)
 	if err != nil {
 		return err
 	}

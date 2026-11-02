@@ -1,9 +1,10 @@
 // Pruebas de extremo a extremo. Requiere el binario compilado: make build.
 // Los identificadores E2E-xx están descritos en docs/proyecto/04-plan-de-pruebas.md.
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { promisify } from "node:util";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
@@ -54,6 +55,15 @@ page.on("console", (message) => {
   if (message.type() === "error" && !message.text().includes("Failed to load resource")) consoleErrors.push(message.text());
 });
 
+const widget = (name) => page.getByTestId(`widget-${name}`);
+const toEditor = async () => {
+  await page.getByRole("link", { name: "Panel", exact: true }).click();
+  await page.getByRole("heading", { name: "Panel", exact: true }).waitFor();
+};
+const saveEditor = async () => {
+  await page.getByRole("button", { name: "Guardar panel" }).click();
+  await page.getByRole("status").getByText("Sin cambios").waitFor();
+};
 const row = (name) => page.locator(".connections li", { hasText: name });
 const openAddAdGuard = async () => {
   await page.getByRole("link", { name: "Añadir conexión" }).click();
@@ -374,11 +384,170 @@ const scenarios = [
     await page.getByRole("button", { name: "Guardar" }).click();
     await page.locator("dialog").waitFor({ state: "detached" });
     await toDashboard();
-    const homeLink = page.locator(".service", { hasText: "Domótica" }).locator(".service-link");
-    await homeLink.waitFor();
-    assert.equal(await homeLink.getAttribute("href"), "https://domotica.example/inicio");
+    // Al volver se ve la copia en caché hasta que llega el primer evento.
+    await page
+      .locator(".service", { hasText: "Domótica" })
+      .locator('.service-link[href="https://domotica.example/inicio"]')
+      .waitFor();
     assert.doesNotMatch(await publicDashboard(), /localhost:13002/);
     await toAdmin();
+  }],
+  ["E2E-24", "Editor: arrastrar, controles de teclado, descartar y guardar", async () => {
+    await toEditor();
+    await page.getByRole("status").getByText("Sin cambios").waitFor();
+    assert.equal(await page.locator(".editor-widget").count(), 3);
+    await shot(page, "15-editor-panel");
+    await widget("Domótica").locator(".widget-handle").scrollIntoViewIfNeeded();
+    const before = await widget("Domótica").boundingBox();
+    const handle = await widget("Domótica").locator(".widget-handle").boundingBox();
+    await page.mouse.move(handle.x + 20, handle.y + 10);
+    await page.mouse.down();
+    await page.mouse.move(handle.x + 200, handle.y + 12, { steps: 8 });
+    await page.mouse.move(handle.x + 620, handle.y + 12, { steps: 12 });
+    await page.mouse.up();
+    await page.getByRole("status").getByText("Cambios sin guardar").waitFor();
+    await page.waitForFunction(() => document.querySelector(".editor-widget.react-draggable-dragging") === null);
+    const after = await widget("Domótica").boundingBox();
+    assert.notEqual(Math.round(after.x), Math.round(before.x));
+    await page.getByRole("button", { name: "Descartar" }).click();
+    await page.getByRole("status").getByText("Sin cambios").waitFor();
+
+    const adguardBox = await widget("AdGuard principal").boundingBox();
+    await widget("AdGuard principal").getByRole("button", { name: "Más ancho" }).click();
+    await page.getByRole("status").getByText("Cambios sin guardar").waitFor();
+    // La rejilla anima el cambio de tamaño.
+    await page.waitForFunction(
+      (width) => document.querySelector('[data-testid="widget-AdGuard principal"]').getBoundingClientRect().width > width + 50,
+      adguardBox.width,
+    );
+    await widget("AdGuard principal").getByRole("button", { name: "Después" }).click();
+    await saveEditor();
+    await toDashboard();
+    await page.locator(".panel-grid .service", { hasText: "AdGuard principal" }).waitFor();
+    const columns = await page.evaluate(() =>
+      [...document.querySelectorAll(".panel-grid > div")].map((el) => el.style.gridColumn),
+    );
+    assert.ok(columns.includes("1 / span 8") || columns.some((c) => c.endsWith("span 8")), String(columns));
+    await page.getByRole("link", { name: "Administración" }).click();
+  }],
+  ["E2E-25", "Varias páginas y servicios fuera del panel", async () => {
+    await toEditor();
+    await page.getByRole("button", { name: "Añadir página" }).click();
+    await page.getByLabel("Nombre de la página").fill("Red");
+    await page.getByRole("button", { name: "AdGuard principal" }).click();
+    assert.equal(await page.locator(".editor-widget").count(), 1);
+    await page.getByRole("button", { name: "Inicio", exact: true }).click();
+    await widget("Domótica").getByRole("button", { name: "Quitar" }).click();
+    await widget("AdGuard principal").getByRole("button", { name: "Quitar" }).click();
+    await shot(page, "16-editor-paginas");
+    await saveEditor();
+    let body = JSON.parse(await publicDashboard());
+    assert.equal(body.pages.length, 2);
+    assert.ok(!body.connections.some((c) => c.name === "Domótica"), "una conexión fuera del panel no debe publicarse");
+    await toDashboard();
+    const tabs = page.locator(".page-tabs");
+    await tabs.getByRole("link", { name: "Inicio" }).waitFor();
+    assert.equal(await page.locator(".panel-grid .service").count(), 1);
+    await tabs.getByRole("link", { name: "Red" }).click();
+    await page.locator(".panel-grid .service", { hasText: "AdGuard principal" }).waitFor();
+    assert.match(page.url(), /\/p\//);
+    await page.reload();
+    await page.locator(".panel-grid .service", { hasText: "AdGuard principal" }).waitFor();
+    assert.equal(await page.locator(".panel-grid .service", { hasText: "Clúster de casa" }).count(), 0);
+
+    // Deja una única página con todo, para los escenarios siguientes.
+    await page.getByRole("link", { name: "Administración" }).click();
+    await row("Domótica").getByText("Funciona").waitFor();
+    await toEditor();
+    await page.getByRole("button", { name: "Red", exact: true }).click();
+    await page.getByRole("button", { name: "Eliminar página" }).click();
+    await page.getByRole("button", { name: "Eliminar página" }).click();
+    await page.getByRole("button", { name: "AdGuard principal" }).click();
+    await page.getByRole("button", { name: "Domótica" }).click();
+    await saveEditor();
+    body = JSON.parse(await publicDashboard());
+    assert.equal(body.pages.length, 1);
+    assert.equal(body.connections.length, 3);
+  }],
+  ["E2E-26", "Tema y color de acento", async () => {
+    await page.getByRole("link", { name: "Ajustes" }).click();
+    await page.getByRole("heading", { name: "Ajustes" }).waitFor();
+    await page.getByRole("radio", { name: "Oscuro" }).check();
+    await page.getByRole("radio", { name: "Turquesa" }).check();
+    await page.getByRole("button", { name: "Guardar ajustes" }).click();
+    await page.getByRole("status").getByText("Ajustes guardados").waitFor();
+    await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
+    const colors = await page.evaluate(() => ({
+      accent: getComputedStyle(document.documentElement).getPropertyValue("--beacon").trim(),
+      page: getComputedStyle(document.body).backgroundColor,
+    }));
+    assert.equal(colors.accent, "#2dd4bf");
+    assert.equal(colors.page, "rgb(7, 43, 53)");
+    await shot(page, "17-ajustes");
+    await toDashboard();
+    await page.getByText("Protección activa").waitFor();
+    await shot(page, "18-tema-oscuro");
+    await toAdmin();
+    await page.getByRole("link", { name: "Ajustes" }).click();
+    await page.getByRole("radio", { name: "Según el sistema" }).check();
+    await page.getByRole("radio", { name: "Ámbar" }).check();
+    await page.getByRole("button", { name: "Guardar ajustes" }).click();
+    await page.getByRole("status").getByText("Ajustes guardados").waitFor();
+  }],
+  ["E2E-27", "Inicio de sesión opcional para ver el panel", async () => {
+    const visitorContext = await browser.newContext({ locale: "es-ES" });
+    const visitor = await visitorContext.newPage();
+    await visitor.goto(BASE);
+    await visitor.getByText("Protección activa").waitFor();
+
+    await page.getByLabel(/Exigir inicio de sesión/).check();
+    await page.getByRole("button", { name: "Guardar ajustes" }).click();
+    await page.getByRole("status").getByText("Ajustes guardados").waitFor();
+
+    // Quien ya tenía el panel abierto deja de verlo sin recargar.
+    await visitor.getByRole("heading", { name: "Entra para ver el panel" }).waitFor();
+    assert.equal((await fetch(`${BASE}/api/dashboard`)).status, 401);
+    assert.equal((await fetch(`${BASE}/api/dashboard/events`)).status, 401);
+    await visitor.getByLabel("Usuario").fill(ADMIN.user);
+    await visitor.getByLabel("Contraseña").fill(ADMIN.password);
+    await visitor.getByRole("button", { name: "Entrar" }).click();
+    await visitor.getByText("Protección activa").waitFor();
+    await visitorContext.close();
+
+    await page.getByLabel(/Exigir inicio de sesión/).uncheck();
+    await page.getByRole("button", { name: "Guardar ajustes" }).click();
+    await page.getByRole("status").getByText("Ajustes guardados").waitFor();
+    assert.equal((await fetch(`${BASE}/api/dashboard`)).status, 200);
+  }],
+  ["E2E-28", "Cambio y recuperación de contraseña", async () => {
+    const form = page.locator("form", { hasText: "Contraseña actual" });
+    const changed = "contrasena-cambiada-larga";
+    await form.getByLabel("Contraseña actual").fill("no-es-la-actual-larga");
+    await form.getByLabel(/^Contraseña nueva/).fill(changed);
+    await form.getByLabel("Repite la contraseña nueva").fill("otra-distinta-larga");
+    await form.getByRole("alert").getByText("no coinciden").waitFor();
+    await form.getByLabel("Repite la contraseña nueva").fill(changed);
+    await form.getByRole("button", { name: "Cambiar contraseña" }).click();
+    await form.getByRole("alert").getByText("no es correcta").waitFor();
+    await form.getByLabel("Contraseña actual").fill(ADMIN.password);
+    await form.getByRole("button", { name: "Cambiar contraseña" }).click();
+    await form.getByRole("status").getByText("Contraseña cambiada").waitFor();
+
+    const { stdout } = await promisify(execFile)(join(root, "bin/talaia"), ["reset-password", "-data", dataDir]);
+    const recovered = stdout.match(/Contraseña nueva: (\S+)/)[1];
+    assert.match(stdout, /Usuario: admin/);
+
+    // La recuperación revoca las sesiones abiertas.
+    await page.goto(`${BASE}/admin`);
+    await page.getByRole("heading", { name: "Entra en la administración" }).waitFor();
+    await page.getByLabel("Usuario").fill(ADMIN.user);
+    await page.getByLabel("Contraseña").fill(changed);
+    await page.getByRole("button", { name: "Entrar" }).click();
+    await page.getByRole("alert").getByText("Usuario o contraseña incorrectos").waitFor();
+    await page.getByLabel("Contraseña").fill(recovered);
+    await page.getByRole("button", { name: "Entrar" }).click();
+    await page.getByRole("heading", { name: "Conexiones", exact: true }).waitFor();
+    ADMIN.password = recovered;
   }],
   ["E2E-12", "Cambio de idioma recordado", async () => {
     await page.getByRole("button", { name: "English" }).click();

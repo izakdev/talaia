@@ -104,3 +104,23 @@ Cada decisión recoge su motivo y sus consecuencias. Si una decisión cambia, se
 - **Contexto:** el panel no exige inicio de sesión, y un contador puede revelar si hay alguien en casa o si una puerta está abierta.
 - **Decisión:** el resumen excluye personas, cerraduras, alarmas, y puertas, garajes y verjas. Los grupos tampoco cuentan, para no contar dos veces a sus miembros.
 - **Consecuencias:** quien quiera ver esos datos puede elegir las entidades concretas, bajo su responsabilidad.
+
+## DEC-21: el bloque sigue siendo la conexión
+- **Contexto:** DEC-08 y DEC-15 dejaron pendiente si las opciones y la selección de entidades debían pasar al widget.
+- **Decisión:** se mantienen en la conexión. Un widget solo guarda página, posición y tamaño, y una conexión puede estar en varias páginas, con el mismo contenido.
+- **Consecuencias:** configuración simple y sin migrar datos. Si se quisieran dos vistas distintas de un mismo servicio, habría que crear otra conexión o revisar esta decisión.
+
+## DEC-22: rejilla CSS en el panel y arrastrable solo en el editor
+- **Contexto:** con `react-grid-layout`, la altura es fija, y el detalle desplegable de Proxmox o una lista larga quedarían recortados.
+- **Decisión:** el panel usa CSS Grid con la misma rejilla y filas que crecen con el contenido. La librería solo se carga en el editor.
+- **Consecuencias:** nada se recorta ni se solapa y el panel carga menos código. La altura elegida es un mínimo, por lo que la vista previa del editor puede recortar lo que en el panel se ve entero.
+
+## DEC-23: recuperación de contraseña por línea de comandos
+- **Contexto:** Talaia no tiene correo ni servicios externos, y una pregunta de seguridad sería más débil.
+- **Decisión:** `talaia reset-password` genera una contraseña aleatoria y revoca las sesiones. Requiere acceso al equipo.
+- **Consecuencias:** sirve en un LXC sin dependencias. Quien no tenga acceso al equipo no puede recuperar la cuenta, y eso es lo que se busca.
+
+## DEC-24: tema y acento globales, con opciones cerradas
+- **Contexto:** los colores libres permitirían combinaciones sin contraste suficiente y valores no controlados en el CSS.
+- **Decisión:** tres temas y cinco acentos validados en el servidor, todos con texto oscuro legible encima.
+- **Consecuencias:** menos libertad, sin riesgo de un panel ilegible. El idioma sigue siendo de cada navegador.

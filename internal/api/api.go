@@ -88,6 +88,12 @@ func (s *Server) Handler() http.Handler {
 		r.Post("/auth/logout", s.logout)
 		r.Route("/admin", func(r chi.Router) {
 			r.Use(s.requireAuth)
+			r.Get("/status", s.adminStatus)
+			r.Get("/panel", s.getPanel)
+			r.Put("/panel", s.savePanel)
+			r.Get("/settings", s.getSettings)
+			r.Put("/settings", s.saveSettings)
+			r.Post("/password", s.changePassword)
 			r.Get("/connections", s.listConnections)
 			r.Post("/connections", s.createConnection)
 			r.Post("/connections/test", s.testConnection)
@@ -169,7 +175,15 @@ func (s *Server) state(w http.ResponseWriter, r *http.Request) {
 		s.internal(w, err)
 		return
 	}
-	resp := map[string]any{"setup_required": needSetup, "version": s.version, "user": nil}
+	settings, err := s.store.GetSettings(r.Context())
+	if err != nil {
+		s.internal(w, err)
+		return
+	}
+	resp := map[string]any{
+		"setup_required": needSetup, "version": s.version, "user": nil,
+		"theme": settings.Theme, "accent": settings.Accent, "require_login": settings.RequireLogin,
+	}
 	if u, err := s.currentUser(r); err == nil {
 		resp["user"] = u.Username
 	} else if !errors.Is(err, store.ErrNotFound) {
@@ -611,12 +625,78 @@ func (s *Server) listEntities(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "entities": entities})
 }
 
-func (s *Server) dashboard(w http.ResponseWriter, _ *http.Request) {
+// dashboardState devuelve las páginas y el estado de las conexiones colocadas en
+// ellas. Lo que no está en el panel no sale por la API pública.
+func (s *Server) dashboardState(ctx context.Context) (map[string]any, error) {
+	pages, err := s.store.Panel(ctx)
+	if err != nil {
+		return nil, err
+	}
+	placed := map[string]bool{}
+	for _, page := range pages {
+		for _, widget := range page.Widgets {
+			placed[widget.ConnectionID] = true
+		}
+	}
+	connections := []collector.Snapshot{}
+	for _, snapshot := range s.collector.Snapshots() {
+		if placed[snapshot.ID] {
+			connections = append(connections, snapshot)
+		}
+	}
+	return map[string]any{"pages": pages, "connections": connections}, nil
+}
+
+// canViewDashboard indica si la petición puede ver el panel según los ajustes.
+func (s *Server) canViewDashboard(r *http.Request) (bool, error) {
+	settings, err := s.store.GetSettings(r.Context())
+	if err != nil {
+		return false, err
+	}
+	if !settings.RequireLogin {
+		return true, nil
+	}
+	_, err = s.currentUser(r)
+	if errors.Is(err, store.ErrNotFound) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
+	allowed, err := s.canViewDashboard(r)
+	if err != nil {
+		s.internal(w, err)
+		return
+	}
+	if !allowed {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	state, err := s.dashboardState(r.Context())
+	if err != nil {
+		s.internal(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, state)
+}
+
+// adminStatus devuelve el estado de todas las conexiones, estén o no en el panel.
+func (s *Server) adminStatus(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"connections": s.collector.Snapshots()})
 }
 
 // dashboardEvents envía el estado completo al conectar y en cada cambio.
 func (s *Server) dashboardEvents(w http.ResponseWriter, r *http.Request) {
+	allowed, err := s.canViewDashboard(r)
+	if err != nil {
+		s.internal(w, err)
+		return
+	}
+	if !allowed {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
 	changes, unsubscribe, ok := s.collector.Subscribe()
 	if !ok {
 		writeError(w, http.StatusServiceUnavailable, "busy")
@@ -642,7 +722,16 @@ func (s *Server) dashboardEvents(w http.ResponseWriter, r *http.Request) {
 		return rc.Flush() == nil
 	}
 	sendSnapshot := func() bool {
-		data, err := json.Marshal(map[string]any{"connections": s.collector.Snapshots()})
+		// Los ajustes o la sesión pueden cambiar con el flujo abierto.
+		if allowed, err := s.canViewDashboard(r); err != nil || !allowed {
+			return false
+		}
+		state, err := s.dashboardState(r.Context())
+		if err != nil {
+			s.log.Error("no se pudo leer el panel", "error", err)
+			return false
+		}
+		data, err := json.Marshal(state)
 		if err != nil {
 			s.log.Error("no se pudo serializar el estado", "error", err)
 			return false

@@ -8,6 +8,8 @@ import { homeAssistantWidget } from "./widgets/homeassistant";
 import { proxmoxWidget } from "./widgets/proxmox";
 import type { Tone, Widget } from "./widgets/types";
 
+const RETRY_MS = 5000;
+
 const WIDGETS: Partial<Record<ConnectionType, unknown>> = {
   adguard: adguardWidget,
   homeassistant: homeAssistantWidget,
@@ -17,16 +19,26 @@ const WIDGETS: Partial<Record<ConnectionType, unknown>> = {
 function useLiveDashboard() {
   const client = useQueryClient();
   const [live, setLive] = useState(true);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
+    let retry: ReturnType<typeof setTimeout> | undefined;
     const events = new EventSource("/api/dashboard/events");
     events.addEventListener("snapshot", (event) => {
       setLive(true);
       client.setQueryData<DashboardState>(["dashboard"], JSON.parse((event as MessageEvent<string>).data));
     });
-    // EventSource reintenta por sí solo mientras no se cierre.
-    events.onerror = () => setLive(false);
-    return () => events.close();
-  }, [client]);
+    events.onerror = () => {
+      setLive(false);
+      // Puede que ahora el panel exija iniciar sesión.
+      client.invalidateQueries({ queryKey: ["state"] });
+      // EventSource solo reintenta por sí solo ante errores de red, no de HTTP.
+      if (events.readyState === EventSource.CLOSED) retry = setTimeout(() => setAttempt((n) => n + 1), RETRY_MS);
+    };
+    return () => {
+      clearTimeout(retry);
+      events.close();
+    };
+  }, [client, attempt]);
   return live;
 }
 
@@ -50,47 +62,74 @@ function relativeTime(iso: string, now: number, lang: Language) {
   return format.format(Math.round(hours / 24), "day");
 }
 
-export default function Dashboard({ navigate }: { navigate: (path: string) => void }) {
+export default function Dashboard({ path, navigate }: { path: string; navigate: (path: string) => void }) {
   const { t } = useI18n();
   const live = useLiveDashboard();
   const dashboard = useQuery({ queryKey: ["dashboard"], queryFn: api.dashboard });
-  const adminLink = (label: string, className: string) => (
+  const link = (to: string, label: string, className: string, current?: boolean) => (
     <a
+      key={to}
       className={className}
-      href="/admin"
+      href={to}
+      aria-current={current ? "page" : undefined}
       onClick={(event) => {
         event.preventDefault();
-        navigate("/admin");
+        navigate(to);
       }}
     >
       {label}
     </a>
   );
 
-  if (dashboard.data?.connections.length === 0) {
+  const pages = dashboard.data?.pages ?? [];
+  if (dashboard.data && pages.every((p) => p.widgets.length === 0)) {
     return (
       <Horizon>
         <h1>{t("dashboard.title")}</h1>
         <p>{t("dashboard.lead")}</p>
-        {adminLink(t("dashboard.admin"), "button primary")}
+        {link("/admin", t("dashboard.admin"), "button primary")}
       </Horizon>
     );
   }
+  const requested = path.startsWith("/p/") ? decodeURIComponent(path.slice(3)) : null;
+  const page = pages.find((p) => p.id === requested) ?? pages[0];
+  const states = new Map(dashboard.data?.connections.map((c) => [c.id, c]));
   return (
     <div className="lookout">
       <header className="lookout-sky">
         <Tower />
         <span className="wordmark">Talaia</span>
-        {adminLink(t("dashboard.admin.short"), "quiet")}
+        {link("/admin", t("dashboard.admin.short"), "quiet")}
         <LanguageSwitch />
       </header>
       <main className="lookout-main">
-        <h1 className="visually-hidden">Talaia</h1>
+        {pages.length > 1 ? (
+          <nav className="page-tabs" aria-label={t("panel.pages")}>
+            {pages.map((p) =>
+              link(`/p/${encodeURIComponent(p.id)}`, p.name, p.id === page.id ? "page-tab current" : "page-tab", p.id === page.id),
+            )}
+          </nav>
+        ) : null}
+        <h1 className="visually-hidden">{page?.name ?? "Talaia"}</h1>
         {!live && <p role="status" className="live-lost">{t("dashboard.live.lost")}</p>}
         {dashboard.isPending && <p>{t("app.loading")}</p>}
         {dashboard.isError && <p role="alert" className="error">{t("dashboard.unavailable")}</p>}
-        <div className="services">
-          {dashboard.data?.connections.map((connection) => <Service key={connection.id} connection={connection} />)}
+        {page && page.widgets.length === 0 && <p className="lead">{t("dashboard.page.empty")}</p>}
+        <div className="panel-grid">
+          {page?.widgets.map((widget) => {
+            const state = states.get(widget.connection_id);
+            return state ? (
+              <div
+                key={widget.id}
+                style={{
+                  gridColumn: `${widget.x + 1} / span ${widget.w}`,
+                  gridRow: `${widget.y + 1} / span ${widget.h}`,
+                }}
+              >
+                <Service connection={state} />
+              </div>
+            ) : null;
+          })}
         </div>
       </main>
     </div>
@@ -111,7 +150,7 @@ function StateLabel({ tone, children }: { tone: Tone; children: ReactNode }) {
   );
 }
 
-function Service({ connection }: { connection: ConnectionState }) {
+export function Service({ connection }: { connection: ConnectionState }) {
   const { t, lang, collectError } = useI18n();
   const now = useNow(10000);
   const widget = WIDGETS[connection.type] as Widget<unknown> | undefined;

@@ -153,7 +153,7 @@ func TestLinkFallsBackToConnectionURL(t *testing.T) {
 func TestMigratesExistingDatabase(t *testing.T) {
 	s, path := newStore(t)
 	ctx := context.Background()
-	if _, err := s.db.Exec(`ALTER TABLE connections DROP COLUMN link_url; ALTER TABLE connections DROP COLUMN entities; ALTER TABLE connections DROP COLUMN options; PRAGMA user_version = 1;`); err != nil {
+	if _, err := s.db.Exec(`DROP TABLE widgets; DROP TABLE pages; DROP TABLE settings; ALTER TABLE connections DROP COLUMN link_url; ALTER TABLE connections DROP COLUMN entities; ALTER TABLE connections DROP COLUMN options; PRAGMA user_version = 1;`); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.db.Exec(`INSERT INTO connections(id, name, type, base_url, secret, interval_seconds, created_at, updated_at)
@@ -170,5 +170,103 @@ func TestMigratesExistingDatabase(t *testing.T) {
 	c, err := s2.GetConnection(ctx, "v1")
 	if err != nil || c.Name != "antigua" || c.Options["show_top_domains"] || len(c.Entities) != 0 {
 		t.Fatalf("c = %+v, err = %v", c, err)
+	}
+	pages, err := s2.Panel(ctx)
+	if err != nil || len(pages) != 1 || len(pages[0].Widgets) != 1 || pages[0].Widgets[0].ConnectionID != "v1" {
+		t.Fatalf("las conexiones existentes deben quedar en el panel: %+v, err = %v", pages, err)
+	}
+}
+
+func TestNewConnectionsFillTwoColumns(t *testing.T) {
+	s, _ := newStore(t)
+	ctx := context.Background()
+	for _, name := range []string{"a", "b", "c"} {
+		if _, err := s.CreateConnection(ctx, Connection{Name: name, Type: "adguard", BaseURL: "http://x", IntervalSeconds: 30}, "s"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	pages, err := s.Panel(ctx)
+	if err != nil || len(pages) != 1 || len(pages[0].Widgets) != 3 {
+		t.Fatalf("panel = %+v, err = %v", pages, err)
+	}
+	w := pages[0].Widgets
+	if w[0].X != 0 || w[0].Y != 0 || w[1].X != DefaultWidgetWidth || w[1].Y != 0 || w[2].X != 0 || w[2].Y != DefaultWidgetHeight {
+		t.Fatalf("widgets = %+v", w)
+	}
+}
+
+func TestPanelSaveAndCascade(t *testing.T) {
+	s, _ := newStore(t)
+	ctx := context.Background()
+	c, err := s.CreateConnection(ctx, Connection{Name: "a", Type: "adguard", BaseURL: "http://x", IntervalSeconds: 30}, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	saved := []Page{
+		{ID: "p2", Name: "Red", Widgets: []Widget{{ID: "w1", ConnectionID: c.ID, X: 3, Y: 1, W: 4, H: 5}}},
+		{ID: "p1", Name: "Vacía", Widgets: []Widget{}},
+	}
+	if err := s.SavePanel(ctx, saved); err != nil {
+		t.Fatal(err)
+	}
+	pages, err := s.Panel(ctx)
+	if err != nil || len(pages) != 2 || pages[0].ID != "p2" || pages[0].Widgets[0].X != 3 {
+		t.Fatalf("panel = %+v, err = %v", pages, err)
+	}
+	if err := s.DeleteConnection(ctx, c.ID); err != nil {
+		t.Fatal(err)
+	}
+	if pages, _ = s.Panel(ctx); len(pages[0].Widgets) != 0 {
+		t.Fatalf("eliminar la conexión debe quitar su widget: %+v", pages)
+	}
+}
+
+func TestSettingsDefaultsAndSave(t *testing.T) {
+	s, _ := newStore(t)
+	ctx := context.Background()
+	got, err := s.GetSettings(ctx)
+	if err != nil || got != (Settings{Theme: "auto", Accent: "amber"}) {
+		t.Fatalf("por defecto = %+v, err = %v", got, err)
+	}
+	want := Settings{Theme: "dark", Accent: "teal", RequireLogin: true}
+	if err := s.SaveSettings(ctx, want); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ = s.GetSettings(ctx); got != want {
+		t.Fatalf("guardado = %+v", got)
+	}
+}
+
+func TestPasswordChangeAndReset(t *testing.T) {
+	s, _ := newStore(t)
+	ctx := context.Background()
+	if _, err := s.ResetPassword(ctx, "x"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("sin usuarios: %v", err)
+	}
+	id, err := s.CreateFirstUser(ctx, "admin", "h1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	expires := time.Now().Add(time.Hour)
+	for _, token := range []string{"actual", "otra"} {
+		if err := s.CreateSession(ctx, token, id, expires); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.ChangePassword(ctx, id, "h2", "actual"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.UserBySession(ctx, "otra"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("debe revocar las demás sesiones: %v", err)
+	}
+	if u, err := s.UserBySession(ctx, "actual"); err != nil || u.PasswordHash != "h2" {
+		t.Fatalf("u = %+v, err = %v", u, err)
+	}
+	name, err := s.ResetPassword(ctx, "h3")
+	if err != nil || name != "admin" {
+		t.Fatalf("name = %s, err = %v", name, err)
+	}
+	if _, err := s.UserBySession(ctx, "actual"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("debe revocar todas las sesiones: %v", err)
 	}
 }

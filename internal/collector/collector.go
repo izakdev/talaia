@@ -233,6 +233,13 @@ func (m *Manager) Snapshots() []Snapshot {
 	return out
 }
 
+// Notify avisa a los suscriptores de un cambio ajeno a la recolección.
+func (m *Manager) Notify() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.notifyLocked()
+}
+
 // Subscribe devuelve un canal que avisa de cambios. Los avisos seguidos se agrupan.
 func (m *Manager) Subscribe() (<-chan struct{}, func(), bool) {
 	m.mu.Lock()

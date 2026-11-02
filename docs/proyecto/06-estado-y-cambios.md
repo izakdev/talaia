@@ -8,10 +8,24 @@
 | 2 | AdGuard y flujo completo, catálogo de servicios y documentación | Terminado y validado por el cliente, en `main` |
 | 3 | Proxmox: visión agregada y detalle por nodo | Terminado y verificado con un clúster real, en `main` |
 | 4 | Home Assistant: estado, entidades, consumos, recursos y resumen; enlace a cada servicio | Terminado y verificado con la instalación del cliente, en `main` |
-| 5 | Editor: rejilla, varias páginas y temas; login opcional; cambio y recuperación de contraseña | Pendiente |
+| 5 | Editor: rejilla, varias páginas y temas; login opcional; cambio y recuperación de contraseña | Implementado, pendiente de validar por el cliente |
 | 6 | Distribución: instalador LXC, actualización y documentación final | Pendiente |
 
 ## Historial
+
+### Hito 5 (2026-11-02)
+
+**Añadido:**
+- Editor del panel: elegir servicios, colocarlos y redimensionarlos, con controles de teclado.
+- Varias páginas, con pestañas en el panel.
+- Tema claro, oscuro o del sistema, y color de acento.
+- Inicio de sesión opcional para ver el panel.
+- Cambio de contraseña desde la web y recuperación con `talaia reset-password`.
+
+**Cambiado:**
+- El panel muestra lo colocado en el editor, y lo que no está en él deja de salir por la API pública.
+- Las conexiones existentes pasan a la página «Inicio», y las nuevas se añaden a la primera página.
+- La administración se organiza en Conexiones, Panel y Ajustes.
 
 ### Hito 4 (2026-11-02)
 
@@ -69,7 +83,6 @@
 
 | Limitación | Impacto | Previsión |
 |---|---|---|
-| No se puede cambiar ni recuperar la contraseña | Olvidarla obliga a empezar de cero | RF-08, hito 5 |
 | Sin instalador | Hay que compilar o copiar el binario y crear el servicio a mano | Hito 6 |
 | CPU, memoria y disco de Home Assistant requieren Supervisor y token de administrador | Otras instalaciones no los muestran; pueden elegir sensores de System Monitor | Por diseño de Home Assistant |
 | El disco de Home Assistant se muestra en GiB | Las cifras son algo menores que los GB que muestra Home Assistant, aunque el porcentaje coincide | Bajo demanda |
@@ -78,9 +91,9 @@
 | Los consumos no se suman | No hay un total automático | Por diseño: se puede crear un sensor agregado en Home Assistant |
 | Nodo caído, pérdida de quórum y nodo independiente solo probados con simulador | Puede haber diferencias en esos casos | Al darse la ocasión |
 | Sin almacenamiento en la vista de Proxmox | Solo se ve el disco de cada nodo | Bajo demanda |
-| El dashboard muestra todas las conexiones con integración, en orden alfabético | No se puede elegir ni colocar | Hito 5 |
-| Dashboard sin login | Cualquiera con acceso al puerto ve el estado | Hito 5 |
 | Bloqueo de login por IP detrás de un proxy inverso | Los fallos cuentan para todos los clientes | Sin hito asignado |
+| Una conexión tiene un solo contenido | No se pueden mostrar dos vistas distintas de un servicio | Bajo demanda, ver DEC-21 |
+| Arrastrar sin probar en pantallas táctiles | Puede no ir fino en un móvil; hay controles alternativos | Al darse la ocasión |
 | Primer arranque abierto hasta crear el administrador | Alguien en la red podría crearlo primero | Revisar en el hito 6 |
 
 ## Consumo medido
