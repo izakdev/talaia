@@ -58,3 +58,18 @@ Cada decisión recoge su motivo y sus consecuencias. Si una decisión cambia, se
 - **Contexto:** el cliente quiere revisar el resultado antes de darlo por bueno.
 - **Decisión:** desde el hito 2, cada hito se entrega en una rama con su pull request.
 - **Consecuencias:** `main` contiene solo lo aceptado por el cliente.
+
+## DEC-12: detalle de VM y LXC desplegable y activado por defecto
+- **Contexto:** el requisito pide ver cada nodo con sus VM y LXC, pero el cliente prefiere una vista rápida y poder ocultar lo adicional.
+- **Decisión:** los agregados y los consumos por nodo son fijos. El detalle se despliega por nodo y se puede desactivar por conexión, en cuyo caso no sale por la API pública.
+- **Consecuencias:** a diferencia del top de dominios de AdGuard, está activado por defecto porque forma parte del requisito. Cualquiera que abra el panel ve los nombres de las VM y LXC, y las conexiones de Proxmox guardadas antes de este cambio lo tienen desactivado hasta editarlas.
+
+## DEC-13: sin almacenamiento en la vista agregada de Proxmox
+- **Contexto:** en un clúster, un almacenamiento compartido aparece una vez por nodo, y sumarlo daría un total falso.
+- **Decisión:** se muestra solo el disco de cada nodo.
+- **Consecuencias:** no se ve el estado de los almacenamientos. Si hiciera falta, se añadiría como opción deduplicando los compartidos.
+
+## DEC-14: ramas de hito encadenadas si el anterior no está fusionado
+- **Contexto:** el cliente puede aprobar la continuación sin fusionar todavía el pull request anterior.
+- **Decisión:** la rama del hito parte de la anterior, y su pull request apunta a ella para que muestre solo los cambios nuevos.
+- **Consecuencias:** hay que fusionar los pull requests por orden.

@@ -377,7 +377,7 @@ function ConnectionDialog({
   const [secret, setSecret] = useState("");
   const [interval, setIntervalValue] = useState(String(connection?.interval_seconds ?? 30));
   const [skipTls, setSkipTls] = useState(connection?.tls_skip_verify ?? false);
-  const [options, setOptions] = useState<Record<string, boolean>>(connection?.options ?? {});
+  const [options, setOptions] = useState<Record<string, boolean>>(connection?.options ?? entry.defaultOptions);
 
   useEffect(() => {
     dialog.current?.showModal();

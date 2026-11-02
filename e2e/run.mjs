@@ -8,6 +8,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import { fakeAdGuard, PASSWORD, USER } from "./fake-adguard.mjs";
+import { fakeProxmox, TOKEN } from "./fake-proxmox.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const screenshotsDir = process.argv.includes("--screenshots") ? join(root, "docs/usuario/img") : null;
@@ -15,6 +16,7 @@ const BASE = "http://127.0.0.1:18080";
 const ADMIN = { user: "admin", password: "una-clave-bien-larga" };
 
 const adguard = fakeAdGuard(13000);
+const proxmox = fakeProxmox(13001);
 const dataDir = mkdtempSync(join(tmpdir(), "talaia-e2e-"));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -181,29 +183,94 @@ const scenarios = [
   ["E2E-10", "Servicio sin integración disponible", async () => {
     await toAdmin();
     await page.getByRole("link", { name: "Añadir conexión" }).click();
-    await page.getByRole("button", { name: /Proxmox/ }).click();
+    await page.getByRole("button", { name: /Home Assistant/ }).click();
     assert.equal(await page.getByRole("button", { name: "Probar conexión" }).count(), 0);
-    await page.getByLabel("Nombre", { exact: true }).fill("Clúster");
-    await page.getByLabel("URL", { exact: true }).fill("https://proxmox.example:8006");
-    await page.locator("dialog input[type=password]").fill("root@pam!talaia=valor");
+    await page.getByLabel("Nombre", { exact: true }).fill("Casa");
+    await page.getByLabel("URL", { exact: true }).fill("http://homeassistant.example:8123");
+    await page.locator("dialog input[type=password]").fill("token-de-larga-duracion");
     await page.getByRole("button", { name: "Guardar" }).click();
-    await row("Clúster").getByText("aún no disponible").waitFor();
-    await shot(page, "06-conexiones");
-    assert.doesNotMatch(await publicDashboard(), /Clúster/);
+    await row("Casa").getByText("aún no disponible").waitFor();
+    assert.doesNotMatch(await publicDashboard(), /Casa/);
   }],
   ["E2E-11", "Editar y eliminar conexiones", async () => {
-    await row("Clúster").getByRole("button", { name: "Editar" }).click();
+    await row("Casa").getByRole("button", { name: "Editar" }).click();
     const secret = page.locator("dialog input[type=password]");
     assert.equal(await secret.evaluate((input) => input.required), false);
-    await page.getByLabel("URL", { exact: true }).fill("https://otro.example:8006");
+    await page.getByLabel("URL", { exact: true }).fill("http://otro.example:8123");
     assert.equal(await secret.evaluate((input) => input.required), true);
     await page.getByRole("button", { name: "Cancelar" }).click();
-    await row("Clúster").getByRole("button", { name: "Eliminar" }).click();
-    await row("Clúster").getByText("¿Eliminar Clúster?").waitFor();
-    await row("Clúster").getByRole("button", { name: "Cancelar" }).click();
-    await row("Clúster").getByRole("button", { name: "Eliminar" }).click();
-    await row("Clúster").getByRole("button", { name: "Eliminar" }).click();
-    await row("Clúster").waitFor({ state: "detached" });
+    await row("Casa").getByRole("button", { name: "Eliminar" }).click();
+    await row("Casa").getByText("¿Eliminar Casa?").waitFor();
+    await row("Casa").getByRole("button", { name: "Cancelar" }).click();
+    await row("Casa").getByRole("button", { name: "Eliminar" }).click();
+    await row("Casa").getByRole("button", { name: "Eliminar" }).click();
+    await row("Casa").waitFor({ state: "detached" });
+  }],
+  ["E2E-16", "Alta de Proxmox con validación del token", async () => {
+    await page.getByRole("link", { name: "Añadir conexión" }).click();
+    await page.getByRole("button", { name: /Proxmox/ }).click();
+    await page.getByLabel("Nombre", { exact: true }).fill("Clúster de casa");
+    await page.getByLabel("URL", { exact: true }).fill(proxmox.url);
+    await page.locator("dialog input[type=number]").fill("5");
+    assert.equal(await page.getByLabel(/detalle de cada VM y LXC/).isChecked(), true);
+    const secret = page.locator("dialog input[type=password]");
+    await secret.fill("sin-formato");
+    await page.getByRole("button", { name: "Probar conexión" }).click();
+    await page.getByRole("alert").getByText("El token debe tener el formato").waitFor();
+    await secret.fill("talaia@pve!dashboard=incorrecto");
+    await page.getByRole("button", { name: "Probar conexión" }).click();
+    await page.locator("dialog [role=status]").getByText("Credenciales rechazadas").waitFor();
+    await secret.fill(TOKEN);
+    await page.getByRole("button", { name: "Probar conexión" }).click();
+    await page.locator("dialog [role=status]").getByText("Conexión correcta").waitFor();
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await row("Clúster de casa").getByText("Funciona").waitFor();
+    await shot(page, "06-conexiones");
+  }],
+  ["E2E-17", "Clúster en el panel: agregados, nodos y detalle", async () => {
+    await toDashboard();
+    const block = page.locator(".service", { hasText: "Clúster de casa" });
+    await block.getByText("Clúster correcto").waitFor();
+    const figures = await block.locator(".figures").innerText();
+    assert.match(figures, /Nodos\s+3\/3/);
+    assert.match(figures, /VM en marcha\s+2\/3/); // Sin contar la plantilla.
+    assert.match(figures, /LXC en marcha\s+3\/3/);
+    assert.equal(await block.locator(".nodes > li").count(), 3);
+    assert.equal(await block.getByText("plantilla").count(), 0);
+    await shot(page, "11-panel-proxmox");
+    const details = block.locator("details", { hasText: "nodo1" });
+    assert.equal(await details.evaluate((el) => el.open), false);
+    await details.locator("summary").click();
+    await details.getByRole("cell", { name: /domotica/ }).waitFor();
+    await details.getByRole("cell", { name: "Parada" }).waitFor();
+    await shot(page, "12-proxmox-detalle");
+    // El detalle sigue abierto aunque lleguen datos nuevos.
+    await sleep(6000);
+    assert.equal(await details.evaluate((el) => el.open), true);
+  }],
+  ["E2E-18", "Nodo caído en el clúster", async () => {
+    proxmox.state.nodeDown = true;
+    const block = page.locator(".service", { hasText: "Clúster de casa" });
+    await block.getByText("2 de 3 nodos en línea").waitFor();
+    await block.locator(".nodes li", { hasText: "nodo3" }).getByText("Sin conexión").waitFor();
+    proxmox.state.nodeDown = false;
+    await block.getByText("Clúster correcto").waitFor();
+  }],
+  ["E2E-19", "Detalle de VM y LXC opcional y excluido de la API pública", async () => {
+    assert.match(await publicDashboard(), /domotica/);
+    await toAdmin();
+    await row("Clúster de casa").getByRole("button", { name: "Editar" }).click();
+    await page.getByLabel(/detalle de cada VM y LXC/).uncheck();
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await page.locator("dialog").waitFor({ state: "detached" });
+    const body = await publicDashboard();
+    assert.doesNotMatch(body, /domotica|mensajeria|"guests"/);
+    await toDashboard();
+    const block = page.locator(".service", { hasText: "Clúster de casa" });
+    await block.getByText("Clúster correcto").waitFor();
+    assert.equal(await block.locator("details").count(), 0);
+    assert.equal(await block.locator(".nodes > li").count(), 3);
+    await toAdmin();
   }],
   ["E2E-12", "Cambio de idioma recordado", async () => {
     await page.getByRole("button", { name: "English" }).click();
@@ -234,7 +301,7 @@ const scenarios = [
   }],
   ["E2E-14", "La API pública no expone configuración ni credenciales", async () => {
     const body = await publicDashboard();
-    for (const leak of [USER, PASSWORD, "localhost:13000", "base_url", "secret"]) {
+    for (const leak of [USER, PASSWORD, TOKEN, "localhost:13000", "localhost:13001", "192.0.2.11", "base_url", "secret"]) {
       assert.equal(body.includes(leak), false, leak);
     }
     const headers = (await fetch(BASE)).headers;
@@ -249,6 +316,7 @@ const scenarios = [
 let failed = 0;
 try {
   await adguard.start();
+  await proxmox.start();
   await waitForServer();
   for (const [id, title, run] of scenarios) {
     try {
@@ -264,6 +332,7 @@ try {
   await browser.close();
   talaia.kill("SIGTERM");
   await adguard.stop().catch(() => {});
+  await proxmox.stop().catch(() => {});
   rmSync(dataDir, { recursive: true, force: true });
 }
 if (failed) process.exit(1);

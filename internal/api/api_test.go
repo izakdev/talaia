@@ -206,9 +206,17 @@ func TestConnectionValidation(t *testing.T) {
 	unknown := adguardConn("s")
 	unknown["options"] = map[string]bool{"otra": true}
 	c.want(400, "POST", "/api/admin/connections", unknown)
-	m := adguardConn("sin-formato")
-	m["type"] = "proxmox"
-	c.want(400, "POST", "/api/admin/connections", m)
+	for _, token := range []string{"sin-formato", "root@pam!sin-valor", "sin-reino!nombre=valor", "root@pam!a=con espacio"} {
+		m := adguardConn(token)
+		m["type"] = "proxmox"
+		if got := c.want(400, "POST", "/api/admin/connections", m); !strings.Contains(got, "invalid_proxmox_token") {
+			t.Fatalf("%s: %s", token, got)
+		}
+	}
+	valid := adguardConn("talaia@pve!dashboard=1234-abcd")
+	valid["type"] = "proxmox"
+	valid["options"] = map[string]bool{"show_guests": true}
+	c.want(201, "POST", "/api/admin/connections", valid)
 }
 
 func TestWritesRequireJSONAndSameOrigin(t *testing.T) {
@@ -391,7 +399,7 @@ func TestConnectionTest(t *testing.T) {
 		t.Fatalf("no debe enviar la credencial guardada a otra URL: %s", got)
 	}
 
-	proxmox := map[string]any{"name": "P", "type": "proxmox", "base_url": "http://192.0.2.2", "secret": "a!b=c", "interval_seconds": 30}
+	proxmox := map[string]any{"name": "P", "type": "proxmox", "base_url": "http://192.0.2.2", "secret": "root@pam!talaia=valor", "interval_seconds": 30}
 	if got := c.want(400, "POST", "/api/admin/connections/test", proxmox); !strings.Contains(got, "not_supported") {
 		t.Fatal(got)
 	}

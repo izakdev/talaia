@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -24,6 +25,7 @@ import (
 	"github.com/izakdev/talaia/internal/collector"
 	"github.com/izakdev/talaia/internal/integrations"
 	"github.com/izakdev/talaia/internal/integrations/adguard"
+	"github.com/izakdev/talaia/internal/integrations/proxmox"
 	"github.com/izakdev/talaia/internal/store"
 )
 
@@ -316,10 +318,13 @@ var connectionTypes = map[string]struct {
 	needsUsername bool
 	options       []string
 }{
-	"proxmox":       {},
+	"proxmox":       {options: []string{proxmox.OptionShowGuests}},
 	"homeassistant": {},
 	"adguard":       {needsUsername: true, options: []string{adguard.OptionShowTopDomains}},
 }
+
+// proxmoxToken valida el formato usuario@reino!nombre=valor.
+var proxmoxToken = regexp.MustCompile(`^[^\s!=]+@[^\s!=]+![^\s!=]+=[^\s]+$`)
 
 type connectionIn struct {
 	Name            string          `json:"name"`
@@ -381,7 +386,7 @@ func validateConnection(in *connectionIn) string {
 		if *in.Secret == "" || len(*in.Secret) > 4096 {
 			return "invalid_secret"
 		}
-		if in.Type == "proxmox" && !strings.Contains(*in.Secret, "!") {
+		if in.Type == "proxmox" && !proxmoxToken.MatchString(*in.Secret) {
 			return "invalid_proxmox_token"
 		}
 	}

@@ -1,8 +1,13 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type AdGuardData, type ConnectionState, type DashboardState, type DomainCount } from "./api";
+import { api, type ConnectionState, type ConnectionType, type DashboardState } from "./api";
 import { Horizon, LanguageSwitch, Tower } from "./chrome";
 import { useI18n, type Language } from "./i18n";
+import { adguardWidget } from "./widgets/adguard";
+import { proxmoxWidget } from "./widgets/proxmox";
+import type { Tone, Widget } from "./widgets/types";
+
+const WIDGETS: Partial<Record<ConnectionType, unknown>> = { adguard: adguardWidget, proxmox: proxmoxWidget };
 
 function useLiveDashboard() {
   const client = useQueryClient();
@@ -87,8 +92,6 @@ export default function Dashboard({ navigate }: { navigate: (path: string) => vo
   );
 }
 
-type Tone = "good" | "warn" | "bad" | "muted";
-
 function StateLabel({ tone, children }: { tone: Tone; children: ReactNode }) {
   return (
     <span className={`service-state ${tone}`}>
@@ -106,95 +109,31 @@ function StateLabel({ tone, children }: { tone: Tone; children: ReactNode }) {
 function Service({ connection }: { connection: ConnectionState }) {
   const { t, lang, collectError } = useI18n();
   const now = useNow(10000);
-  const data = connection.data as AdGuardData | null;
+  const widget = WIDGETS[connection.type] as Widget<unknown> | undefined;
+  const data = connection.data;
   const failed = connection.status === "error";
+  if (!widget) return null;
 
-  let state = <StateLabel tone="muted">{t("status.checking")}</StateLabel>;
-  if (failed) state = <StateLabel tone="bad">{t("status.noResponse")}</StateLabel>;
-  else if (data) {
-    state = !data.running ? (
-      <StateLabel tone="bad">{t("adguard.dnsStopped")}</StateLabel>
-    ) : data.protection_enabled ? (
-      <StateLabel tone="good">{t("adguard.protectionOn")}</StateLabel>
-    ) : (
-      <StateLabel tone="warn">{t("adguard.protectionOff")}</StateLabel>
-    );
-  }
+  let state = { tone: "muted" as Tone, label: t("status.checking") };
+  if (failed) state = { tone: "bad", label: t("status.noResponse") };
+  else if (data) state = widget.state(data, t);
+
+  const age = connection.last_success_at ? relativeTime(connection.last_success_at, now, lang) : null;
+  const freshness = failed ? (age ? t("age.last", { age }) : t("age.never")) : age && t("age.checked", { age });
+  const version = data ? widget.footer(data) : "";
 
   return (
     <section className={failed ? "service stale" : "service"}>
       <div className="service-head">
         <h2>{connection.name}</h2>
-        {state}
+        <StateLabel tone={state.tone}>{state.label}</StateLabel>
       </div>
       {failed && <p role="status" className="service-notice">{collectError(connection.error)}</p>}
-      {data && <AdGuard data={data} />}
+      {data ? <widget.Body data={data} /> : null}
       <p className="service-foot">
-        {failed
-          ? connection.last_success_at
-            ? t("age.last", { age: relativeTime(connection.last_success_at, now, lang) })
-            : t("age.never")
-          : connection.last_success_at && t("age.checked", { age: relativeTime(connection.last_success_at, now, lang) })}
-        {data?.version && ` (AdGuard Home ${data.version})`}
+        {freshness}
+        {version && ` (${version})`}
       </p>
     </section>
-  );
-}
-
-function AdGuard({ data }: { data: AdGuardData }) {
-  const { t, lang } = useI18n();
-  const integer = new Intl.NumberFormat(lang);
-  const compact = new Intl.NumberFormat(lang, { notation: "compact", maximumFractionDigits: 1 });
-  const percent = new Intl.NumberFormat(lang, { maximumFractionDigits: 1 });
-  const period =
-    data.period_length > 0 && data.period_unit
-      ? t(`adguard.period.${data.period_unit}`, { n: data.period_length })
-      : null;
-  return (
-    <>
-      <dl className="figures">
-        <div>
-          <dt>{t("adguard.queries")}</dt>
-          <dd title={integer.format(data.queries)}>{compact.format(data.queries)}</dd>
-        </div>
-        <div>
-          <dt>{t("adguard.blocked")}</dt>
-          <dd title={integer.format(data.blocked)}>{percent.format(data.blocked_percent)} %</dd>
-        </div>
-        <div>
-          <dt>{t("adguard.avg")}</dt>
-          <dd>{data.avg_processing_ms < 1 ? "< 1" : percent.format(data.avg_processing_ms)} ms</dd>
-        </div>
-      </dl>
-      {data.top_queried && data.top_blocked && (
-        <div className="tops">
-          <TopDomains title={t("adguard.topQueried")} domains={data.top_queried} />
-          <TopDomains title={t("adguard.topBlocked")} domains={data.top_blocked} />
-        </div>
-      )}
-      {period && <p className="service-foot">{period}</p>}
-    </>
-  );
-}
-
-function TopDomains({ title, domains }: { title: string; domains: DomainCount[] }) {
-  const { t, lang } = useI18n();
-  const integer = new Intl.NumberFormat(lang);
-  return (
-    <div>
-      <h3>{title}</h3>
-      {domains.length === 0 ? (
-        <p>{t("adguard.noDomains")}</p>
-      ) : (
-        <ol>
-          {domains.map((entry) => (
-            <li key={entry.domain}>
-              <span>{entry.domain}</span>
-              <span>{integer.format(entry.count)}</span>
-            </li>
-          ))}
-        </ol>
-      )}
-    </div>
   );
 }

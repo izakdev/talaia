@@ -65,10 +65,11 @@ Talaia es un dashboard autoalojado para ver de un vistazo el estado de los servi
 
 | ID | Requisito | Hito | Estado |
 |---|---|---|---|
-| RF-40 | Muestra una visión agregada del clúster | 3 | Pendiente |
-| RF-41 | Muestra cada nodo con sus VM y LXC y sus consumos | 3 | Pendiente |
+| RF-40 | Muestra una visión agregada: quórum, nodos, VM, LXC, CPU y RAM. Admite clúster y nodo independiente | 3 | Implementado |
+| RF-41 | Muestra cada nodo con su CPU, RAM y disco, y sus VM y LXC con sus consumos | 3 | Implementado |
+| RF-42 | El detalle de VM y LXC es opcional por conexión y está activado por defecto; desactivado, no sale por la API pública | 3 | Implementado |
 
-Una conexión de Proxmox ya se puede guardar, pero todavía no se consulta ni aparece en el dashboard.
+Implementado contra un simulador y la fuente oficial de la API, pendiente de verificar con un Proxmox real. Consulta el [plan de pruebas](04-plan-de-pruebas.md#verificaciones-manuales).
 
 ### Home Assistant
 
