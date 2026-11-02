@@ -27,6 +27,45 @@ export interface ConnectionInput {
   tls_skip_verify: boolean;
 }
 
+export interface DomainCount {
+  domain: string;
+  count: number;
+}
+
+export interface AdGuardData {
+  version: string;
+  running: boolean;
+  protection_enabled: boolean;
+  queries: number;
+  blocked: number;
+  blocked_percent: number;
+  avg_processing_ms: number;
+  period_unit: "hours" | "days" | "";
+  period_length: number;
+  top_queried: DomainCount[];
+  top_blocked: DomainCount[];
+}
+
+export interface ConnectionState {
+  id: string;
+  name: string;
+  type: ConnectionType;
+  status: "pending" | "ok" | "error";
+  error?: string;
+  data: unknown;
+  checked_at: string | null;
+  last_success_at: string | null;
+}
+
+export interface DashboardState {
+  connections: ConnectionState[];
+}
+
+export interface TestResult {
+  ok: boolean;
+  error?: string;
+}
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -63,5 +102,8 @@ export const api = {
   createConnection: (input: ConnectionInput) => request<Connection>("POST", "/api/admin/connections", input),
   updateConnection: (id: string, input: ConnectionInput) =>
     request<Connection>("PUT", `/api/admin/connections/${encodeURIComponent(id)}`, input),
+  testConnection: (input: ConnectionInput & { id?: string }) =>
+    request<TestResult>("POST", "/api/admin/connections/test", input),
+  dashboard: () => request<DashboardState>("GET", "/api/dashboard"),
   deleteConnection: (id: string) => request("DELETE", `/api/admin/connections/${encodeURIComponent(id)}`),
 };

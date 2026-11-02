@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,6 +16,9 @@ import (
 	"time"
 
 	"github.com/izakdev/talaia/internal/api"
+	"github.com/izakdev/talaia/internal/collector"
+	"github.com/izakdev/talaia/internal/integrations"
+	"github.com/izakdev/talaia/internal/integrations/adguard"
 	"github.com/izakdev/talaia/internal/secrets"
 	"github.com/izakdev/talaia/internal/store"
 	"github.com/izakdev/talaia/web"
@@ -68,7 +72,9 @@ func run(log *slog.Logger) error {
 	}
 	defer st.Close()
 
-	server, err := api.New(st, log, version, web.Dist())
+	registry := integrations.Registry{"adguard": adguard.New}
+	manager := collector.New(st, registry, log)
+	server, err := api.New(st, manager, registry, log, version, web.Dist())
 	if err != nil {
 		return err
 	}
@@ -82,6 +88,13 @@ func run(log *slog.Logger) error {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	if err := manager.Start(ctx); err != nil {
+		return err
+	}
+	// Se espera a los recolectores antes de cerrar la base de datos.
+	defer manager.Wait()
+	defer stop()
+	httpServer.BaseContext = func(net.Listener) context.Context { return ctx }
 	go func() {
 		ticker := time.NewTicker(time.Hour)
 		defer ticker.Stop()

@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, ApiError, type Connection, type ConnectionInput, type ConnectionType } from "./api";
+import { api, ApiError, type Connection, type ConnectionInput, type ConnectionType, type ConnectionState } from "./api";
+import { Horizon, LanguageSwitch } from "./chrome";
+import Dashboard from "./Dashboard";
 import { useI18n } from "./i18n";
 
 function usePath(): [string, (path: string) => void] {
@@ -47,63 +49,6 @@ export default function App() {
     );
   }
   return <Dashboard navigate={navigate} />;
-}
-
-function LanguageSwitch() {
-  const { lang, setLang } = useI18n();
-  const next = lang === "es" ? "en" : "es";
-  return (
-    <button className="quiet language" lang={next} onClick={() => setLang(next)}>
-      {next === "en" ? "English" : "Español"}
-    </button>
-  );
-}
-
-function Tower() {
-  return (
-    <svg className="tower" viewBox="0 0 120 200" aria-hidden="true">
-      <path className="beam" d="M64 30 L3000 -110 L3000 170 Z" />
-      <path className="masonry" d="M36 200 46 62h28l10 138Z" />
-      <path className="masonry" d="M40 62V44h6v6h7v-6h6v6h7v-6h6v6h7v12Z" transform="translate(-1 0)" />
-      <path className="door" d="M54 200v-22a6 6 0 0 1 12 0v22Z" />
-      <circle className="beacon" cx="60" cy="30" r="7" />
-    </svg>
-  );
-}
-
-function Horizon({ children }: { children: ReactNode }) {
-  return (
-    <main className="horizon">
-      <div className="sky">
-        <span className="wordmark">Talaia</span>
-        <LanguageSwitch />
-        <Tower />
-      </div>
-      <div className="sea">
-        <div className="sea-content">{children}</div>
-      </div>
-    </main>
-  );
-}
-
-function Dashboard({ navigate }: { navigate: (path: string) => void }) {
-  const { t } = useI18n();
-  return (
-    <Horizon>
-      <h1>{t("dashboard.title")}</h1>
-      <p>{t("dashboard.lead")}</p>
-      <a
-        className="button primary"
-        href="/admin"
-        onClick={(event) => {
-          event.preventDefault();
-          navigate("/admin");
-        }}
-      >
-        {t("dashboard.admin")}
-      </a>
-    </Horizon>
-  );
 }
 
 function Credentials({ mode }: { mode: "setup" | "login" }) {
@@ -206,6 +151,14 @@ function Admin({ user, version, navigate }: { user: string; version: string; nav
   );
 }
 
+function ConnectionHealth({ type, state }: { type: ConnectionType; state?: ConnectionState }) {
+  const { t, collectError } = useI18n();
+  if (!TESTABLE.includes(type)) return <span>{t("connections.notAvailable")}</span>;
+  if (!state || state.status === "pending") return <span>{t("status.checking")}</span>;
+  if (state.status === "error") return <span className="warn">{collectError(state.error)}</span>;
+  return <span>{t("connections.working")}</span>;
+}
+
 type Editing = { kind: "new" } | { kind: "edit"; connection: Connection } | null;
 
 function Connections() {
@@ -223,10 +176,12 @@ function Connections() {
       client.invalidateQueries({ queryKey: ["state"] });
     }
   }, [connections.error, client]);
+  const states = useQuery({ queryKey: ["dashboard"], queryFn: api.dashboard, refetchInterval: 10000 });
   const remove = useMutation({
     mutationFn: api.deleteConnection,
     onSuccess: () => {
       setConfirming(null);
+      client.invalidateQueries({ queryKey: ["dashboard"] });
       return client.invalidateQueries({ queryKey: ["connections"] });
     },
   });
@@ -264,6 +219,10 @@ function Connections() {
               <div className="connection-meta">
                 <span className="url">{connection.base_url}</span>
                 <span>{t("connections.every", { n: connection.interval_seconds })}</span>
+                <ConnectionHealth
+                  type={connection.type}
+                  state={states.data?.connections.find((state) => state.id === connection.id)}
+                />
                 {connection.tls_skip_verify && <span className="warn">{t("connections.tlsOff")}</span>}
               </div>
               <div className="connection-actions">
@@ -309,6 +268,8 @@ function Connections() {
 }
 
 const TYPES: ConnectionType[] = ["proxmox", "homeassistant", "adguard"];
+// Integraciones ya disponibles. Las demás se pueden guardar, pero aún no se consultan.
+const TESTABLE: ConnectionType[] = ["adguard"];
 const PLACEHOLDERS: Record<ConnectionType, string> = {
   proxmox: "https://proxmox.example:8006",
   homeassistant: "http://homeassistant.local:8123",
@@ -316,8 +277,9 @@ const PLACEHOLDERS: Record<ConnectionType, string> = {
 };
 
 function ConnectionDialog({ connection, onClose }: { connection: Connection | null; onClose: () => void }) {
-  const { t, errorText } = useI18n();
+  const { t, errorText, collectError } = useI18n();
   const client = useQueryClient();
+  const form = useRef<HTMLFormElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const [type, setType] = useState<ConnectionType>(connection?.type ?? "proxmox");
   const [name, setName] = useState(connection?.name ?? "");
@@ -339,29 +301,35 @@ function ConnectionDialog({ connection, onClose }: { connection: Connection | nu
       : t(`form.secretHint.${type}`)
     : t("form.secretKeep");
 
+  const input = (): ConnectionInput => ({
+    name,
+    type,
+    base_url: url,
+    username,
+    interval_seconds: Number(interval),
+    tls_skip_verify: skipTls,
+    ...(secret ? { secret } : {}),
+  });
   const save = useMutation({
-    mutationFn: () => {
-      const input: ConnectionInput = {
-        name,
-        type,
-        base_url: url,
-        username,
-        interval_seconds: Number(interval),
-        tls_skip_verify: skipTls,
-        ...(secret ? { secret } : {}),
-      };
-      return connection ? api.updateConnection(connection.id, input) : api.createConnection(input);
-    },
+    mutationFn: () => (connection ? api.updateConnection(connection.id, input()) : api.createConnection(input())),
     onSuccess: async () => {
       setSecret("");
+      client.invalidateQueries({ queryKey: ["dashboard"] });
       await client.invalidateQueries({ queryKey: ["connections"] });
       onClose();
     },
   });
+  const test = useMutation({
+    mutationFn: () => api.testConnection({ ...input(), ...(connection ? { id: connection.id } : {}) }),
+  });
+  const { reset: resetTest } = test;
+  // Un resultado solo vale para los datos con los que se probó.
+  useEffect(() => resetTest(), [type, url, username, secret, skipTls, resetTest]);
 
   return (
     <dialog ref={dialog} onClose={onClose}>
       <form
+        ref={form}
         className="stack"
         onSubmit={(event) => {
           event.preventDefault();
@@ -436,7 +404,26 @@ function ConnectionDialog({ connection, onClose }: { connection: Connection | nu
           </span>
         </label>
         {save.isError && <p role="alert" className="error">{errorText(code(save.error))}</p>}
+        {test.isError && <p role="alert" className="error">{errorText(code(test.error))}</p>}
+        {test.data && (
+          <p role="status" className={test.data.ok ? "test-ok" : "error"}>
+            {test.data.ok ? t("form.testOk") : collectError(test.data.error)}
+          </p>
+        )}
         <div className="dialog-actions">
+          {TESTABLE.includes(type) && (
+            <button
+              type="button"
+              className="secondary"
+              disabled={test.isPending}
+              onClick={() => {
+                if (form.current?.reportValidity()) test.mutate();
+              }}
+            >
+              {t(test.isPending ? "form.testing" : "form.test")}
+            </button>
+          )}
+          <span className="spacer" />
           <button type="button" className="quiet" onClick={onClose}>
             {t("form.cancel")}
           </button>

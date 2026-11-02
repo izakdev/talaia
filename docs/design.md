@@ -37,6 +37,8 @@ Navegador ──HTTP/SSE──> Binario Go (LXC) ──> Proxmox / Home Assistan
 | Home Assistant | Token de larga duración | `/api/`, `/api/config`, `/api/states` | Estado; entidades elegidas; consumos |
 | AdGuard | Basic Auth | `/control/status`, `/control/stats` | Protección, consultas, % de bloqueo y top de dominios |
 
+Hasta el editor del hito 5, el dashboard muestra todas las conexiones con una integración disponible. Las URL, los usuarios y las credenciales nunca se envían a la API pública.
+
 ## Modelo de datos
 
 - `users`: administradores.

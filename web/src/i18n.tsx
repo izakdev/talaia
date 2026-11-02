@@ -65,6 +65,38 @@ const es = {
   "error.secret_required_for_url_change": "Al cambiar la URL hay que volver a escribir la credencial.",
   "error.unauthorized": "La sesión ha caducado. Vuelve a entrar.",
   "error.not_found": "Esta conexión ya no existe.",
+  "connections.working": "Funciona",
+  "connections.notAvailable": "Lectura de datos aún no disponible",
+  "form.test": "Probar conexión",
+  "form.testing": "Probando…",
+  "form.testOk": "Conexión correcta.",
+  "status.checking": "Consultando…",
+  "status.noResponse": "Con fallos",
+  "dashboard.admin.short": "Administración",
+  "dashboard.live.lost": "Sin actualización en vivo. Reintentando; los datos pueden estar desactualizados.",
+  "dashboard.unavailable": "No se han podido cargar los servicios.",
+  "age.checked": "Actualizado {age}",
+  "age.last": "Último dato {age}",
+  "age.never": "Todavía sin datos.",
+  "adguard.protectionOn": "Protección activa",
+  "adguard.protectionOff": "Protección desactivada",
+  "adguard.dnsStopped": "Servidor DNS parado",
+  "adguard.queries": "Consultas",
+  "adguard.blocked": "Bloqueadas",
+  "adguard.avg": "Tiempo medio",
+  "adguard.topQueried": "Más consultados",
+  "adguard.topBlocked": "Más bloqueados",
+  "adguard.noDomains": "Sin datos en este periodo.",
+  "adguard.period.hours": "Últimas {n} horas",
+  "adguard.period.days": "Últimos {n} días",
+  "collect.unauthorized": "Credenciales rechazadas por el servicio. Revisa la conexión.",
+  "collect.timeout": "El servicio no ha respondido a tiempo.",
+  "collect.unreachable": "No se puede conectar con el servicio. Revisa la URL y la red.",
+  "collect.tls": "Certificado TLS no válido. Si es autofirmado, desactiva la verificación en la conexión.",
+  "collect.bad_response": "La respuesta no es la esperada. Revisa que la URL sea la de este servicio.",
+  "collect.secret_unreadable": "No se puede descifrar la credencial. Vuelve a escribirla en la conexión.",
+  "collect.internal": "Error inesperado al consultar el servicio. Revisa los registros de Talaia.",
+  "error.not_supported": "Esta integración aún no está disponible.",
 };
 
 type Key = keyof typeof es;
@@ -134,6 +166,38 @@ const en: Record<Key, string> = {
   "error.secret_required_for_url_change": "Changing the URL requires entering the credential again.",
   "error.unauthorized": "Your session has expired. Sign in again.",
   "error.not_found": "This connection no longer exists.",
+  "connections.working": "Working",
+  "connections.notAvailable": "Data reading not available yet",
+  "form.test": "Test connection",
+  "form.testing": "Testing…",
+  "form.testOk": "Connection works.",
+  "status.checking": "Checking…",
+  "status.noResponse": "Failing",
+  "dashboard.admin.short": "Administration",
+  "dashboard.live.lost": "Live updates lost. Retrying; data may be out of date.",
+  "dashboard.unavailable": "Services could not be loaded.",
+  "age.checked": "Updated {age}",
+  "age.last": "Last data {age}",
+  "age.never": "No data yet.",
+  "adguard.protectionOn": "Protection on",
+  "adguard.protectionOff": "Protection off",
+  "adguard.dnsStopped": "DNS server stopped",
+  "adguard.queries": "Queries",
+  "adguard.blocked": "Blocked",
+  "adguard.avg": "Average time",
+  "adguard.topQueried": "Most queried",
+  "adguard.topBlocked": "Most blocked",
+  "adguard.noDomains": "No data in this period.",
+  "adguard.period.hours": "Last {n} hours",
+  "adguard.period.days": "Last {n} days",
+  "collect.unauthorized": "The service rejected the credentials. Check the connection.",
+  "collect.timeout": "The service did not respond in time.",
+  "collect.unreachable": "Can't connect to the service. Check the URL and the network.",
+  "collect.tls": "Invalid TLS certificate. If it's self-signed, turn off verification in the connection.",
+  "collect.bad_response": "Unexpected response. Check that the URL belongs to this service.",
+  "collect.secret_unreadable": "The credential can't be decrypted. Enter it again in the connection.",
+  "collect.internal": "Unexpected error reading the service. Check Talaia's logs.",
+  "error.not_supported": "This integration isn't available yet.",
 };
 
 const dictionaries = { es, en };
@@ -154,6 +218,7 @@ interface I18n {
   setLang: (lang: Language) => void;
   t: (key: Key, vars?: Record<string, string | number>) => string;
   errorText: (code: string) => string;
+  collectError: (code?: string) => string;
 }
 
 const Context = createContext<I18n | null>(null);
@@ -177,6 +242,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       setLang,
       t,
       errorText: (code) => (dict as Record<string, string>)[`error.${code}`] ?? dict["error.internal"],
+      collectError: (code) => (dict as Record<string, string>)[`collect.${code}`] ?? dict["collect.internal"],
     };
   }, [lang]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
