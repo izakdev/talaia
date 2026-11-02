@@ -323,4 +323,4 @@ sequenceDiagram
 
 **Publicación del instalador:** cada versión incluye también el script.
 
-**Publicación:** una etiqueta `v*` genera en GitHub Actions los binarios de Linux para amd64 y arm64, con `SHA256SUMS`.
+**Publicación:** al subir una etiqueta `v*`, por ejemplo con `git push origin v1.0.0`, se generan en GitHub Actions los binarios de Linux para amd64 y arm64, con `SHA256SUMS` y el instalador. Una etiqueta con guion se publica como versión preliminar.

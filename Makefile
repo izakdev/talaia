@@ -24,7 +24,7 @@ dist: web
 	for arch in amd64 arm64; do \
 		CGO_ENABLED=0 GOOS=linux GOARCH=$$arch go build -trimpath -ldflags "$(LDFLAGS)" -o dist/talaia-linux-$$arch ./cmd/talaia; \
 	done
-	cd dist && sha256sum talaia-linux-* > SHA256SUMS
+	cd dist && (command -v sha256sum >/dev/null && sha256sum talaia-linux-* || shasum -a 256 talaia-linux-*) > SHA256SUMS
 
 test-installer:
 	shellcheck scripts/talaia-proxmox.sh scripts/test/*.sh scripts/test/stubs/*
