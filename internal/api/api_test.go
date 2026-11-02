@@ -294,6 +294,20 @@ func TestConnectionOptionsRoundTrip(t *testing.T) {
 	}
 }
 
+func TestMultipleConnectionsOfSameService(t *testing.T) {
+	c, _ := newServer(t)
+	c.want(200, "POST", "/api/setup", creds())
+	for _, name := range []string{"AdGuard A", "AdGuard B"} {
+		m := adguardConn("correcta")
+		m["name"] = name
+		c.want(201, "POST", "/api/admin/connections", m)
+	}
+	body := waitDashboard(t, c, "AdGuard B")
+	if strings.Index(body, "AdGuard A") < 0 || strings.Index(body, "AdGuard A") > strings.Index(body, "AdGuard B") {
+		t.Fatalf("faltan conexiones o no están ordenadas: %s", body)
+	}
+}
+
 func TestDashboardFollowsConnectionChanges(t *testing.T) {
 	c, _ := newServer(t)
 	c.want(200, "POST", "/api/setup", creds())

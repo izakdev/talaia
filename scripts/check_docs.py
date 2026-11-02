@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+"""Comprueba que la documentación es coherente con el código."""
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+DOCS = ROOT / "docs"
+PLAN = DOCS / "proyecto/04-plan-de-pruebas.md"
+REQUIREMENTS = DOCS / "proyecto/01-requisitos.md"
+MANUAL = DOCS / "usuario/manual-de-usuario.md"
+
+errors = []
+plan = PLAN.read_text(encoding="utf-8")
+requirements = REQUIREMENTS.read_text(encoding="utf-8")
+
+# Cada prueba de Go está en el plan, y el plan no cita pruebas inexistentes.
+go_tests = set()
+for path in (ROOT / "internal").rglob("*_test.go"):
+    go_tests.update(re.findall(r"^func (Test\w+)\(", path.read_text(encoding="utf-8"), re.M))
+planned = set(re.findall(r"`(Test\w+)`", plan))
+errors += [f"Prueba de Go sin documentar: {name}" for name in sorted(go_tests - planned)]
+errors += [f"El plan cita una prueba inexistente: {name}" for name in sorted(planned - go_tests)]
+
+# Lo mismo con los escenarios E2E.
+e2e = set(re.findall(r'\["(E2E-\d+)"', (ROOT / "e2e/run.mjs").read_text(encoding="utf-8")))
+planned_e2e = set(re.findall(r"E2E-\d+", plan))
+errors += [f"Escenario E2E sin documentar: {name}" for name in sorted(e2e - planned_e2e)]
+errors += [f"El plan cita un escenario inexistente: {name}" for name in sorted(planned_e2e - e2e)]
+
+# Los requisitos citados existen, y los implementados tienen cobertura.
+rows = re.findall(r"^\| (RN?F-\d+) \|.*\| ([^|]+?) \|$", requirements, re.M)
+known = {req for req, _ in rows}
+cited = set(re.findall(r"RN?F-\d+", plan))
+errors += [f"El plan cita un requisito inexistente: {req}" for req in sorted(cited - known)]
+trace = plan.split("## Trazabilidad", 1)[-1]
+covered = set(re.findall(r"^\| (RN?F-\d+) \|", trace, re.M))
+for req, state in rows:
+    if state.startswith(("Implementado", "Parcial")) and req not in covered:
+        errors.append(f"Requisito {state.split(':')[0].lower()} sin trazabilidad: {req}")
+
+# Los enlaces e imágenes relativos existen.
+for path in [*DOCS.rglob("*.md"), ROOT / "README.md", ROOT / "CLAUDE.md"]:
+    for target in re.findall(r"\]\(([^)\s]+)\)", path.read_text(encoding="utf-8")):
+        if re.match(r"[a-z]+://", target) or target.startswith("#"):
+            continue
+        if not (path.parent / target.split("#")[0]).exists():
+            errors.append(f"{path.relative_to(ROOT)}: enlace roto a {target}")
+
+# Las capturas generadas se usan en el manual.
+manual = MANUAL.read_text(encoding="utf-8")
+for image in sorted((DOCS / "usuario/img").glob("*.png")):
+    if f"img/{image.name}" not in manual:
+        errors.append(f"Captura sin usar en el manual: {image.name}")
+
+if errors:
+    print("\n".join(errors))
+    sys.exit(1)
+print(f"Documentación coherente: {len(go_tests)} pruebas de Go, {len(e2e)} E2E, {len(rows)} requisitos.")

@@ -27,3 +27,12 @@ jobs:
         run: test -z "$(gofmt -l .)"
       - run: go vet ./...
       - run: go test -race ./...
+      - name: Comprobar documentación
+        run: python3 scripts/check_docs.py
+      - name: Compilar binario
+        run: CGO_ENABLED=0 go build -o bin/talaia ./cmd/talaia
+      - run: npm --prefix e2e ci
+      - name: Instalar navegador
+        run: npx --prefix e2e playwright install --with-deps chromium
+      - name: Pruebas E2E
+        run: npm --prefix e2e test
