@@ -384,7 +384,6 @@ const scenarios = [
     await page.getByRole("button", { name: "Guardar" }).click();
     await page.locator("dialog").waitFor({ state: "detached" });
     await toDashboard();
-    // Al volver se ve la copia en caché hasta que llega el primer evento.
     await page
       .locator(".service", { hasText: "Domótica" })
       .locator('.service-link[href="https://domotica.example/inicio"]')

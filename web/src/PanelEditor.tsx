@@ -99,7 +99,7 @@ function Editor({
     onSuccess: async (result) => {
       setPages(result.pages);
       setSaved(result.pages);
-      await client.invalidateQueries({ queryKey: ["dashboard"] });
+      client.removeQueries({ queryKey: ["dashboard"] });
     },
   });
 

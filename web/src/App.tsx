@@ -292,7 +292,7 @@ function Connections({ navigate }: { navigate: (path: string) => void }) {
     mutationFn: api.deleteConnection,
     onSuccess: () => {
       setConfirming(null);
-      client.invalidateQueries({ queryKey: ["dashboard"] });
+      client.removeQueries({ queryKey: ["dashboard"] });
       client.invalidateQueries({ queryKey: ["status"] });
       return client.invalidateQueries({ queryKey: ["connections"] });
     },
@@ -440,7 +440,7 @@ function ConnectionDialog({
     mutationFn: () => (connection ? api.updateConnection(connection.id, input()) : api.createConnection(input())),
     onSuccess: async () => {
       setSecret("");
-      client.invalidateQueries({ queryKey: ["dashboard"] });
+      client.removeQueries({ queryKey: ["dashboard"] });
       client.invalidateQueries({ queryKey: ["status"] });
       await client.invalidateQueries({ queryKey: ["connections"] });
       onSaved();
