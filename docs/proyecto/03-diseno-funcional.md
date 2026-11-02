@@ -52,6 +52,7 @@ Mientras no exista un administrador, todas las rutas muestran el asistente de pr
 
 **Con servicios:** cada página muestra sus bloques en la posición elegida en el editor. Con más de una página aparecen pestañas.
 
+- **Recuadro:** cada bloque tiene fondo, borde y una sombra ligera, para distinguirlo de los demás. Los bloques de una misma fila igualan su altura.
 - **Altura:** un bloque crece si su contenido lo necesita, sin solaparse.
 - **Pantallas de menos de 900 px:** los bloques se apilan en una columna, de arriba abajo y de izquierda a derecha.
 - **Página vacía:** indica que no tiene servicios.

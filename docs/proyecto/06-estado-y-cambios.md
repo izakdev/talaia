@@ -20,6 +20,7 @@
 - Varias páginas, con pestañas en el panel.
 - Tema claro, oscuro o del sistema, y color de acento.
 - Inicio de sesión opcional para ver el panel.
+- Recuadro en cada bloque del panel, a petición del cliente.
 - Cambio de contraseña desde la web y recuperación con `talaia reset-password`.
 
 **Cambiado:**
