@@ -48,7 +48,8 @@ CREATE TABLE connections (
 	created_at       INTEGER NOT NULL,
 	updated_at       INTEGER NOT NULL
 );`, `
-ALTER TABLE connections ADD COLUMN options TEXT NOT NULL DEFAULT '{}';`}
+ALTER TABLE connections ADD COLUMN options TEXT NOT NULL DEFAULT '{}';`, `
+ALTER TABLE connections ADD COLUMN entities TEXT NOT NULL DEFAULT '[]';`}
 
 // Store accede a la base de datos.
 type Store struct {
@@ -197,24 +198,28 @@ type Connection struct {
 	IntervalSeconds int
 	TLSSkipVerify   bool
 	Options         map[string]bool
+	Entities        []string
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }
 
-const connectionColumns = `id, name, type, base_url, username, interval_seconds, tls_skip_verify, options, created_at, updated_at`
+const connectionColumns = `id, name, type, base_url, username, interval_seconds, tls_skip_verify, options, entities, created_at, updated_at`
 
 type scanner interface{ Scan(...any) error }
 
 func scanConnection(row scanner) (Connection, error) {
 	var c Connection
 	var created, updated int64
-	var options string
-	if err := row.Scan(&c.ID, &c.Name, &c.Type, &c.BaseURL, &c.Username, &c.IntervalSeconds, &c.TLSSkipVerify, &options, &created, &updated); err != nil {
+	var options, entities string
+	if err := row.Scan(&c.ID, &c.Name, &c.Type, &c.BaseURL, &c.Username, &c.IntervalSeconds, &c.TLSSkipVerify, &options, &entities, &created, &updated); err != nil {
 		return c, err
 	}
 	c.CreatedAt, c.UpdatedAt = time.Unix(created, 0).UTC(), time.Unix(updated, 0).UTC()
 	if err := json.Unmarshal([]byte(options), &c.Options); err != nil {
 		return c, fmt.Errorf("leer opciones de %s: %w", c.ID, err)
+	}
+	if err := json.Unmarshal([]byte(entities), &c.Entities); err != nil {
+		return c, fmt.Errorf("leer entidades de %s: %w", c.ID, err)
 	}
 	return c, nil
 }
@@ -257,15 +262,15 @@ func (s *Store) CreateConnection(ctx context.Context, c Connection, secret strin
 	if err != nil {
 		return c, err
 	}
-	options, err := encodeOptions(c.Options)
+	options, entities, err := encodeSelection(c)
 	if err != nil {
 		return c, err
 	}
 	now := time.Now().Unix()
 	if _, err := s.db.ExecContext(ctx,
-		`INSERT INTO connections(id, name, type, base_url, username, secret, interval_seconds, tls_skip_verify, options, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		c.ID, c.Name, c.Type, c.BaseURL, c.Username, sealed, c.IntervalSeconds, c.TLSSkipVerify, options, now, now); err != nil {
+		`INSERT INTO connections(id, name, type, base_url, username, secret, interval_seconds, tls_skip_verify, options, entities, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		c.ID, c.Name, c.Type, c.BaseURL, c.Username, sealed, c.IntervalSeconds, c.TLSSkipVerify, options, entities, now, now); err != nil {
 		return c, err
 	}
 	return s.GetConnection(ctx, c.ID)
@@ -273,12 +278,12 @@ func (s *Store) CreateConnection(ctx context.Context, c Connection, secret strin
 
 // UpdateConnection actualiza una conexión. Si secret es nil, conserva el secreto actual.
 func (s *Store) UpdateConnection(ctx context.Context, c Connection, secret *string) (Connection, error) {
-	options, err := encodeOptions(c.Options)
+	options, entities, err := encodeSelection(c)
 	if err != nil {
 		return c, err
 	}
-	query := `UPDATE connections SET name = ?, base_url = ?, username = ?, interval_seconds = ?, tls_skip_verify = ?, options = ?, updated_at = ?`
-	args := []any{c.Name, c.BaseURL, c.Username, c.IntervalSeconds, c.TLSSkipVerify, options, time.Now().Unix()}
+	query := `UPDATE connections SET name = ?, base_url = ?, username = ?, interval_seconds = ?, tls_skip_verify = ?, options = ?, entities = ?, updated_at = ?`
+	args := []any{c.Name, c.BaseURL, c.Username, c.IntervalSeconds, c.TLSSkipVerify, options, entities, time.Now().Unix()}
 	if secret != nil {
 		sealed, err := s.box.Seal([]byte(*secret), []byte(c.ID))
 		if err != nil {
@@ -299,12 +304,22 @@ func (s *Store) UpdateConnection(ctx context.Context, c Connection, secret *stri
 	return s.GetConnection(ctx, c.ID)
 }
 
-func encodeOptions(options map[string]bool) (string, error) {
-	if options == nil {
-		return "{}", nil
+func encodeSelection(c Connection) (options, entities string, err error) {
+	if c.Options == nil {
+		c.Options = map[string]bool{}
 	}
-	raw, err := json.Marshal(options)
-	return string(raw), err
+	if c.Entities == nil {
+		c.Entities = []string{}
+	}
+	rawOptions, err := json.Marshal(c.Options)
+	if err != nil {
+		return "", "", err
+	}
+	rawEntities, err := json.Marshal(c.Entities)
+	if err != nil {
+		return "", "", err
+	}
+	return string(rawOptions), string(rawEntities), nil
 }
 
 // DeleteConnection elimina una conexión.

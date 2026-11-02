@@ -19,6 +19,7 @@ import (
 	"github.com/izakdev/talaia/internal/collector"
 	"github.com/izakdev/talaia/internal/integrations"
 	"github.com/izakdev/talaia/internal/integrations/adguard"
+	"github.com/izakdev/talaia/internal/integrations/homeassistant"
 	"github.com/izakdev/talaia/internal/integrations/proxmox"
 	"github.com/izakdev/talaia/internal/secrets"
 	"github.com/izakdev/talaia/internal/store"
@@ -73,7 +74,7 @@ func run(log *slog.Logger) error {
 	}
 	defer st.Close()
 
-	registry := integrations.Registry{"adguard": adguard.New, "proxmox": proxmox.New}
+	registry := integrations.Registry{"adguard": adguard.New, "homeassistant": homeassistant.New, "proxmox": proxmox.New}
 	manager := collector.New(st, registry, log)
 	server, err := api.New(st, manager, registry, log, version, web.Dist())
 	if err != nil {

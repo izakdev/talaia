@@ -73,3 +73,18 @@ Cada decisión recoge su motivo y sus consecuencias. Si una decisión cambia, se
 - **Contexto:** el cliente puede aprobar la continuación sin fusionar todavía el pull request anterior.
 - **Decisión:** la rama del hito parte de la anterior, y su pull request apunta a ella para que muestre solo los cambios nuevos.
 - **Consecuencias:** hay que fusionar los pull requests por orden.
+
+## DEC-15: entidades de Home Assistant elegidas una a una
+- **Contexto:** una instalación puede tener miles de entidades, y algunas revelan datos personales, como la ubicación de una persona.
+- **Decisión:** por defecto no se muestra ninguna. Se eligen en un selector con búsqueda y filtros, y solo las elegidas salen por la API pública.
+- **Consecuencias:** configurarlo lleva algo más de trabajo, a cambio de una vista rápida y sin exponer datos por sorpresa. En el hito 5 habrá que decidir si la selección pasa al widget, como en DEC-08.
+
+## DEC-16: consumos sin sumar
+- **Contexto:** sumar todos los sensores de potencia contaría dos veces un medidor general y los enchufes que cuelgan de él. Además, un sensor de energía puede ser acumulado o diario.
+- **Decisión:** cada sensor elegido se muestra con su valor y su unidad, sin totales.
+- **Consecuencias:** las cifras coinciden siempre con Home Assistant. Quien quiera un total puede crear un sensor agregado allí y elegirlo aquí.
+
+## DEC-17: consultar todos los estados de una vez
+- **Contexto:** se podría pedir cada entidad con `/api/states/<entity_id>`, pero con 200 entidades serían 200 peticiones por ciclo.
+- **Decisión:** una sola consulta a `/api/states`, solo si hay selección, y límite de respuesta ampliado a 32 MiB.
+- **Consecuencias:** en instalaciones muy grandes, cada ciclo descarga todas las entidades. Se puede aliviar con un intervalo de refresco mayor.

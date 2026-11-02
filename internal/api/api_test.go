@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net"
@@ -29,11 +30,25 @@ const password = "una-contraseña-larga"
 // fakeIntegration acepta solo la credencial "correcta".
 type fakeIntegration struct{ cfg integrations.Config }
 
+func (f fakeIntegration) ListEntities(context.Context) ([]integrations.EntityOption, error) {
+	if f.cfg.Secret != "correcta" {
+		return nil, &integrations.Error{Code: integrations.CodeUnauthorized, Err: errors.New("credencial")}
+	}
+	return []integrations.EntityOption{{ID: "light.salon", Name: "Salón", State: "on"}}, nil
+}
+
 func (f fakeIntegration) Collect(context.Context) (any, error) {
 	if f.cfg.Secret != "correcta" {
 		return nil, &integrations.Error{Code: integrations.CodeUnauthorized, Err: errors.New("credencial")}
 	}
 	return map[string]int{"queries": 7}, nil
+}
+
+// plainIntegration no ofrece entidades que elegir.
+type plainIntegration struct{ cfg integrations.Config }
+
+func (p plainIntegration) Collect(ctx context.Context) (any, error) {
+	return fakeIntegration(p).Collect(ctx)
 }
 
 type client struct {
@@ -54,7 +69,9 @@ func newServer(t *testing.T) (*client, *store.Store) {
 	}
 	web := fstest.MapFS{"index.html": {Data: []byte("<html>app</html>")}}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	registry := integrations.Registry{"adguard": func(cfg integrations.Config) integrations.Integration { return fakeIntegration{cfg} }}
+	fake := func(cfg integrations.Config) integrations.Integration { return fakeIntegration{cfg} }
+	plain := func(cfg integrations.Config) integrations.Integration { return plainIntegration{cfg} }
+	registry := integrations.Registry{"adguard": plain, "homeassistant": fake}
 	manager := collector.New(st, registry, logger)
 	ctx, cancel := context.WithCancel(context.Background())
 	if err := manager.Start(ctx); err != nil {
@@ -401,6 +418,73 @@ func TestConnectionTest(t *testing.T) {
 
 	proxmox := map[string]any{"name": "P", "type": "proxmox", "base_url": "http://192.0.2.2", "secret": "root@pam!talaia=valor", "interval_seconds": 30}
 	if got := c.want(400, "POST", "/api/admin/connections/test", proxmox); !strings.Contains(got, "not_supported") {
+		t.Fatal(got)
+	}
+}
+
+func homeAssistantConn(secret string) map[string]any {
+	return map[string]any{"name": "Casa", "type": "homeassistant", "base_url": "http://192.0.2.3:8123", "secret": secret, "interval_seconds": 30}
+}
+
+func TestListEntitiesEndpoint(t *testing.T) {
+	c, _ := newServer(t)
+	path := "/api/admin/connections/entities"
+	newClient(t, c.base).want(401, "POST", path, homeAssistantConn("correcta"))
+	c.want(200, "POST", "/api/setup", creds())
+
+	if got := c.want(200, "POST", path, homeAssistantConn("correcta")); !strings.Contains(got, "light.salon") {
+		t.Fatal(got)
+	}
+	if got := c.want(200, "POST", path, homeAssistantConn("mala")); !strings.Contains(got, `"error":"unauthorized"`) {
+		t.Fatal(got)
+	}
+	if got := c.want(400, "POST", path, adguardConn("correcta")); !strings.Contains(got, "not_supported") {
+		t.Fatal(got)
+	}
+
+	var out connectionOut
+	if err := json.Unmarshal([]byte(c.want(201, "POST", "/api/admin/connections", homeAssistantConn("correcta"))), &out); err != nil {
+		t.Fatal(err)
+	}
+	stored := homeAssistantConn("correcta")
+	delete(stored, "secret")
+	stored["id"] = out.ID
+	if got := c.want(200, "POST", path, stored); !strings.Contains(got, "light.salon") {
+		t.Fatalf("debe usar la credencial guardada: %s", got)
+	}
+	stored["base_url"] = "http://198.51.100.9"
+	c.want(400, "POST", path, stored)
+}
+
+func TestEntitySelectionValidation(t *testing.T) {
+	c, _ := newServer(t)
+	c.want(200, "POST", "/api/setup", creds())
+	create := "/api/admin/connections"
+	many := make([]string, maxEntities+1)
+	for i := range many {
+		many[i] = fmt.Sprintf("sensor.s%d", i)
+	}
+	cases := map[string][]string{
+		"formato":     {"no valida"},
+		"sin dominio": {"salon"},
+		"mayúsculas":  {"Light.Salon"},
+		"repetida":    {"light.a", "light.a"},
+		"demasiadas":  many,
+	}
+	for name, entities := range cases {
+		t.Run(name, func(t *testing.T) {
+			m := homeAssistantConn("correcta")
+			m["entities"] = entities
+			c.want(400, "POST", create, m)
+		})
+	}
+	wrongType := adguardConn("correcta")
+	wrongType["entities"] = []string{"light.salon"}
+	c.want(400, "POST", create, wrongType)
+
+	valid := homeAssistantConn("correcta")
+	valid["entities"] = []string{"light.salon", "sensor.casa_potencia"}
+	if got := c.want(201, "POST", create, valid); !strings.Contains(got, `"entities":["light.salon","sensor.casa_potencia"]`) {
 		t.Fatal(got)
 	}
 }

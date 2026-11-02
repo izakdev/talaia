@@ -163,6 +163,23 @@ func TestChangingOptionsDropsOldData(t *testing.T) {
 	}
 }
 
+func TestChangingEntitiesDropsOldData(t *testing.T) {
+	e := setup(t)
+	c := e.create(t, "adguard")
+	e.waitFor(t, func(s Snapshot) bool { return s.Status == StatusOK })
+	e.fail.Store(true)
+	c.Entities = []string{"light.salon"}
+	if _, err := e.st.UpdateConnection(context.Background(), c, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.m.Refresh(context.Background(), c.ID); err != nil {
+		t.Fatal(err)
+	}
+	if s := e.waitFor(t, func(s Snapshot) bool { return s.Status == StatusError }); s.Data != nil {
+		t.Fatalf("conserva datos de otra selección: %+v", s)
+	}
+}
+
 func TestRemoveAndUnsupported(t *testing.T) {
 	e := setup(t)
 	c := e.create(t, "adguard")

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, type Connection, type ConnectionInput, type ConnectionType, type ConnectionState } from "./api";
 import { CATALOG, catalogEntry } from "./catalog";
 import { Horizon, IntegrationIcon, LanguageSwitch } from "./chrome";
+import EntityPicker, { normalize } from "./EntityPicker";
 import Dashboard from "./Dashboard";
 import { useI18n } from "./i18n";
 
@@ -162,22 +163,14 @@ function Admin({
   );
 }
 
-function ConnectionHealth({ type, state }: { type: ConnectionType; state?: ConnectionState }) {
+function ConnectionHealth({ state }: { state?: ConnectionState }) {
   const { t, collectError } = useI18n();
-  if (!catalogEntry(type).readable) return <span>{t("connections.notAvailable")}</span>;
   if (!state || state.status === "pending") return <span>{t("status.checking")}</span>;
   if (state.status === "error") return <span className="warn">{collectError(state.error)}</span>;
   return <span>{t("connections.working")}</span>;
 }
 
 const NEW_CONNECTION_PATH = "/admin/connections/new";
-
-function normalize(text: string) {
-  return text
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase();
-}
 
 function NewConnection({ navigate }: { navigate: (path: string) => void }) {
   const { t } = useI18n();
@@ -221,7 +214,6 @@ function NewConnection({ navigate }: { navigate: (path: string) => void }) {
               <IntegrationIcon icon={entry.icon} />
               <strong>{t(`type.${entry.type}`)}</strong>
               <span>{t(`catalog.desc.${entry.type}`)}</span>
-              {!entry.readable && <em>{t("catalog.soon")}</em>}
             </button>
           </li>
         ))}
@@ -304,10 +296,7 @@ function Connections({ navigate }: { navigate: (path: string) => void }) {
               <div className="connection-meta">
                 <span className="url">{connection.base_url}</span>
                 <span>{t("connections.every", { n: connection.interval_seconds })}</span>
-                <ConnectionHealth
-                  type={connection.type}
-                  state={states.data?.connections.find((state) => state.id === connection.id)}
-                />
+                <ConnectionHealth state={states.data?.connections.find((state) => state.id === connection.id)} />
                 {connection.tls_skip_verify && <span className="warn">{t("connections.tlsOff")}</span>}
               </div>
               <div className="connection-actions">
@@ -378,6 +367,7 @@ function ConnectionDialog({
   const [interval, setIntervalValue] = useState(String(connection?.interval_seconds ?? 30));
   const [skipTls, setSkipTls] = useState(connection?.tls_skip_verify ?? false);
   const [options, setOptions] = useState<Record<string, boolean>>(connection?.options ?? entry.defaultOptions);
+  const [entities, setEntities] = useState<string[]>(connection?.entities ?? []);
 
   useEffect(() => {
     dialog.current?.showModal();
@@ -399,6 +389,7 @@ function ConnectionDialog({
     interval_seconds: Number(interval),
     tls_skip_verify: skipTls,
     options,
+    entities,
     ...(secret ? { secret } : {}),
   });
   const save = useMutation({
@@ -410,9 +401,8 @@ function ConnectionDialog({
       onSaved();
     },
   });
-  const test = useMutation({
-    mutationFn: () => api.testConnection({ ...input(), ...(connection ? { id: connection.id } : {}) }),
-  });
+  const withId = () => ({ ...input(), ...(connection ? { id: connection.id } : {}) });
+  const test = useMutation({ mutationFn: () => api.testConnection(withId()) });
   const { reset: resetTest } = test;
   // Un resultado solo vale para los datos con los que se probó.
   useEffect(() => resetTest(), [type, url, username, secret, skipTls, resetTest]);
@@ -495,6 +485,16 @@ function ConnectionDialog({
             ))}
           </fieldset>
         )}
+        {entry.hasEntities && (
+          <EntityPicker
+            selected={entities}
+            onChange={setEntities}
+            load={() => {
+              if (!form.current?.reportValidity()) return null;
+              return api.listEntities(withId());
+            }}
+          />
+        )}
         <label className="check">
           <input type="checkbox" checked={skipTls} onChange={(e) => setSkipTls(e.target.checked)} />
           <span>
@@ -510,18 +510,16 @@ function ConnectionDialog({
           </p>
         )}
         <div className="dialog-actions">
-          {entry.readable && (
-            <button
-              type="button"
-              className="secondary"
-              disabled={test.isPending}
-              onClick={() => {
-                if (form.current?.reportValidity()) test.mutate();
-              }}
-            >
-              {t(test.isPending ? "form.testing" : "form.test")}
-            </button>
-          )}
+          <button
+            type="button"
+            className="secondary"
+            disabled={test.isPending}
+            onClick={() => {
+              if (form.current?.reportValidity()) test.mutate();
+            }}
+          >
+            {t(test.isPending ? "form.testing" : "form.test")}
+          </button>
           <span className="spacer" />
           <button type="button" className="quiet" onClick={onClose}>
             {t("form.cancel")}

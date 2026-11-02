@@ -15,6 +15,7 @@ export interface Connection {
   interval_seconds: number;
   tls_skip_verify: boolean;
   options: Record<string, boolean> | null;
+  entities: string[] | null;
   updated_at: string;
 }
 
@@ -27,6 +28,29 @@ export interface ConnectionInput {
   interval_seconds: number;
   tls_skip_verify: boolean;
   options: Record<string, boolean>;
+  entities: string[];
+}
+
+export interface EntityOption {
+  entity_id: string;
+  name: string;
+  state: string;
+  unit?: string;
+  device_class?: string;
+}
+
+export interface EntitiesResult {
+  ok: boolean;
+  error?: string;
+  entities?: EntityOption[];
+}
+
+export interface HomeAssistantData {
+  version: string;
+  state: string;
+  safe_mode: boolean;
+  recovery_mode: boolean;
+  entities: EntityOption[];
 }
 
 export interface DomainCount {
@@ -151,6 +175,8 @@ export const api = {
     request<Connection>("PUT", `/api/admin/connections/${encodeURIComponent(id)}`, input),
   testConnection: (input: ConnectionInput & { id?: string }) =>
     request<TestResult>("POST", "/api/admin/connections/test", input),
+  listEntities: (input: ConnectionInput & { id?: string }) =>
+    request<EntitiesResult>("POST", "/api/admin/connections/entities", input),
   dashboard: () => request<DashboardState>("GET", "/api/dashboard"),
   deleteConnection: (id: string) => request("DELETE", `/api/admin/connections/${encodeURIComponent(id)}`),
 };

@@ -126,13 +126,13 @@ func (m *Manager) start(c store.Connection) {
 	}
 
 	// Los datos de otro destino no pertenecen a esta configuración.
-	// Tampoco los que una opción acaba de ocultar.
+	// Tampoco los que una opción o selección acaba de ocultar.
 	options, err := json.Marshal(c.Options)
 	if err != nil {
 		m.log.Error("no se pueden leer las opciones", "conexion", c.ID, "error", err)
 		return
 	}
-	target := strings.Join([]string{c.BaseURL, c.Username, string(options)}, "\x00")
+	target := strings.Join(append([]string{c.BaseURL, c.Username, string(options)}, c.Entities...), "\x00")
 	snapshot := Snapshot{ID: c.ID, Name: c.Name, Type: c.Type, Status: StatusPending}
 	if old, ok := m.items[c.ID]; ok {
 		old.cancel()
@@ -165,7 +165,7 @@ func (m *Manager) run(ctx context.Context, c store.Connection, factory func(inte
 		return
 	}
 	integration := factory(integrations.Config{
-		BaseURL: c.BaseURL, Username: c.Username, Secret: secret, TLSSkipVerify: c.TLSSkipVerify, Options: c.Options,
+		BaseURL: c.BaseURL, Username: c.Username, Secret: secret, TLSSkipVerify: c.TLSSkipVerify, Options: c.Options, Entities: c.Entities,
 	})
 	ticker := time.NewTicker(time.Duration(c.IntervalSeconds) * time.Second)
 	defer ticker.Stop()

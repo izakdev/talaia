@@ -27,7 +27,7 @@ const (
 
 const (
 	requestTimeout = 10 * time.Second
-	maxResponse    = 8 << 20
+	maxResponse    = 32 << 20
 )
 
 // Config contiene lo necesario para hablar con un servicio.
@@ -37,12 +37,27 @@ type Config struct {
 	Secret        string
 	TLSSkipVerify bool
 	Options       map[string]bool
+	Entities      []string
 }
 
 // Integration lee el estado de un servicio. El resultado se envía al dashboard
 // público, así que no debe incluir credenciales ni direcciones internas.
 type Integration interface {
 	Collect(ctx context.Context) (any, error)
+}
+
+// EntityOption es una entidad que se puede elegir en la administración.
+type EntityOption struct {
+	ID          string `json:"entity_id"`
+	Name        string `json:"name"`
+	State       string `json:"state"`
+	Unit        string `json:"unit,omitempty"`
+	DeviceClass string `json:"device_class,omitempty"`
+}
+
+// EntityLister lo implementan las integraciones con entidades que se pueden elegir.
+type EntityLister interface {
+	ListEntities(ctx context.Context) ([]EntityOption, error)
 }
 
 // Registry asocia cada tipo de conexión con su integración.

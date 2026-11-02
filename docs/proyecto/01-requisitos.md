@@ -31,7 +31,7 @@ Talaia es un dashboard autoalojado para ver de un vistazo el estado de los servi
 | RF-05 | La interfaz está disponible en español e inglés | 1 | Implementado |
 | RF-06 | La interfaz se adapta a móvil y sigue el modo claro u oscuro del sistema | 1 | Implementado |
 | RF-07 | El dashboard puede exigir inicio de sesión si se configura así | 5 | Pendiente |
-| RF-08 | El administrador puede cambiar y recuperar su contraseña | Sin asignar | Propuesto |
+| RF-08 | El administrador puede cambiar y recuperar su contraseña | 5 | Pendiente |
 
 ### Conexiones
 
@@ -75,11 +75,11 @@ Verificado con un clúster real. Los casos aún sin probar en real están en el 
 
 | ID | Requisito | Hito | Estado |
 |---|---|---|---|
-| RF-50 | Muestra el estado del servicio | 4 | Pendiente |
-| RF-51 | Muestra las entidades elegidas en la administración, no todas | 4 | Pendiente |
-| RF-52 | Muestra consumos a partir de los sensores de potencia y energía | 4 | Pendiente |
+| RF-50 | Muestra el estado del servicio: en marcha, arrancando, modo seguro o de recuperación | 4 | Implementado |
+| RF-51 | Muestra solo las entidades elegidas en la administración, hasta 200; las demás no salen por la API pública | 4 | Implementado |
+| RF-52 | Muestra por separado los consumos, a partir de los sensores elegidos con clase de potencia o energía | 4 | Implementado |
 
-Una conexión de Home Assistant ya se puede guardar, pero todavía no se consulta ni aparece en el dashboard.
+Verificado con un Home Assistant real en local. Pendiente de la validación del cliente con su instalación.
 
 ### Instalación
 

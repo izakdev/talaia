@@ -7,11 +7,23 @@
 | 1 | Base: repositorio, CI, autenticación, SQLite y conexiones | Terminado, en `main` |
 | 2 | AdGuard y flujo completo, catálogo de servicios y documentación | Terminado y validado por el cliente, en `main` |
 | 3 | Proxmox: visión agregada y detalle por nodo | Terminado y verificado con un clúster real, en `main` |
-| 4 | Home Assistant: estado, entidades y consumos | Pendiente |
-| 5 | Editor: rejilla, varias páginas, temas y login opcional | Pendiente |
+| 4 | Home Assistant: estado, entidades y consumos | Implementado y verificado con un Home Assistant real en local, pendiente de validar con el del cliente |
+| 5 | Editor: rejilla, varias páginas y temas; login opcional; cambio y recuperación de contraseña | Pendiente |
 | 6 | Distribución: instalador LXC, actualización y documentación final | Pendiente |
 
 ## Historial
+
+### Hito 4 (2026-11-02)
+
+**Añadido:**
+- Integración de Home Assistant con estado, consumos y entidades elegidas.
+- Selector de entidades con búsqueda y filtros.
+- Detección de arranque, modo seguro y modo de recuperación.
+
+**Cambiado:**
+- Desaparece el aviso «Sin datos todavía» del catálogo, porque todos los servicios ya leen datos.
+- El límite de respuesta de los servicios sube de 8 a 32 MiB.
+- El cambio y la recuperación de contraseña se planifican en el hito 5, a petición del cliente.
 
 ### Hito 3 (2026-11-02)
 
@@ -54,9 +66,10 @@
 
 | Limitación | Impacto | Previsión |
 |---|---|---|
-| No se puede cambiar ni recuperar la contraseña | Olvidarla obliga a empezar de cero | RF-08, sin hito asignado |
+| No se puede cambiar ni recuperar la contraseña | Olvidarla obliga a empezar de cero | RF-08, hito 5 |
 | Sin instalador | Hay que compilar o copiar el binario y crear el servicio a mano | Hito 6 |
-| Home Assistant no se consulta | Se puede guardar, pero no aparece en el dashboard | Hito 4 |
+| Home Assistant sin validar con la instalación del cliente | Puede haber diferencias con sensores físicos o muchas entidades | Antes de cerrar el hito 4 |
+| Los consumos no se suman | No hay un total automático | Por diseño: se puede crear un sensor agregado en Home Assistant |
 | Nodo caído, pérdida de quórum y nodo independiente solo probados con simulador | Puede haber diferencias en esos casos | Al darse la ocasión |
 | Sin almacenamiento en la vista de Proxmox | Solo se ve el disco de cada nodo | Bajo demanda |
 | El dashboard muestra todas las conexiones con integración, en orden alfabético | No se puede elegir ni colocar | Hito 5 |

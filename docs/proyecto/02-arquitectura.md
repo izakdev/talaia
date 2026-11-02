@@ -26,10 +26,8 @@ flowchart LR
     C -.->|descifra con| K
     C -->|solo lectura| AG
     C -->|solo lectura| PX
-    C -.->|hito 4| HA
+    C -->|solo lectura| HA
 ```
-
-La línea discontinua de Home Assistant indica una integración todavía no implementada.
 
 ## Tecnologías
 
@@ -58,6 +56,7 @@ Los motivos detallados están en [Decisiones](05-decisiones.md).
 | `internal/integrations` | Interfaz común, cliente HTTP y códigos de error |
 | `internal/integrations/adguard` | Integración con AdGuard Home |
 | `internal/integrations/proxmox` | Integración con Proxmox VE |
+| `internal/integrations/homeassistant` | Integración con Home Assistant |
 | `web` | Frontend; `web/embed.go` lo incluye en el binario |
 | `web/src/widgets` | Estado, contenido y pie del bloque de cada integración |
 | `e2e` | Pruebas de extremo a extremo y generación de capturas |
@@ -107,7 +106,7 @@ type Integration interface {
 }
 ```
 
-`Collect` devuelve los datos que se enviarán al dashboard público, por lo que no debe incluir credenciales ni direcciones internas. Los errores se clasifican en códigos públicos con `integrations.Code`:
+`Collect` devuelve los datos que se enviarán al dashboard público, por lo que no debe incluir credenciales ni direcciones internas. Una integración con entidades que elegir implementa además `EntityLister`, que alimenta el selector de la administración. Los errores se clasifican en códigos públicos con `integrations.Code`:
 
 | Código | Causa |
 |---|---|
@@ -129,6 +128,18 @@ type Integration interface {
 6. Actualizar las pruebas y la documentación.
 
 **Deuda técnica conocida:** los tipos de conexión y sus opciones están repetidos entre backend y frontend.
+
+### Home Assistant
+
+| Aspecto | Detalle |
+|---|---|
+| Autenticación | Cabecera `Authorization: Bearer` con un token de larga duración |
+| Consultas | `/api/config` y, si hay entidades elegidas, `/api/states` |
+| Selección | Lista de `entity_id` por conexión, en la columna `entities` |
+| Datos públicos | Identificador, nombre, estado, unidad y clase de las entidades elegidas, además de versión y estado del servicio |
+| Excluido | Ubicación de `/api/config`, atributos y el resto de entidades |
+| Consumos | Entidades con clase `power` o `energy`, sin sumar: un medidor general y sus enchufes contarían dos veces |
+| Entidad eliminada | Se publica con estado `missing` para que se vea en el panel |
 
 ### Proxmox VE
 
@@ -160,6 +171,7 @@ Las respuestas son JSON. Las escrituras exigen `Content-Type: application/json` 
 | `GET /api/admin/connections` | Sesión | Lista las conexiones |
 | `POST /api/admin/connections` | Sesión | Crea una conexión |
 | `POST /api/admin/connections/test` | Sesión | Prueba una conexión sin guardarla |
+| `POST /api/admin/connections/entities` | Sesión | Lista las entidades que se pueden elegir, sin guardar nada |
 | `GET /api/admin/connections/{id}` | Sesión | Devuelve una conexión |
 | `PUT /api/admin/connections/{id}` | Sesión | Actualiza una conexión |
 | `DELETE /api/admin/connections/{id}` | Sesión | Elimina una conexión |
@@ -190,6 +202,7 @@ erDiagram
         integer interval_seconds
         integer tls_skip_verify
         text options
+        text entities
         integer created_at
         integer updated_at
     }
@@ -212,7 +225,7 @@ erDiagram
 | Credenciales | AES-256-GCM, vinculadas al ID de la conexión para que no se puedan intercambiar entre filas |
 | Clave de cifrado | `secret.key` con permisos `600`; Talaia no arranca si son más abiertos |
 | Archivos | Al crearlos, directorio de datos `700` y base de datos `600` |
-| Salida a servicios | Sin proxy, sin seguir redirecciones, 10 s de espera por petición y respuestas de 8 MiB como máximo |
+| Salida a servicios | Sin proxy, sin seguir redirecciones, 10 s de espera por petición y respuestas de 32 MiB como máximo |
 | TLS | Verificación activa por defecto, con excepción explícita por conexión |
 | API pública | Sin URL, usuarios ni credenciales |
 | Navegador | CSP `default-src 'self'`, `frame-ancestors 'none'`, `nosniff` y `Referrer-Policy: same-origin` |
