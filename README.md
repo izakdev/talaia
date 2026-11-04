@@ -2,7 +2,7 @@
 
 Dashboard autoalojado para ver el estado de tus servicios de un vistazo.
 
-> **Estado:** en desarrollo. El instalador para Proxmox VE está pendiente de verificarse en un servidor real.
+> **Estado:** en desarrollo. El instalador para Proxmox VE ya funciona en un servidor real; falta verificar la actualización.
 
 *Talaia* significa «atalaya» en catalán: una torre desde la que se vigila el entorno.
 

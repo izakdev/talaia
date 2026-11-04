@@ -9,7 +9,7 @@
 | 3 | Proxmox: visión agregada y detalle por nodo | Terminado y verificado con un clúster real, en `main` |
 | 4 | Home Assistant: estado, entidades, consumos, recursos y resumen; enlace a cada servicio | Terminado y verificado con la instalación del cliente, en `main` |
 | 5 | Editor: rejilla, varias páginas y temas; login opcional; cambio y recuperación de contraseña | Terminado y validado por el cliente, en `main` |
-| 6 | Distribución: instalador LXC, actualización y documentación final | Implementado, pendiente de verificar en un Proxmox real |
+| 6 | Distribución: instalador LXC, actualización y documentación final | Instalado en un Proxmox real; pendiente de verificar la actualización y el reinicio |
 
 ## Historial
 
@@ -24,6 +24,7 @@
 
 **Corregido:**
 - El instalador elegía la plantilla de Debian con la versión más alta, aunque fuera de otra arquitectura.
+- Un token pegado con un salto de línea daba un error inesperado. Ahora se limpia.
 
 **Cambiado:**
 - Las versiones con guion, como `v1.0.0-rc.1`, se publican como preliminares.
@@ -110,16 +111,17 @@
 | Bloqueo de login por IP detrás de un proxy inverso | Los fallos cuentan para todos los clientes | Sin hito asignado |
 | Una conexión tiene un solo contenido | No se pueden mostrar dos vistas distintas de un servicio | Bajo demanda, ver DEC-21 |
 | Arrastrar sin probar en pantallas táctiles | Puede no ir fino en un móvil; hay controles alternativos | Al darse la ocasión |
-| Instalador sin verificar en un Proxmox real | Puede haber diferencias con la plantilla o el LXC real | Antes de cerrar el hito 6 |
+| Actualización sin verificar en un Proxmox real | Solo probada con comandos simulados | Antes de cerrar el hito 6 |
 | Repositorio privado | El comando de instalación solo funciona con `--binary` hasta hacerlo público | Decisión del cliente |
 | Sistema del contenedor sin actualizaciones automáticas | Hay que actualizarlo con `apt` | Bajo demanda |
 
 ## Consumo medido
 
-Medición en reposo con una conexión de AdGuard y un intervalo de 5 segundos, sin navegador conectado. Es orientativa y no se ha hecho en un LXC real.
+Medición en reposo. Es orientativa.
 
 | Fecha | Binario | Memoria (RSS) |
 |---|---|---|
-| 2026-11-02 | 15 MB | 141 MB, unos 30 segundos después de crear el administrador |
+| 2026-11-02 | 15 MB | 141 MB, unos 30 segundos después de crear el administrador, fuera de un LXC |
+| 2026-11-04 | 14 MB, versión publicada | 18,3 MB en un LXC real de 512 MB, con tres conexiones; pico de 140,3 MB |
 
 Cada cálculo de contraseña reserva 64 MiB, con un máximo de 2 simultáneos, y parte de esa memoria puede seguir contando en la medición. El objetivo de 512 MB de RNF-06 queda por confirmar en un LXC real y con varias integraciones.

@@ -43,6 +43,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestSetupRequiresTokenWhenConfigured` | Con archivo de código, el asistente lo exige, no lo publica y lo elimina al usarlo | RF-62 |
 | `TestSetupTokenAttemptsAreLimited` | Los intentos con un código erróneo se bloquean | RF-62 |
 | `TestEmptySetupTokenNeverMatches` | Un archivo vacío no deja crear el administrador | RF-62 |
+| `TestPastedTokenIsTrimmed` | Un token pegado con espacios o saltos de línea se limpia; con saltos en medio se rechaza | RF-14 |
 | `TestConnectionTest` | Exige sesión, no guarda nada, reutiliza la credencial solo con la misma URL y rechaza tipos sin integración | RF-13, RF-14 |
 
 ### `internal/auth`
@@ -192,6 +193,7 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 | 2026-11-02 | Hito 5 | Base de datos creada por la versión del hito 4, con conexiones | Correcto: conserva el administrador y las conexiones, y las coloca en la página «Inicio» por orden alfabético y sin solapes |
 | 2026-11-02 | Hito 5 | Validación del cliente en su instalación | Correcto: editor y recuadro de los bloques |
 | 2026-11-04 | Hito 6 | Proxmox VE real del cliente, primer intento | Fallo: el instalador eligió la plantilla arm64 en un nodo amd64 y el contenedor no arrancó. Corregido, con su prueba en INS-01. El contenedor fallido se eliminó solo, como estaba previsto |
+| 2026-11-04 | Hito 6 | Proxmox VE real del cliente, segundo intento, LXC no privilegiado | Correcto según el cliente y el registro del servicio: plantilla amd64, servicio endurecido activo, enlace con código, administrador creado y las tres conexiones correctas. 18,3 MB de memoria y pico de 140,3 MB |
 
 **Contraste con fuentes oficiales:**
 - AdGuard Home: especificación OpenAPI.
@@ -199,7 +201,8 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 - Proxmox VE: fuente de la API en `PVE/API2/Cluster.pm`, de `pve-manager`, y documentación de API tokens.
 
 **Aún sin verificar:**
-- **Instalación en un Proxmox VE real.** Es necesario para dar por cerrado el hito 6. En especial: plantilla real, LXC no privilegiado con el servicio endurecido, consumo en 512 MB y descarga desde GitHub con el repositorio público.
+- **Actualización y reinicio en un Proxmox VE real.** Son necesarios para dar por cerrado el hito 6.
+- **Descarga desde GitHub** con el repositorio público. Hasta ahora se ha usado `--binary`.
 - **Arrastrar en pantallas táctiles.** Solo se ha probado con ratón; los controles de teclado funcionan también con toque.
 - **Recursos con un token sin permisos de administrador.** La falta de Supervisor se ha probado en real; el rechazo por permisos, solo por el código de Home Assistant.
 - **Home Assistant real, casos no probados:** instalaciones con miles de entidades, sensores de energía físicos, modo de recuperación y acceso por HTTPS.
@@ -224,7 +227,7 @@ Los requisitos pendientes se probarán en su hito.
 | RF-11 | `TestMultipleConnectionsOfSameService` |
 | RF-12 | E2E-04 |
 | RF-13 | `TestConnectionTest`, E2E-05 |
-| RF-14 | `TestConnectionsNeverExposeSecret`, `TestConnectionTest`, `TestConnectionSecretIsEncryptedAndKept`, E2E-11 |
+| RF-14 | `TestPastedTokenIsTrimmed`, `TestConnectionsNeverExposeSecret`, `TestConnectionTest`, `TestConnectionSecretIsEncryptedAndKept`, E2E-11 |
 | RF-20 | `TestDashboardEvents`, `TestDashboardFollowsConnectionChanges`, `TestSubscribersAreNotified`, E2E-08 |
 | RF-21 | `TestErrorKeepsLastDataAndRecovers`, `TestChangingTargetDropsOldData`, `TestErrors`, `TestConnectionFailures`, E2E-09 |
 | RF-30 | `TestCollect`, E2E-06, E2E-08 |
@@ -255,6 +258,6 @@ Los requisitos pendientes se probarán en su hito.
 | RNF-06 | Medición manual en reposo, ver [Estado y cambios](06-estado-y-cambios.md#consumo-medido) |
 | RNF-07 | `TestRemoveAndUnsupported`; el recolector solo depende de `integrations.Registry` |
 | RNF-08 | E2E-24 para los controles sin arrastrar; revisión de código y de capturas; sin auditoría formal |
-| RNF-09 | Compilación para arm64 en local; publicación definida en `release.yml` |
+| RNF-09 | Versión preliminar `v0.1.0-rc.1` publicada por `release.yml`, con ambos binarios, sumas e instalador |
 | RNF-10 | Revisión del repositorio |
 | RNF-11 | `make docs-check` |

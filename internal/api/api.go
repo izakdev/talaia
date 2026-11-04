@@ -488,7 +488,12 @@ func validateConnection(in *connectionIn) string {
 		return "invalid_interval"
 	}
 	if in.Secret != nil {
-		if *in.Secret == "" || len(*in.Secret) > 4096 {
+		// Los tokens se suelen pegar con un salto de línea, que no sería válido en una cabecera.
+		if in.Type != "adguard" {
+			trimmed := strings.TrimSpace(*in.Secret)
+			in.Secret = &trimmed
+		}
+		if *in.Secret == "" || len(*in.Secret) > 4096 || strings.ContainsAny(*in.Secret, "\r\n") {
 			return "invalid_secret"
 		}
 		if in.Type == "proxmox" && !proxmoxToken.MatchString(*in.Secret) {

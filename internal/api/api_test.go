@@ -739,3 +739,19 @@ func TestEmptySetupTokenNeverMatches(t *testing.T) {
 	c, _ := newServerWithSetupToken(t, "")
 	c.want(403, "POST", "/api/setup", creds())
 }
+
+func TestPastedTokenIsTrimmed(t *testing.T) {
+	c, st := newServer(t)
+	c.want(200, "POST", "/api/setup", creds())
+	if got := c.want(200, "POST", "/api/admin/connections/entities", homeAssistantConn(" correcta\n")); !strings.Contains(got, "light.salon") {
+		t.Fatal(got)
+	}
+	var out connectionOut
+	if err := json.Unmarshal([]byte(c.want(201, "POST", "/api/admin/connections", homeAssistantConn("correcta\n"))), &out); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := st.ConnectionSecret(t.Context(), out.ID); err != nil || got != "correcta" {
+		t.Fatalf("secreto = %q, err = %v", got, err)
+	}
+	c.want(400, "POST", "/api/admin/connections", homeAssistantConn("dos\nlineas"))
+}
