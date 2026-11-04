@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Simula pct con un contenedor Docker que ejecuta systemd.
+set -euo pipefail
+command="$1"
+id="$2"
+shift 2
+name="talaia-test-ct-$id"
+echo "pct $command $id $*" >>"$STUB_LOG"
+case "$command" in
+  status)
+    state="$(docker inspect -f '{{.State.Status}}' "$name" 2>/dev/null)" || exit 2
+    echo "status: $state"
+    ;;
+  create)
+    docker run -d --name "$name" --privileged --cgroupns=host \
+      -v /sys/fs/cgroup:/sys/fs/cgroup:rw --stop-signal SIGRTMIN+3 "$STUB_IMAGE" >/dev/null
+    docker stop "$name" >/dev/null
+    ;;
+  start) docker start "$name" >/dev/null ;;
+  stop) docker stop "$name" >/dev/null ;;
+  destroy) docker rm -f "$name" >/dev/null ;;
+  push)
+    source="$1"
+    target="$2"
+    shift 2
+    docker cp -q "$source" "$name:$target"
+    if [[ "${1:-}" == "--perms" ]]; then docker exec "$name" chmod "$2" "$target"; fi
+    docker exec "$name" chown root:root "$target"
+    ;;
+  exec)
+    [[ "$1" == "--" ]] && shift
+    docker exec -i "$name" "$@"
+    ;;
+  *)
+    echo "pct simulado: comando desconocido $command" >&2
+    exit 1
+    ;;
+esac

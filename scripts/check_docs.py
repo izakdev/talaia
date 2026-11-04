@@ -28,6 +28,12 @@ planned_e2e = set(re.findall(r"E2E-\d+", plan))
 errors += [f"Escenario E2E sin documentar: {name}" for name in sorted(e2e - planned_e2e)]
 errors += [f"El plan cita un escenario inexistente: {name}" for name in sorted(planned_e2e - e2e)]
 
+# Lo mismo con las pruebas del instalador.
+installer = set(re.findall(r"INS-\d+", (ROOT / "scripts/test/proxmox-integration.sh").read_text(encoding="utf-8")))
+planned_installer = set(re.findall(r"INS-\d+", plan))
+errors += [f"Prueba del instalador sin documentar: {name}" for name in sorted(installer - planned_installer)]
+errors += [f"El plan cita una prueba del instalador inexistente: {name}" for name in sorted(planned_installer - installer)]
+
 # Los requisitos citados existen, y los implementados tienen cobertura.
 rows = re.findall(r"^\| (RN?F-\d+) \|.*\| ([^|]+?) \|$", requirements, re.M)
 known = {req for req, _ in rows}
@@ -56,4 +62,4 @@ for image in sorted((DOCS / "usuario/img").glob("*.png")):
 if errors:
     print("\n".join(errors))
     sys.exit(1)
-print(f"Documentación coherente: {len(go_tests)} pruebas de Go, {len(e2e)} E2E, {len(rows)} requisitos.")
+print(f"Documentación coherente: {len(go_tests)} pruebas de Go, {len(e2e)} E2E, {len(installer)} del instalador, {len(rows)} requisitos.")

@@ -2,7 +2,7 @@
 
 Talaia es un panel para ver de un vistazo el estado de los servicios de tu laboratorio doméstico. Está pensado para usarlo como página inicial del navegador.
 
-> **Versión de este manual:** hito 5, en desarrollo. Hoy muestran datos AdGuard Home, Proxmox VE y Home Assistant. Consulta las [limitaciones actuales](#limitaciones-actuales).
+> **Versión de este manual:** hito 6, en desarrollo. Hoy muestran datos AdGuard Home, Proxmox VE y Home Assistant. Consulta las [limitaciones actuales](#limitaciones-actuales).
 
 ## Índice
 
@@ -22,9 +22,56 @@ Talaia es un panel para ver de un vistazo el estado de los servicios de tu labor
 
 ## Instalación
 
-Todavía no hay un instalador para Proxmox. Mientras tanto, hay que compilar Talaia a partir del código.
+### En Proxmox VE (recomendado)
 
-**Necesitas:** `git`, `make`, Go y Node.js 22 o posterior.
+Ejecuta esto como root en la consola de un nodo de Proxmox:
+
+```sh
+curl -fsSL https://github.com/izakdev/talaia/releases/latest/download/talaia-proxmox.sh -o talaia-proxmox.sh
+bash talaia-proxmox.sh install
+```
+
+Te muestra lo que va a crear y pide confirmación. Crea un contenedor no privilegiado con Debian, 1 vCPU, 512 MB de RAM y 4 GB de disco, que arranca con el nodo. El contenedor no necesita Internet.
+
+Al terminar muestra **un enlace para crear el administrador**. Solo sirve una vez, y hasta usarlo nadie más puede crearlo.
+
+**Opciones más habituales:**
+
+| Opción | Por defecto | Función |
+|---|---|---|
+| `--ctid ID` | El siguiente libre | ID del contenedor |
+| `--hostname NOMBRE` | `talaia` | Nombre del contenedor |
+| `--ip CIDR` y `--gateway IP` | DHCP | Dirección fija, por ejemplo `--ip 192.0.2.50/24 --gateway 192.0.2.1` |
+| `--bridge NOMBRE` y `--vlan ID` | `vmbr0`, sin VLAN | Red |
+| `--storage NOMBRE` | El primero disponible | Almacenamiento del disco |
+| `--port N` | `8080` | Puerto de Talaia |
+| `--cores`, `--memory` y `--disk` | 1, 512 y 4 | vCPU, MB de RAM y GB de disco |
+| `--yes` | | No pide confirmación |
+
+Consulta todas con `bash talaia-proxmox.sh --help`.
+
+> **Mientras el repositorio sea privado,** el comando anterior no puede descargar nada. Compila el binario con `make dist`, copia al nodo `dist/talaia-linux-amd64` y `scripts/talaia-proxmox.sh`, y ejecuta `bash talaia-proxmox.sh install --binary ./talaia-linux-amd64`.
+
+### Actualizar
+
+En el nodo de Proxmox, con el ID de tu contenedor:
+
+```sh
+curl -fsSL https://github.com/izakdev/talaia/releases/latest/download/talaia-proxmox.sh -o talaia-proxmox.sh
+bash talaia-proxmox.sh update --ctid ID
+```
+
+Hace una copia de la base de datos y del binario, y actualiza. **Si la versión nueva no arranca, vuelve sola a la anterior.** Las copias, hasta 3, quedan en `/var/lib/talaia/backups` dentro del contenedor.
+
+Para actualizar el sistema del contenedor:
+
+```sh
+pct exec ID -- bash -c "apt update && apt -y upgrade"
+```
+
+### Desde el código
+
+Necesitas `git`, `make`, Go y Node.js 22 o posterior.
 
 ```sh
 git clone https://github.com/izakdev/talaia.git
@@ -33,7 +80,7 @@ make build
 ./bin/talaia -listen :8080 -data ./data
 ```
 
-Abre `http://IP_DEL_EQUIPO:8080` en el navegador.
+Abre `http://IP_DEL_EQUIPO:8080`. Crea el administrador enseguida: sin el instalador, hasta entonces podría hacerlo cualquiera en tu red.
 
 **Opciones de arranque:**
 
@@ -42,10 +89,13 @@ Abre `http://IP_DEL_EQUIPO:8080` en el navegador.
 | `-listen` | `TALAIA_LISTEN` | `:8080` | Dirección y puerto |
 | `-data` | `TALAIA_DATA_DIR` | `data` | Carpeta de datos |
 | `-key-file` | `TALAIA_KEY_FILE` | `secret.key` en la carpeta de datos | Clave de cifrado |
+| `-setup-token-file` | `TALAIA_SETUP_TOKEN_FILE` | Ninguno | Código que protege el primer arranque |
+
+En el contenedor, estas variables están en `/etc/talaia/talaia.env`. Si cambias algo, reinicia con `pct exec ID -- systemctl restart talaia`.
 
 ## Primer arranque
 
-La primera vez, Talaia te pide crear el administrador. Hazlo nada más arrancar, porque hasta entonces cualquiera en tu red podría crearlo.
+La primera vez, Talaia te pide crear el administrador. Si has usado el instalador, abre su enlace, que ya incluye el **código de instalación**. Si lo has perdido, está en `/var/lib/talaia/setup.token` dentro del contenedor.
 
 ![Pantalla para crear el administrador](img/01-primer-arranque.png)
 
@@ -309,7 +359,9 @@ En la administración, abre **Ajustes**.
 
 ## Copias de seguridad
 
-Toda la configuración está en la carpeta de datos:
+**En Proxmox,** la copia de seguridad del contenedor (`vzdump`) lo incluye todo.
+
+**A mano,** toda la configuración está en la carpeta de datos, que en el contenedor es `/var/lib/talaia`:
 
 | Archivo | Contenido |
 |---|---|
@@ -342,7 +394,11 @@ Toda la configuración está en la carpeta de datos:
 |---|---|
 | Talaia no arranca y menciona permisos de la clave | `secret.key` es accesible por otros usuarios. Ejecuta `chmod 600` sobre ese archivo |
 | «Demasiados intentos fallidos» | Espera 15 minutos o reinicia Talaia |
-| He olvidado la contraseña | En el equipo de Talaia, ejecuta `talaia reset-password -data CARPETA_DE_DATOS`. Muestra una contraseña nueva, que puedes cambiar en **Ajustes**, y cierra las sesiones abiertas. Tus datos se conservan |
+| He olvidado la contraseña | En el nodo de Proxmox, ejecuta `pct exec ID -- runuser -u talaia -- talaia reset-password -data /var/lib/talaia`. Sin contenedor: `talaia reset-password -data CARPETA_DE_DATOS`. Muestra una contraseña nueva, que puedes cambiar en **Ajustes**, y cierra las sesiones abiertas. Tus datos se conservan |
+| El instalador no puede descargar | Comprueba que el nodo tenga Internet. Si el repositorio es privado, usa `--binary` |
+| El instalador indica que no hay almacenamiento | Indícalo con `--storage`. Consulta los disponibles con `pvesm status` |
+| El servicio no arranca en el contenedor | Consulta `pct exec ID -- journalctl -u talaia -n 50`. El instalador elimina el contenedor si falla al instalar, y muestra este registro antes |
+| No puedo acceder al panel | Comprueba la dirección con `pct exec ID -- hostname -I` y que tu firewall permita ese puerto |
 | Un servicio no aparece en el panel | Comprueba en **Panel** que esté en esa página. Una conexión nueva se añade a la primera |
 | El panel no se actualiza detrás de un proxy | Comprueba que el proxy no retenga las respuestas de `/api/dashboard/events` |
 | No aparecen CPU, memoria ni disco | Pulsa **Probar conexión**. Requieren Supervisor y un token de administrador |
@@ -354,6 +410,6 @@ Toda la configuración está en la carpeta de datos:
 
 - La vista de Proxmox no incluye el almacenamiento.
 - Una conexión tiene un solo contenido: si está en dos páginas, se ve igual en ambas.
-- No hay instalador ni actualización automática.
+- No se actualiza solo: hay que ejecutar el comando de actualización.
 
 El estado de cada punto está en [Estado y cambios](../proyecto/06-estado-y-cambios.md).

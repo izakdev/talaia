@@ -9,9 +9,26 @@
 | 3 | Proxmox: visión agregada y detalle por nodo | Terminado y verificado con un clúster real, en `main` |
 | 4 | Home Assistant: estado, entidades, consumos, recursos y resumen; enlace a cada servicio | Terminado y verificado con la instalación del cliente, en `main` |
 | 5 | Editor: rejilla, varias páginas y temas; login opcional; cambio y recuperación de contraseña | Terminado y validado por el cliente, en `main` |
-| 6 | Distribución: instalador LXC, actualización y documentación final | Pendiente |
+| 6 | Distribución: instalador LXC, actualización y documentación final | Terminado y verificado en un Proxmox real, en `main`; falta publicar `v0.1.0` |
 
 ## Historial
+
+### Hito 6 (2026-11-02)
+
+**Añadido:**
+- Instalador y actualizador para Proxmox VE en un solo script.
+- Servicio con usuario propio y sistema de archivos protegido.
+- Código de un solo uso para proteger el primer arranque.
+- Actualización con copia de seguridad y marcha atrás automática.
+- Pruebas del instalador en CI, con systemd real.
+
+**Corregido:**
+- El instalador elegía la plantilla de Debian con la versión más alta, aunque fuera de otra arquitectura.
+- Un token pegado con un salto de línea daba un error inesperado. Ahora se limpia.
+
+**Cambiado:**
+- Las versiones con guion, como `v1.0.0-rc.1`, se publican como preliminares.
+- Cada versión publicada incluye el instalador.
 
 ### Hito 5 (2026-11-02)
 
@@ -84,7 +101,6 @@
 
 | Limitación | Impacto | Previsión |
 |---|---|---|
-| Sin instalador | Hay que compilar o copiar el binario y crear el servicio a mano | Hito 6 |
 | CPU, memoria y disco de Home Assistant requieren Supervisor y token de administrador | Otras instalaciones no los muestran; pueden elegir sensores de System Monitor | Por diseño de Home Assistant |
 | El disco de Home Assistant se muestra en GiB | Las cifras son algo menores que los GB que muestra Home Assistant, aunque el porcentaje coincide | Bajo demanda |
 | Home Assistant sin probar con miles de entidades | Cada ciclo descarga todas las entidades, y podría tardar | Si se da el caso, subir el refresco |
@@ -95,14 +111,17 @@
 | Bloqueo de login por IP detrás de un proxy inverso | Los fallos cuentan para todos los clientes | Sin hito asignado |
 | Una conexión tiene un solo contenido | No se pueden mostrar dos vistas distintas de un servicio | Bajo demanda, ver DEC-21 |
 | Arrastrar sin probar en pantallas táctiles | Puede no ir fino en un móvil; hay controles alternativos | Al darse la ocasión |
-| Primer arranque abierto hasta crear el administrador | Alguien en la red podría crearlo primero | Revisar en el hito 6 |
+| Cambio de versión y marcha atrás solo probados en CI | En un Proxmox real solo se ha reinstalado la misma versión con `--force` | Al publicar la siguiente versión |
+| Repositorio privado | El comando de instalación solo funciona con `--binary` hasta hacerlo público | Decisión del cliente |
+| Sistema del contenedor sin actualizaciones automáticas | Hay que actualizarlo con `apt` | Bajo demanda |
 
 ## Consumo medido
 
-Medición en reposo con una conexión de AdGuard y un intervalo de 5 segundos, sin navegador conectado. Es orientativa y no se ha hecho en un LXC real.
+Medición en reposo. Es orientativa.
 
 | Fecha | Binario | Memoria (RSS) |
 |---|---|---|
-| 2026-11-02 | 15 MB | 141 MB, unos 30 segundos después de crear el administrador |
+| 2026-11-02 | 15 MB | 141 MB, unos 30 segundos después de crear el administrador, fuera de un LXC |
+| 2026-11-04 | 14 MB, versión publicada | 18,3 MB en un LXC real de 512 MB, con tres conexiones; pico de 140,3 MB |
 
 Cada cálculo de contraseña reserva 64 MiB, con un máximo de 2 simultáneos, y parte de esa memoria puede seguir contando en la medición. El objetivo de 512 MB de RNF-06 queda por confirmar en un LXC real y con varias integraciones.

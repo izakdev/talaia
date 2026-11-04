@@ -2,7 +2,7 @@
 // Los identificadores E2E-xx están descritos en docs/proyecto/04-plan-de-pruebas.md.
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
 import { dirname, join } from "node:path";
@@ -23,10 +23,10 @@ const homeAssistant = fakeHomeAssistant(13002);
 const dataDir = mkdtempSync(join(tmpdir(), "talaia-e2e-"));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function waitForServer() {
+async function waitForServer(url = BASE) {
   for (let i = 0; i < 50; i++) {
     try {
-      if ((await fetch(`${BASE}/healthz`)).ok) return;
+      if ((await fetch(`${url}/healthz`)).ok) return;
     } catch {
       await sleep(100);
     }
@@ -547,6 +547,37 @@ const scenarios = [
     await page.getByRole("button", { name: "Entrar" }).click();
     await page.getByRole("heading", { name: "Conexiones", exact: true }).waitFor();
     ADMIN.password = recovered;
+  }],
+  ["E2E-29", "Primer arranque protegido con un código de instalación", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "talaia-e2e-token-"));
+    const tokenFile = join(dir, "setup.token");
+    writeFileSync(tokenFile, "codigo-de-prueba\n", { mode: 0o600 });
+    const url = "http://127.0.0.1:18081";
+    const server = spawn(join(root, "bin/talaia"), ["-listen", "127.0.0.1:18081", "-data", join(dir, "data"), "-setup-token-file", tokenFile], { stdio: "ignore" });
+    const installContext = await browser.newContext({ locale: "es-ES" });
+    try {
+      await waitForServer(url);
+      const installer = await installContext.newPage();
+      await installer.goto(url);
+      await installer.getByLabel("Usuario").fill(ADMIN.user);
+      await installer.getByLabel("Contraseña").fill("una-clave-bien-larga");
+      await installer.getByLabel(/Código de instalación/).fill("incorrecto");
+      await installer.getByRole("button", { name: "Crear administrador" }).click();
+      await installer.getByRole("alert").getByText("no es correcto").waitFor();
+
+      await installer.goto(`${url}/?setup=codigo-de-prueba`);
+      assert.equal(await installer.getByLabel(/Código de instalación/).inputValue(), "codigo-de-prueba");
+      assert.doesNotMatch(installer.url(), /setup=/);
+      await installer.getByLabel("Usuario").fill(ADMIN.user);
+      await installer.getByLabel("Contraseña").fill("una-clave-bien-larga");
+      await installer.getByRole("button", { name: "Crear administrador" }).click();
+      await installer.getByRole("heading", { name: "Aún no hay servicios" }).waitFor();
+      assert.equal(existsSync(tokenFile), false);
+    } finally {
+      await installContext.close();
+      server.kill("SIGTERM");
+      rmSync(dir, { recursive: true, force: true });
+    }
   }],
   ["E2E-12", "Cambio de idioma recordado", async () => {
     await page.getByRole("button", { name: "English" }).click();

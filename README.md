@@ -2,7 +2,7 @@
 
 Dashboard autoalojado para ver el estado de tus servicios de un vistazo.
 
-> **Estado:** en desarrollo inicial. Todavía no hay una versión instalable.
+> **Estado:** en desarrollo. La instalación, la actualización y el arranque automático en Proxmox VE están verificados en un servidor real; falta publicar la primera versión.
 
 *Talaia* significa «atalaya» en catalán: una torre desde la que se vigila el entorno.
 
@@ -11,7 +11,18 @@ Dashboard autoalojado para ver el estado de tus servicios de un vistazo.
 - Dashboard de cliente, pensado como página inicial del navegador.
 - Administración protegida para configurar conexiones, páginas y widgets.
 - Integraciones de solo lectura: Proxmox VE, Home Assistant y AdGuard Home.
-- Instalación en un LXC autónomo de Proxmox.
+- Instalación y actualización en un LXC autónomo de Proxmox.
+
+## Instalación en Proxmox VE
+
+Como root, en un nodo de Proxmox:
+
+```sh
+curl -fsSL https://github.com/izakdev/talaia/releases/latest/download/talaia-proxmox.sh -o talaia-proxmox.sh
+bash talaia-proxmox.sh install
+```
+
+Crea un contenedor LXC no privilegiado y muestra el enlace para crear el administrador. Más opciones en el [manual de usuario](docs/usuario/manual-de-usuario.md#instalación).
 
 ## Documentación
 

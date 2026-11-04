@@ -7,6 +7,7 @@
 | Unitarias y de integración | `go test` con detector de carreras | `make test` | CI, en cada cambio |
 | Extremo a extremo (E2E) | Playwright y Chromium contra el binario real y un AdGuard simulado | `make e2e` | CI, en cada cambio |
 | Compilación | `tsc`, Vite y `go build` | `make build` | CI, en cada cambio |
+| Instalador | `shellcheck` y Bash con systemd real en Docker | `make test-installer`, como root | CI, en cada cambio |
 | Documentación | `scripts/check_docs.py` | `make docs-check` | CI, en cada cambio |
 | Contra servicio real | Manual, con el servicio real en local | Ver [verificaciones manuales](#verificaciones-manuales) | Al cerrar cada integración |
 
@@ -39,6 +40,10 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestDashboardCanRequireLogin` | Con sesión obligatoria, la API da 401, los flujos abiertos se cierran y el estado público informa | RF-07, RF-24 |
 | `TestSettingsValidation` | Exige sesión y rechaza temas y acentos desconocidos | RF-24 |
 | `TestChangePassword` | Exige sesión y la contraseña actual; revoca otras sesiones | RF-08 |
+| `TestSetupRequiresTokenWhenConfigured` | Con archivo de código, el asistente lo exige, no lo publica y lo elimina al usarlo | RF-62 |
+| `TestSetupTokenAttemptsAreLimited` | Los intentos con un código erróneo se bloquean | RF-62 |
+| `TestEmptySetupTokenNeverMatches` | Un archivo vacío no deja crear el administrador | RF-62 |
+| `TestPastedTokenIsTrimmed` | Un token pegado con espacios o saltos de línea se limpia; con saltos en medio se rechaza | RF-14 |
 | `TestConnectionTest` | Exige sesión, no guarda nada, reutiliza la credencial solo con la misma URL y rechaza tipos sin integración | RF-13, RF-14 |
 
 ### `internal/auth`
@@ -142,6 +147,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-26 | Tema y color de acento | RF-24 |
 | E2E-27 | Inicio de sesión opcional para ver el panel | RF-07 |
 | E2E-28 | Cambio y recuperación de contraseña | RF-08 |
+| E2E-29 | Primer arranque protegido con un código de instalación | RF-62 |
 | E2E-13 | Móvil y modo oscuro sin desbordamiento | RF-06 |
 | E2E-14 | La API pública no expone configuración ni credenciales | RNF-03 |
 | E2E-23 | Enlace a cada servicio desde su bloque | RF-25 |
@@ -156,6 +162,23 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 
 Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las discrepancias con el servicio real las cubren las verificaciones manuales.
 
+## Pruebas del instalador
+
+`scripts/test/proxmox-integration.sh` ejecuta el instalador real contra un contenedor con systemd. Docker sustituye a `pct`, y un servidor local sirve las versiones. Prueba el script y el servicio, pero **no** un Proxmox real ni un LXC no privilegiado.
+
+| ID | Prueba | Requisitos |
+|---|---|---|
+| INS-01 | Instalación con servicio endurecido: plantilla de la arquitectura del nodo, opciones del contenedor, usuario, permisos y arranque automático | RF-60 |
+| INS-02 | Código de instalación: rechaza sin él, acepta con él y lo elimina | RF-62 |
+| INS-03 | Recuperación de contraseña dentro del contenedor, sin dejar archivos de root | RF-08 |
+| INS-04 | Actualización con copia de seguridad, conservando datos, sesión y puerto | RF-61 |
+| INS-05 | No hace nada si ya está en esa versión | RF-61 |
+| INS-06 | Marcha atrás automática si la versión nueva no arranca | RF-61 |
+| INS-07 | Una suma de comprobación incorrecta no crea nada | RF-60 |
+| INS-08 | Una instalación fallida elimina el contenedor creado | RF-60 |
+| INS-09 | No reutiliza ni borra un contenedor existente; por defecto instala la última versión | RF-60 |
+| INS-10 | Rechaza opciones no válidas sin tocar nada | RF-60 |
+
 ## Verificaciones manuales
 
 | Fecha | Versión de Talaia | Servicio | Resultado |
@@ -169,6 +192,9 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 | 2026-11-02 | Hito 4 (`dd3706c`) | Home Assistant 2026.10.1 del cliente, con Supervisor y token de administrador | Correcto: validado por el cliente. Revisión adicional: CPU, memoria, disco y arranque reales y coherentes (porcentajes iguales a usado sobre total), resumen por dominio, enlaces en los tres servicios con `noopener` y sin usuarios, credenciales, nombre del equipo, personas ni cerraduras en la API pública. Reconexión de la actualización en vivo tras reiniciar Talaia. No se han comparado los recuentos con la interfaz de Home Assistant |
 | 2026-11-02 | Hito 5 | Base de datos creada por la versión del hito 4, con conexiones | Correcto: conserva el administrador y las conexiones, y las coloca en la página «Inicio» por orden alfabético y sin solapes |
 | 2026-11-02 | Hito 5 | Validación del cliente en su instalación | Correcto: editor y recuadro de los bloques |
+| 2026-11-04 | Hito 6 | Proxmox VE real del cliente, primer intento | Fallo: el instalador eligió la plantilla arm64 en un nodo amd64 y el contenedor no arrancó. Corregido, con su prueba en INS-01. El contenedor fallido se eliminó solo, como estaba previsto |
+| 2026-11-04 | Hito 6 | Proxmox VE real del cliente, segundo intento, LXC no privilegiado | Correcto según el cliente y el registro del servicio: plantilla amd64, servicio endurecido activo, enlace con código, administrador creado y las tres conexiones correctas. 18,3 MB de memoria y pico de 140,3 MB |
+| 2026-11-04 | Hito 6 | Proxmox VE real del cliente, actualización y reinicio | Correcto: reinstalación con `--force` y copia de seguridad, servicio activo al reiniciar el contenedor, y conexiones y panel conservados según el cliente, con captura del panel con datos reales |
 
 **Contraste con fuentes oficiales:**
 - AdGuard Home: especificación OpenAPI.
@@ -176,11 +202,13 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 - Proxmox VE: fuente de la API en `PVE/API2/Cluster.pm`, de `pve-manager`, y documentación de API tokens.
 
 **Aún sin verificar:**
+- **Actualización entre dos versiones distintas en un Proxmox VE real.** Se ha reinstalado con `--force`; el cambio de versión solo se ha probado en CI (INS-04).
+- **Marcha atrás automática en un Proxmox VE real.** Solo se ha probado en CI (INS-06).
+- **Descarga desde GitHub** con el repositorio público. Hasta ahora se ha usado `--binary`.
 - **Arrastrar en pantallas táctiles.** Solo se ha probado con ratón; los controles de teclado funcionan también con toque.
 - **Recursos con un token sin permisos de administrador.** La falta de Supervisor se ha probado en real; el rechazo por permisos, solo por el código de Home Assistant.
 - **Home Assistant real, casos no probados:** instalaciones con miles de entidades, sensores de energía físicos, modo de recuperación y acceso por HTTPS.
 - **Proxmox VE real, casos no probados:** nodo caído, pérdida de quórum y nodo independiente. Solo se han probado con el simulador.
-- La instalación y el consumo en un LXC real de Proxmox.
 - Otros navegadores además de Chromium.
 - Compatibilidad con otras versiones de AdGuard Home.
 - Accesibilidad con lector de pantalla.
@@ -201,7 +229,7 @@ Los requisitos pendientes se probarán en su hito.
 | RF-11 | `TestMultipleConnectionsOfSameService` |
 | RF-12 | E2E-04 |
 | RF-13 | `TestConnectionTest`, E2E-05 |
-| RF-14 | `TestConnectionsNeverExposeSecret`, `TestConnectionTest`, `TestConnectionSecretIsEncryptedAndKept`, E2E-11 |
+| RF-14 | `TestPastedTokenIsTrimmed`, `TestConnectionsNeverExposeSecret`, `TestConnectionTest`, `TestConnectionSecretIsEncryptedAndKept`, E2E-11 |
 | RF-20 | `TestDashboardEvents`, `TestDashboardFollowsConnectionChanges`, `TestSubscribersAreNotified`, E2E-08 |
 | RF-21 | `TestErrorKeepsLastDataAndRecovers`, `TestChangingTargetDropsOldData`, `TestErrors`, `TestConnectionFailures`, E2E-09 |
 | RF-30 | `TestCollect`, E2E-06, E2E-08 |
@@ -217,10 +245,13 @@ Los requisitos pendientes se probarán en su hito.
 | RF-53 | `TestSystemFromSupervisor`, `TestSystemIsOptional`, `TestConnectionTestReportsNotes`, E2E-21 |
 | RF-54 | `TestSummary`, E2E-21 |
 | RF-07 | `TestDashboardCanRequireLogin`, `TestSettingsDefaultsAndSave`, E2E-27 |
-| RF-08 | `TestChangePassword`, `TestPasswordChangeAndReset`, E2E-28 |
+| RF-08 | `TestChangePassword`, `TestPasswordChangeAndReset`, E2E-28, INS-03 |
 | RF-22 | `TestPanelSaveAndValidation`, `TestUnplacedConnectionIsHidden`, `TestNewConnectionsFillTwoColumns`, `TestPanelSaveAndCascade`, E2E-24, E2E-25 |
 | RF-23 | `TestPanelSaveAndValidation`, `TestPanelSaveAndCascade`, E2E-25 |
 | RF-24 | `TestSettingsValidation`, `TestSettingsDefaultsAndSave`, E2E-26 |
+| RF-60 | INS-01, INS-07, INS-08, INS-09, INS-10 |
+| RF-61 | INS-04, INS-05, INS-06 |
+| RF-62 | `TestSetupRequiresTokenWhenConfigured`, `TestSetupTokenAttemptsAreLimited`, `TestEmptySetupTokenNeverMatches`, E2E-29, INS-02 |
 | RNF-01 | Por diseño: el modelo de datos no tiene tablas de métricas |
 | RNF-02 | `TestCollect` y `TestClusterAggregates` usan solo lecturas; por diseño, el cliente solo ofrece `GetJSON` |
 | RNF-03 | `TestDashboardIsPublicAndHidesConfiguration`, `TestCollectsAndPassesDecryptedSecret`, `TestRedirectIsNotFollowed`, E2E-14 |
@@ -229,6 +260,6 @@ Los requisitos pendientes se probarán en su hito.
 | RNF-06 | Medición manual en reposo, ver [Estado y cambios](06-estado-y-cambios.md#consumo-medido) |
 | RNF-07 | `TestRemoveAndUnsupported`; el recolector solo depende de `integrations.Registry` |
 | RNF-08 | E2E-24 para los controles sin arrastrar; revisión de código y de capturas; sin auditoría formal |
-| RNF-09 | Compilación para arm64 en local; publicación definida en `release.yml`, aún sin ejecutar |
+| RNF-09 | Versión preliminar `v0.1.0-rc.1` publicada por `release.yml`, con ambos binarios, sumas e instalador |
 | RNF-10 | Revisión del repositorio |
 | RNF-11 | `make docs-check` |

@@ -36,3 +36,15 @@ jobs:
         run: npx --prefix e2e playwright install --with-deps chromium
       - name: Pruebas E2E
         run: npm --prefix e2e test
+
+  installer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Comprobar scripts
+        run: shellcheck scripts/talaia-proxmox.sh scripts/test/*.sh scripts/test/stubs/*
+      - name: Instalación y actualización con systemd real
+        run: sudo env "PATH=$PATH" scripts/test/proxmox-integration.sh

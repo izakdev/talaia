@@ -88,8 +88,9 @@ Verificado con un Home Assistant real en local y con la instalación del cliente
 
 | ID | Requisito | Hito | Estado |
 |---|---|---|---|
-| RF-60 | Un comando en el host Proxmox crea y configura un LXC autónomo | 6 | Pendiente |
-| RF-61 | Hay un procedimiento de actualización | 6 | Pendiente |
+| RF-60 | Un comando en el host Proxmox crea y configura un LXC autónomo, no privilegiado y con arranque automático | 6 | Implementado |
+| RF-61 | Un comando actualiza Talaia con copia de seguridad y vuelve a la versión anterior si la nueva no arranca | 6 | Implementado |
+| RF-62 | El primer arranque instalado está protegido con un código de un solo uso, para que nadie en la red cree antes el administrador | 6 | Implementado |
 
 ## Requisitos no funcionales
 
@@ -100,10 +101,10 @@ Verificado con un Home Assistant real en local y con la instalación del cliente
 | RNF-03 | El navegador nunca contacta con los servicios ni recibe sus tokens: el backend actúa de intermediario | 2 | Implementado |
 | RNF-04 | Las credenciales se guardan cifradas, con la clave fuera de la base de datos | 1 | Implementado |
 | RNF-05 | Autónomo: un binario con SQLite embebida y sin dependencias externas ni de Internet en ejecución | 1 | Implementado |
-| RNF-06 | Funciona en un LXC de 1 vCPU, 512 MB de RAM y 4 GB de disco | 6 | Parcial: el consumo se ha medido en reposo, sin probarlo aún en un LXC real |
+| RNF-06 | Funciona en un LXC de 1 vCPU, 512 MB de RAM y 4 GB de disco | 6 | Implementado |
 | RNF-07 | Añadir una integración no exige cambiar el núcleo de recolección | 2 | Implementado |
 | RNF-08 | Accesibilidad básica: teclado, foco visible, estados no solo por color y respeto a la reducción de movimiento | 1 | Parcial: aplicado en el diseño, sin auditoría formal |
-| RNF-09 | Binarios para Linux amd64 y arm64 | 1 | Parcial: ambos compilan; la publicación automática aún no se ha ejecutado |
+| RNF-09 | Binarios para Linux amd64 y arm64, publicados con sus sumas de comprobación | 1 | Implementado |
 | RNF-10 | Código abierto con licencia MIT y sin datos del laboratorio del autor en el repositorio | 1 | Implementado |
 | RNF-11 | La documentación se mantiene al día con cada cambio | 2 | Implementado |
 
