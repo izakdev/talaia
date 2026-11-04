@@ -10,7 +10,7 @@
 | 4 | Home Assistant: estado, entidades, consumos, recursos y resumen; enlace a cada servicio | Terminado y verificado con la instalación del cliente, en `main` |
 | 5 | Editor: rejilla, varias páginas y temas; login opcional; cambio y recuperación de contraseña | Terminado y validado por el cliente, en `main` |
 | 6 | Distribución: instalador LXC, actualización y documentación final | Terminado y verificado en un Proxmox real, publicado como `v0.1.0` |
-| 7 | OPNsense: gateways, tráfico WAN y recursos | Programado; pendiente de verificar contra el OPNsense del cliente |
+| 7 | OPNsense: gateways, tráfico WAN y recursos | Terminado y verificado con el OPNsense del cliente |
 | 8 | Portainer: entornos y contenedores | Pendiente |
 | 9 | WGDashboard: túneles y peers | Pendiente |
 

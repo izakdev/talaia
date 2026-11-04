@@ -64,7 +64,7 @@ function OPNsense({ data }: { data: OPNsenseData }) {
       {data.gateways.length > 0 && (
         <div className="ha-section">
           <h3>{t("opnsense.gateways")}</h3>
-          <ul className="ha-entities">
+          <ul className="ha-entities gateways">
             {data.gateways.map((gateway) => (
               <GatewayRow key={gateway.name} gateway={gateway} />
             ))}

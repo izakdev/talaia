@@ -154,7 +154,7 @@ Cada decisión recoge su motivo y sus consecuencias. Si una decisión cambia, se
 ## DEC-30: gateways sin monitorizar, en neutro
 - **Contexto:** OPNsense devuelve `none` y «Online» también en gateways sin medidas, con `~` en la latencia y la pérdida. Verde daría a entender que hay Internet sin haberlo comprobado.
 - **Decisión:** tratarlos como un estado propio, «Sin monitorizar», que no pone el bloque en verde por sí solo.
-- **Consecuencias:** un panel sin monitorización se ve en neutro hasta activarla en OPNsense. Se apoya en lo observado en un OPNsense real; falta confirmar que `~` solo aparece con la monitorización desactivada.
+- **Consecuencias:** un panel sin monitorización se ve en neutro hasta activarla en OPNsense. Comprobado en un OPNsense real: con la monitorización desactivada devuelve `~`, y al activarla, medidas reales.
 
 ## DEC-31: velocidad WAN calculada en memoria
 - **Contexto:** la API da contadores acumulados, y Talaia no guarda histórico.

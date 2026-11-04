@@ -332,9 +332,11 @@ Los nombres pueden variar según la versión. **Probar conexión** te avisa si f
 | Indicador | Significado |
 |---|---|
 | Círculo verde: **Gateways en línea** | Hay gateways con medidas y ninguno falla |
-| Neutro: **Gateways sin monitorizar** | OPNsense no mide sus gateways, así que no se sabe si hay conexión. Para verlo, activa su monitorización en OPNsense, en *System > Gateways* |
+| Neutro: **Gateways sin monitorizar** | OPNsense no mide sus gateways, así que no se sabe si hay conexión. Para verlo, activa su monitorización en OPNsense, en *System > Gateways* (consulta la nota siguiente) |
 | Triángulo ámbar: **Gateway degradado** | Hay pérdida de paquetes o latencia alta |
 | Cuadrado rojo: **Gateway caído** | Algún gateway ha caído |
+
+**Si al activar la monitorización un gateway pasa a Offline:** muchos operadores no responden a ping en la IP del gateway, sobre todo con PPPoE. Indica en **Monitor IP** una IP pública, como `9.9.9.9`, distinta de tus DNS de subida. Deja sin monitorizar los gateways que no tengan salida real, por ejemplo IPv6: de lo contrario, aparecerá **Gateway caído**.
 
 La velocidad de la WAN aparece a partir de la segunda lectura y es la media del tiempo de refresco. Los datos de recursos son de OPNsense, y Talaia no muestra sus actualizaciones pendientes.
 

@@ -215,6 +215,7 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 | 2026-11-04 | `v0.1.0` | Proxmox VE real del cliente, actualización de `v0.1.0-rc.1` a `v0.1.0` con `--binary` | Correcto según la salida del instalador: cambio de versión con copia de seguridad; repetir el comando no hace nada porque ya está en esa versión. No se han vuelto a comprobar los datos tras este cambio |
 | 2026-11-04 | `v0.1.0` | Proxmox VE real del cliente, instalador sin `--binary` | Correcto según la salida del instalador: descarga desde GitHub, suma comprobada (si no coincide, no instala) y reinstalación con `--force` y copia de seguridad, dos veces. Después, captura del cliente con su panel y datos actuales de Home Assistant y Proxmox; el contenido del bloque de AdGuard no se ve en ella |
 | 2026-11-04 | Hito 7, antes de programar | Respuestas de un OPNsense 26.7.1 real, con IP y MAC ocultas | Formatos confirmados: actividad, recursos, disco, información, tráfico y gateways. `core/firmware/running` da `403`. Los gateways del cliente devuelven `~` en las medidas |
+| 2026-11-04 | Hito 7 | OPNsense 26.7.1 real del cliente, con Talaia en Proxmox | Correcto según la captura del cliente: estado en verde, recursos, tiempo encendido, gateway IPv4 con latencia, gateway IPv6 sin monitorizar, velocidad y total de la WAN, y versión. La monitorización desactivada devolvía `~`; al activarla sin indicar IP, el gateway PPPoE pasaba a `Offline`, y responde con una IP pública como Monitor IP. No se han comparado las cifras con la interfaz de OPNsense |
 
 **Contraste con fuentes oficiales:**
 - AdGuard Home: especificación OpenAPI.
@@ -223,7 +224,7 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 - OPNsense: referencia de la API para rutas y métodos. El formato de las respuestas no está documentado: se ha tomado del servicio real.
 
 **Aún sin verificar:**
-- **Integración de OPNsense completa contra un OPNsense real.** Sus simuladores usan las respuestas reales de OPNsense 26.7 obtenidas el 2026-11-04, pero el código aún no se ha ejecutado contra él. Es necesario para cerrar el hito 7.
+- **OPNsense real, casos no probados:** gateway degradado o caído, comparación de las cifras con su interfaz y nombres exactos de los privilegios mínimos.
 - **Marcha atrás automática en un Proxmox VE real.** Solo se ha probado en CI (INS-06).
 - **Instalación nueva con descarga desde GitHub en un Proxmox VE real.** La descarga se ha probado al actualizar; las instalaciones reales usaron `--binary`.
 - **Arrastrar en pantallas táctiles.** Solo se ha probado con ratón; los controles de teclado funcionan también con toque.
