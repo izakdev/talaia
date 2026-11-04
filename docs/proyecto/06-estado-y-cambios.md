@@ -115,7 +115,7 @@ Primera versión estable, con los binarios para amd64 y arm64, las sumas de comp
 | Bloqueo de login por IP detrás de un proxy inverso | Los fallos cuentan para todos los clientes | Sin hito asignado |
 | Una conexión tiene un solo contenido | No se pueden mostrar dos vistas distintas de un servicio | Bajo demanda, ver DEC-21 |
 | Arrastrar sin probar en pantallas táctiles | Puede no ir fino en un móvil; hay controles alternativos | Al darse la ocasión |
-| Cambio de versión y marcha atrás solo probados en CI | En un Proxmox real solo se ha reinstalado la misma versión con `--force` | Al publicar la siguiente versión |
+| Marcha atrás automática solo probada en CI | No se ha provocado un fallo de arranque en un Proxmox real | Al darse la ocasión |
 | Sistema del contenedor sin actualizaciones automáticas | Hay que actualizarlo con `apt` | Bajo demanda |
 
 ## Consumo medido
