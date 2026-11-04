@@ -195,6 +195,10 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 | 2026-11-04 | Hito 6 | Proxmox VE real del cliente, primer intento | Fallo: el instalador eligió la plantilla arm64 en un nodo amd64 y el contenedor no arrancó. Corregido, con su prueba en INS-01. El contenedor fallido se eliminó solo, como estaba previsto |
 | 2026-11-04 | Hito 6 | Proxmox VE real del cliente, segundo intento, LXC no privilegiado | Correcto según el cliente y el registro del servicio: plantilla amd64, servicio endurecido activo, enlace con código, administrador creado y las tres conexiones correctas. 18,3 MB de memoria y pico de 140,3 MB |
 | 2026-11-04 | Hito 6 | Proxmox VE real del cliente, actualización y reinicio | Correcto: reinstalación con `--force` y copia de seguridad, servicio activo al reiniciar el contenedor, y conexiones y panel conservados según el cliente, con captura del panel con datos reales |
+| 2026-11-04 | `v0.1.0` | Versión publicada por `release.yml` | Correcto: no preliminar y marcada como la última, con ambos binarios, sumas e instalador. Sumas correctas tras la descarga y el binario amd64 indica `v0.1.0`. No se ha instalado esta versión en un Proxmox real |
+| 2026-11-04 | `v0.1.0` | Repositorio público, sin credenciales | Correcto: se descargan el instalador, los binarios y las sumas desde `releases/latest/download`, y las sumas coinciden. Sin IP ni dominios del laboratorio en el historial de Git |
+| 2026-11-04 | `v0.1.0` | Proxmox VE real del cliente, actualización de `v0.1.0-rc.1` a `v0.1.0` con `--binary` | Correcto según la salida del instalador: cambio de versión con copia de seguridad; repetir el comando no hace nada porque ya está en esa versión. No se han vuelto a comprobar los datos tras este cambio |
+| 2026-11-04 | `v0.1.0` | Proxmox VE real del cliente, instalador sin `--binary` | Correcto según la salida del instalador: descarga desde GitHub, suma comprobada (si no coincide, no instala) y reinstalación con `--force` y copia de seguridad, dos veces. No se han vuelto a comprobar los datos tras esta prueba |
 
 **Contraste con fuentes oficiales:**
 - AdGuard Home: especificación OpenAPI.
@@ -202,9 +206,8 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 - Proxmox VE: fuente de la API en `PVE/API2/Cluster.pm`, de `pve-manager`, y documentación de API tokens.
 
 **Aún sin verificar:**
-- **Actualización entre dos versiones distintas en un Proxmox VE real.** Se ha reinstalado con `--force`; el cambio de versión solo se ha probado en CI (INS-04).
 - **Marcha atrás automática en un Proxmox VE real.** Solo se ha probado en CI (INS-06).
-- **Descarga desde GitHub** con el repositorio público. Hasta ahora se ha usado `--binary`.
+- **Instalación nueva con descarga desde GitHub en un Proxmox VE real.** La descarga se ha probado al actualizar; las instalaciones reales usaron `--binary`.
 - **Arrastrar en pantallas táctiles.** Solo se ha probado con ratón; los controles de teclado funcionan también con toque.
 - **Recursos con un token sin permisos de administrador.** La falta de Supervisor se ha probado en real; el rechazo por permisos, solo por el código de Home Assistant.
 - **Home Assistant real, casos no probados:** instalaciones con miles de entidades, sensores de energía físicos, modo de recuperación y acceso por HTTPS.
@@ -260,6 +263,6 @@ Los requisitos pendientes se probarán en su hito.
 | RNF-06 | Medición manual en reposo, ver [Estado y cambios](06-estado-y-cambios.md#consumo-medido) |
 | RNF-07 | `TestRemoveAndUnsupported`; el recolector solo depende de `integrations.Registry` |
 | RNF-08 | E2E-24 para los controles sin arrastrar; revisión de código y de capturas; sin auditoría formal |
-| RNF-09 | Versión preliminar `v0.1.0-rc.1` publicada por `release.yml`, con ambos binarios, sumas e instalador |
+| RNF-09 | Versiones `v0.1.0-rc.1` y `v0.1.0` publicadas por `release.yml`, con ambos binarios, sumas e instalador |
 | RNF-10 | Revisión del repositorio |
 | RNF-11 | `make docs-check` |

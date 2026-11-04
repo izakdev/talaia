@@ -50,7 +50,7 @@ Al terminar muestra **un enlace para crear el administrador**. Solo sirve una ve
 
 Consulta todas con `bash talaia-proxmox.sh --help`.
 
-> **Mientras el repositorio sea privado,** el comando anterior no puede descargar nada. Compila el binario con `make dist`, copia al nodo `dist/talaia-linux-amd64` y `scripts/talaia-proxmox.sh`, y ejecuta `bash talaia-proxmox.sh install --binary ./talaia-linux-amd64`.
+> **Sin acceso a GitHub desde el nodo,** compila el binario con `make dist`, copia al nodo `dist/talaia-linux-amd64` y `scripts/talaia-proxmox.sh`, y ejecuta `bash talaia-proxmox.sh install --binary ./talaia-linux-amd64`.
 
 ### Actualizar
 
@@ -395,7 +395,7 @@ En la administración, abre **Ajustes**.
 | Talaia no arranca y menciona permisos de la clave | `secret.key` es accesible por otros usuarios. Ejecuta `chmod 600` sobre ese archivo |
 | «Demasiados intentos fallidos» | Espera 15 minutos o reinicia Talaia |
 | He olvidado la contraseña | En el nodo de Proxmox, ejecuta `pct exec ID -- runuser -u talaia -- talaia reset-password -data /var/lib/talaia`. Sin contenedor: `talaia reset-password -data CARPETA_DE_DATOS`. Muestra una contraseña nueva, que puedes cambiar en **Ajustes**, y cierra las sesiones abiertas. Tus datos se conservan |
-| El instalador no puede descargar | Comprueba que el nodo tenga Internet. Si el repositorio es privado, usa `--binary` |
+| El instalador no puede descargar | Comprueba que el nodo tenga Internet. Si no puede salir, usa `--binary` |
 | El instalador indica que no hay almacenamiento | Indícalo con `--storage`. Consulta los disponibles con `pvesm status` |
 | El servicio no arranca en el contenedor | Consulta `pct exec ID -- journalctl -u talaia -n 50`. El instalador elimina el contenedor si falla al instalar, y muestra este registro antes |
 | No puedo acceder al panel | Comprueba la dirección con `pct exec ID -- hostname -I` y que tu firewall permita ese puerto |
