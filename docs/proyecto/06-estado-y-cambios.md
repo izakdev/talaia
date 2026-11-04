@@ -9,7 +9,7 @@
 | 3 | Proxmox: visión agregada y detalle por nodo | Terminado y verificado con un clúster real, en `main` |
 | 4 | Home Assistant: estado, entidades, consumos, recursos y resumen; enlace a cada servicio | Terminado y verificado con la instalación del cliente, en `main` |
 | 5 | Editor: rejilla, varias páginas y temas; login opcional; cambio y recuperación de contraseña | Terminado y validado por el cliente, en `main` |
-| 6 | Distribución: instalador LXC, actualización y documentación final | Instalado en un Proxmox real; pendiente de verificar la actualización y el reinicio |
+| 6 | Distribución: instalador LXC, actualización y documentación final | Terminado y verificado en un Proxmox real, en `main`; falta publicar `v0.1.0` |
 
 ## Historial
 
@@ -111,7 +111,7 @@
 | Bloqueo de login por IP detrás de un proxy inverso | Los fallos cuentan para todos los clientes | Sin hito asignado |
 | Una conexión tiene un solo contenido | No se pueden mostrar dos vistas distintas de un servicio | Bajo demanda, ver DEC-21 |
 | Arrastrar sin probar en pantallas táctiles | Puede no ir fino en un móvil; hay controles alternativos | Al darse la ocasión |
-| Actualización sin verificar en un Proxmox real | Solo probada con comandos simulados | Antes de cerrar el hito 6 |
+| Cambio de versión y marcha atrás solo probados en CI | En un Proxmox real solo se ha reinstalado la misma versión con `--force` | Al publicar la siguiente versión |
 | Repositorio privado | El comando de instalación solo funciona con `--binary` hasta hacerlo público | Decisión del cliente |
 | Sistema del contenedor sin actualizaciones automáticas | Hay que actualizarlo con `apt` | Bajo demanda |
 

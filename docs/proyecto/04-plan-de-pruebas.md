@@ -194,6 +194,7 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 | 2026-11-02 | Hito 5 | Validación del cliente en su instalación | Correcto: editor y recuadro de los bloques |
 | 2026-11-04 | Hito 6 | Proxmox VE real del cliente, primer intento | Fallo: el instalador eligió la plantilla arm64 en un nodo amd64 y el contenedor no arrancó. Corregido, con su prueba en INS-01. El contenedor fallido se eliminó solo, como estaba previsto |
 | 2026-11-04 | Hito 6 | Proxmox VE real del cliente, segundo intento, LXC no privilegiado | Correcto según el cliente y el registro del servicio: plantilla amd64, servicio endurecido activo, enlace con código, administrador creado y las tres conexiones correctas. 18,3 MB de memoria y pico de 140,3 MB |
+| 2026-11-04 | Hito 6 | Proxmox VE real del cliente, actualización y reinicio | Correcto: reinstalación con `--force` y copia de seguridad, servicio activo al reiniciar el contenedor, y conexiones y panel conservados según el cliente, con captura del panel con datos reales |
 
 **Contraste con fuentes oficiales:**
 - AdGuard Home: especificación OpenAPI.
@@ -201,7 +202,8 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 - Proxmox VE: fuente de la API en `PVE/API2/Cluster.pm`, de `pve-manager`, y documentación de API tokens.
 
 **Aún sin verificar:**
-- **Actualización y reinicio en un Proxmox VE real.** Son necesarios para dar por cerrado el hito 6.
+- **Actualización entre dos versiones distintas en un Proxmox VE real.** Se ha reinstalado con `--force`; el cambio de versión solo se ha probado en CI (INS-04).
+- **Marcha atrás automática en un Proxmox VE real.** Solo se ha probado en CI (INS-06).
 - **Descarga desde GitHub** con el repositorio público. Hasta ahora se ha usado `--binary`.
 - **Arrastrar en pantallas táctiles.** Solo se ha probado con ratón; los controles de teclado funcionan también con toque.
 - **Recursos con un token sin permisos de administrador.** La falta de Supervisor se ha probado en real; el rechazo por permisos, solo por el código de Home Assistant.

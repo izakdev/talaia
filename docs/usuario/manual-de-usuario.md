@@ -410,7 +410,6 @@ En la administración, abre **Ajustes**.
 
 - La vista de Proxmox no incluye el almacenamiento.
 - Una conexión tiene un solo contenido: si está en dos páginas, se ve igual en ambas.
-- La actualización aún no se ha verificado en un Proxmox real.
 - No se actualiza solo: hay que ejecutar el comando de actualización.
 
 El estado de cada punto está en [Estado y cambios](../proyecto/06-estado-y-cambios.md).
