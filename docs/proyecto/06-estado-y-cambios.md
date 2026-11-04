@@ -15,7 +15,7 @@
 
 ### `v0.1.0` (2026-11-04)
 
-Primera versión estable, con los binarios para amd64 y arm64, las sumas de comprobación y el instalador. El repositorio sigue siendo privado.
+Primera versión estable, con los binarios para amd64 y arm64, las sumas de comprobación y el instalador. El repositorio pasa a ser público.
 
 ### Hito 6 (2026-11-02)
 
@@ -116,7 +116,6 @@ Primera versión estable, con los binarios para amd64 y arm64, las sumas de comp
 | Una conexión tiene un solo contenido | No se pueden mostrar dos vistas distintas de un servicio | Bajo demanda, ver DEC-21 |
 | Arrastrar sin probar en pantallas táctiles | Puede no ir fino en un móvil; hay controles alternativos | Al darse la ocasión |
 | Cambio de versión y marcha atrás solo probados en CI | En un Proxmox real solo se ha reinstalado la misma versión con `--force` | Al publicar la siguiente versión |
-| Repositorio privado | El comando de instalación solo funciona con `--binary` hasta hacerlo público | Decisión del cliente |
 | Sistema del contenedor sin actualizaciones automáticas | Hay que actualizarlo con `apt` | Bajo demanda |
 
 ## Consumo medido

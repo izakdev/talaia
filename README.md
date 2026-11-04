@@ -2,7 +2,7 @@
 
 Dashboard autoalojado para ver el estado de tus servicios de un vistazo.
 
-> **Estado:** `v0.1.0` publicada. La instalación, la actualización y el arranque automático en Proxmox VE están verificados en un servidor real. Mientras el repositorio sea privado, la instalación necesita `--binary`.
+> **Estado:** `v0.1.0` publicada. La instalación, la actualización y el arranque automático en Proxmox VE están verificados en un servidor real.
 
 *Talaia* significa «atalaya» en catalán: una torre desde la que se vigila el entorno.
 

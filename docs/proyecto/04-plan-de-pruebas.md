@@ -196,6 +196,7 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 | 2026-11-04 | Hito 6 | Proxmox VE real del cliente, segundo intento, LXC no privilegiado | Correcto según el cliente y el registro del servicio: plantilla amd64, servicio endurecido activo, enlace con código, administrador creado y las tres conexiones correctas. 18,3 MB de memoria y pico de 140,3 MB |
 | 2026-11-04 | Hito 6 | Proxmox VE real del cliente, actualización y reinicio | Correcto: reinstalación con `--force` y copia de seguridad, servicio activo al reiniciar el contenedor, y conexiones y panel conservados según el cliente, con captura del panel con datos reales |
 | 2026-11-04 | `v0.1.0` | Versión publicada por `release.yml` | Correcto: no preliminar y marcada como la última, con ambos binarios, sumas e instalador. Sumas correctas tras la descarga y el binario amd64 indica `v0.1.0`. No se ha instalado esta versión en un Proxmox real |
+| 2026-11-04 | `v0.1.0` | Repositorio público, sin credenciales | Correcto: se descargan el instalador, los binarios y las sumas desde `releases/latest/download`, y las sumas coinciden. Sin IP ni dominios del laboratorio en el historial de Git |
 
 **Contraste con fuentes oficiales:**
 - AdGuard Home: especificación OpenAPI.
@@ -205,7 +206,7 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 **Aún sin verificar:**
 - **Actualización entre dos versiones distintas en un Proxmox VE real.** Se ha reinstalado con `--force`; el cambio de versión solo se ha probado en CI (INS-04).
 - **Marcha atrás automática en un Proxmox VE real.** Solo se ha probado en CI (INS-06).
-- **Descarga desde GitHub** con el repositorio público. Hasta ahora se ha usado `--binary`.
+- **Instalador con descarga desde GitHub en un Proxmox VE real.** Los archivos se descargan sin credenciales, pero en el nodo solo se ha usado `--binary`.
 - **Arrastrar en pantallas táctiles.** Solo se ha probado con ratón; los controles de teclado funcionan también con toque.
 - **Recursos con un token sin permisos de administrador.** La falta de Supervisor se ha probado en real; el rechazo por permisos, solo por el código de Home Assistant.
 - **Home Assistant real, casos no probados:** instalaciones con miles de entidades, sensores de energía físicos, modo de recuperación y acceso por HTTPS.
