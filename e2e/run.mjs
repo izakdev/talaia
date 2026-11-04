@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import { fakeAdGuard, PASSWORD, USER } from "./fake-adguard.mjs";
 import { fakeHomeAssistant, HA_TOKEN } from "./fake-homeassistant.mjs";
+import { fakeOPNsense, OPN_KEY, OPN_SECRET } from "./fake-opnsense.mjs";
 import { fakeProxmox, TOKEN } from "./fake-proxmox.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -20,6 +21,7 @@ const ADMIN = { user: "admin", password: "una-clave-bien-larga" };
 const adguard = fakeAdGuard(13000);
 const proxmox = fakeProxmox(13001);
 const homeAssistant = fakeHomeAssistant(13002);
+const opnsense = fakeOPNsense(13003);
 const dataDir = mkdtempSync(join(tmpdir(), "talaia-e2e-"));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -113,7 +115,7 @@ const scenarios = [
   ["E2E-04", "Catálogo de servicios: búsqueda y navegación", async () => {
     await page.getByRole("link", { name: "Añadir conexión" }).click();
     await page.getByRole("heading", { name: "Elige un servicio" }).waitFor();
-    assert.equal(await page.locator(".catalog button").count(), 3);
+    assert.equal(await page.locator(".catalog button").count(), 4);
     await shot(page, "04-catalogo");
     const search = page.getByLabel("Buscar servicio");
     await search.fill("maquinas");
@@ -579,6 +581,51 @@ const scenarios = [
       rmSync(dir, { recursive: true, force: true });
     }
   }],
+  ["E2E-30", "Alta de OPNsense y privilegios limitados", async () => {
+    await page.goto(`${BASE}/admin/connections/new`);
+    await page.getByRole("button", { name: /OPNsense/ }).click();
+    await page.getByLabel("Nombre", { exact: true }).fill("Cortafuegos");
+    await page.getByLabel("URL", { exact: true }).fill(opnsense.url);
+    await page.getByLabel(/^Clave de API/).fill(`key=${OPN_KEY}`);
+    await page.locator("dialog input[type=number]").fill("5");
+    const secret = page.locator("dialog input[type=password]");
+    await secret.fill("secreto-incorrecto");
+    await page.getByRole("button", { name: "Probar conexión" }).click();
+    await page.locator("dialog p[role=status]").getByText("Credenciales rechazadas").waitFor();
+    await secret.fill(`secret=${OPN_SECRET}`);
+    opnsense.state.limited = true;
+    await page.getByRole("button", { name: "Probar conexión" }).click();
+    await page.locator("dialog p[role=status]").getByText("Conexión correcta").waitFor();
+    await page.getByText("Faltan algunos datos").waitFor();
+    opnsense.state.limited = false;
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await row("Cortafuegos").getByText("Funciona").waitFor();
+  }],
+  ["E2E-31", "OPNsense en el panel: recursos, gateways y tráfico WAN", async () => {
+    await toDashboard();
+    const block = page.locator(".service", { hasText: "Cortafuegos" });
+    const state = block.locator(".service-state");
+    await state.getByText("Gateways en línea").waitFor();
+    const body = await block.innerText();
+    assert.match(body, /CPU\s+10 %/);
+    assert.match(body, /RAM\s+25 %/);
+    assert.match(body, /Disco\s+25 %/);
+    assert.match(body, /OPNsense 26\.7-simulado/);
+    await block.locator(".ha-entities li", { hasText: "WAN_V4" }).getByText("En línea, 4,2 ms").waitFor();
+    await block.locator(".ha-entities li", { hasText: "WAN_V6" }).getByText("Sin monitorizar").waitFor();
+    await block.getByText(/Mbit\/s/).first().waitFor({ timeout: 20000 });
+    await shot(block, "19-panel-opnsense");
+    opnsense.state.gateway = "loss";
+    await state.getByText("Gateway degradado").waitFor();
+    opnsense.state.gateway = "down";
+    await state.getByText("Gateway caído").waitFor();
+    opnsense.state.gateway = "none";
+    opnsense.state.monitored = false;
+    await state.getByText("Gateways sin monitorizar").waitFor();
+    opnsense.state.monitored = true;
+    await state.getByText("Gateways en línea").waitFor();
+    await toAdmin();
+  }],
   ["E2E-12", "Cambio de idioma recordado", async () => {
     await page.getByRole("button", { name: "English" }).click();
     await page.getByRole("heading", { name: "Connections", exact: true }).waitFor();
@@ -608,7 +655,7 @@ const scenarios = [
   }],
   ["E2E-14", "La API pública no expone configuración ni credenciales", async () => {
     const body = await publicDashboard();
-    for (const leak of [USER, PASSWORD, TOKEN, HA_TOKEN, "localhost:13002", "192.0.2.11", "base_url", "link_url", "secret"]) {
+    for (const leak of [USER, PASSWORD, TOKEN, HA_TOKEN, OPN_KEY, OPN_SECRET, "localhost:13002", "192.0.2.11", "192.0.2.50", "cortafuegos.simulado", "proceso-simulado", "pppoe1", "base_url", "link_url", "secret"]) {
       assert.equal(body.includes(leak), false, leak);
     }
     const headers = (await fetch(BASE)).headers;
@@ -625,6 +672,7 @@ try {
   await adguard.start();
   await proxmox.start();
   await homeAssistant.start();
+  await opnsense.start();
   await waitForServer();
   for (const [id, title, run] of scenarios) {
     try {
@@ -642,6 +690,7 @@ try {
   await adguard.stop().catch(() => {});
   await proxmox.stop().catch(() => {});
   await homeAssistant.stop().catch(() => {});
+  await opnsense.stop().catch(() => {});
   rmSync(dataDir, { recursive: true, force: true });
 }
 if (failed) process.exit(1);

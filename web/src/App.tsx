@@ -503,10 +503,11 @@ function ConnectionDialog({
             required
           />
         </label>
-        {type === "adguard" && (
+        {(type === "adguard" || type === "opnsense") && (
           <label>
-            {t("form.username")}
+            {t(`form.username.${type}`)}
             <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="off" required />
+            {type === "opnsense" && <small>{t("form.usernameHint.opnsense")}</small>}
           </label>
         )}
         <label>
@@ -579,6 +580,7 @@ function ConnectionDialog({
           </p>
         )}
         {test.data?.notes?.includes("system_unavailable") && <small>{t("form.note.system_unavailable")}</small>}
+        {test.data?.notes?.includes("limited_privileges") && <small>{t("form.note.limited_privileges")}</small>}
         <div className="dialog-actions">
           <button
             type="button"

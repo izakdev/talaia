@@ -34,7 +34,7 @@ function stateLabel(state: string, t: Translate) {
   }
 }
 
-function formatBytes(value: number, format: Intl.NumberFormat) {
+export function formatBytes(value: number, format: Intl.NumberFormat) {
   const units = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"];
   let size = value;
   let unit = 0;

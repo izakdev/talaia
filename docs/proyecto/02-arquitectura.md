@@ -17,6 +17,7 @@ flowchart LR
     AG[AdGuard Home]
     PX[Proxmox VE]
     HA[Home Assistant]
+    OP[OPNsense]
 
     B -->|HTTP y SSE| A
     B --> W
@@ -27,6 +28,7 @@ flowchart LR
     C -->|solo lectura| AG
     C -->|solo lectura| PX
     C -->|solo lectura| HA
+    C -->|solo lectura| OP
 ```
 
 ## Tecnologías
@@ -59,6 +61,7 @@ Los motivos detallados están en [Decisiones](05-decisiones.md).
 | `internal/integrations/adguard` | Integración con AdGuard Home |
 | `internal/integrations/proxmox` | Integración con Proxmox VE |
 | `internal/integrations/homeassistant` | Integración con Home Assistant |
+| `internal/integrations/opnsense` | Integración con OPNsense |
 | `web` | Frontend; `web/embed.go` lo incluye en el binario |
 | `web/src/widgets` | Estado, contenido y pie del bloque de cada integración |
 | `web/src/PanelEditor.tsx` | Editor de páginas y bloques |
@@ -163,6 +166,16 @@ type Integration interface {
 | Valores booleanos | La API los puede devolver como `0` y `1`, y se aceptan ambas formas |
 
 Proxmox filtra `/cluster/resources` según los permisos. Una lista sin nodos se interpreta como falta de permisos.
+
+### OPNsense
+
+| Aspecto | Detalle |
+|---|---|
+| Autenticación | HTTP Basic con la clave y el secreto de API |
+| Imprescindibles | `GET /api/diagnostics/activity/get_activity`, de cuyas cabeceras salen CPU y tiempo encendido, y `GET /api/routes/gateway/status` |
+| Opcionales | `GET /api/diagnostics/system/system_information`, `system_resources` y `system_disk`, y `GET /api/diagnostics/traffic/interface`. Un `401` o `403` omite el dato y añade el aviso `limited_privileges` |
+| Velocidad WAN | Diferencia de los contadores de la interfaz `wan` entre dos lecturas. Vive en memoria, así que falta en la primera lectura y si los contadores bajan |
+| Datos públicos | Nunca incluyen el nombre del equipo, direcciones de gateway, procesos, dispositivos de red ni sistemas de archivos |
 
 ## API HTTP
 
