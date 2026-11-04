@@ -81,7 +81,7 @@ output="$("$INSTALLER" install --yes --ctid "$CT" --version v0.0.1 --port "$PORT
   || { echo "$output" >&2; fail "la instalación ha fallado"; }
 create="$(grep "pct create $CT" "$STUB_LOG")"
 for option in "--unprivileged 1" "--features nesting=1" "--onboot 1" "--memory 512" "--cores 1" "--rootfs local:4" \
-  "debian-13-standard" "ip=192.0.2.50/24,gw=192.0.2.1,tag=20"; do
+  "--arch $ARCH" "debian-13-standard_13.1-2_${ARCH}.tar" "ip=192.0.2.50/24,gw=192.0.2.1,tag=20"; do
   [[ "$create" == *"$option"* ]] || fail "falta $option en: $create"
 done
 expect "servicio" "$(inside systemctl is-active talaia)" active

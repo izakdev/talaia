@@ -167,7 +167,7 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 
 | ID | Prueba | Requisitos |
 |---|---|---|
-| INS-01 | Instalación con servicio endurecido: opciones del contenedor, usuario, permisos y arranque automático | RF-60 |
+| INS-01 | Instalación con servicio endurecido: plantilla de la arquitectura del nodo, opciones del contenedor, usuario, permisos y arranque automático | RF-60 |
 | INS-02 | Código de instalación: rechaza sin él, acepta con él y lo elimina | RF-62 |
 | INS-03 | Recuperación de contraseña dentro del contenedor, sin dejar archivos de root | RF-08 |
 | INS-04 | Actualización con copia de seguridad, conservando datos, sesión y puerto | RF-61 |
@@ -191,6 +191,7 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 | 2026-11-02 | Hito 4 (`dd3706c`) | Home Assistant 2026.10.1 del cliente, con Supervisor y token de administrador | Correcto: validado por el cliente. Revisión adicional: CPU, memoria, disco y arranque reales y coherentes (porcentajes iguales a usado sobre total), resumen por dominio, enlaces en los tres servicios con `noopener` y sin usuarios, credenciales, nombre del equipo, personas ni cerraduras en la API pública. Reconexión de la actualización en vivo tras reiniciar Talaia. No se han comparado los recuentos con la interfaz de Home Assistant |
 | 2026-11-02 | Hito 5 | Base de datos creada por la versión del hito 4, con conexiones | Correcto: conserva el administrador y las conexiones, y las coloca en la página «Inicio» por orden alfabético y sin solapes |
 | 2026-11-02 | Hito 5 | Validación del cliente en su instalación | Correcto: editor y recuadro de los bloques |
+| 2026-11-04 | Hito 6 | Proxmox VE real del cliente, primer intento | Fallo: el instalador eligió la plantilla arm64 en un nodo amd64 y el contenedor no arrancó. Corregido, con su prueba en INS-01. El contenedor fallido se eliminó solo, como estaba previsto |
 
 **Contraste con fuentes oficiales:**
 - AdGuard Home: especificación OpenAPI.

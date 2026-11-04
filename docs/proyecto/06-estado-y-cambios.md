@@ -22,6 +22,9 @@
 - Actualización con copia de seguridad y marcha atrás automática.
 - Pruebas del instalador en CI, con systemd real.
 
+**Corregido:**
+- El instalador elegía la plantilla de Debian con la versión más alta, aunque fuera de otra arquitectura.
+
 **Cambiado:**
 - Las versiones con guion, como `v1.0.0-rc.1`, se publican como preliminares.
 - Cada versión publicada incluye el instalador.

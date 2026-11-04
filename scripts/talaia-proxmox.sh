@@ -168,9 +168,11 @@ first_storage() {
   pvesm status --content "$1" | awk 'NR > 1 && $3 == "active" { print $1; exit }'
 }
 
+# La lista incluye plantillas de varias arquitecturas: hay que elegir la del nodo.
 latest_template() {
   pveam update >/dev/null
-  pveam available --section system | awk '{ print $2 }' | grep -E '^debian-[0-9]+-standard' | sort -V | tail -n 1
+  pveam available --section system | awk '{ print $2 }' \
+    | grep -E "^debian-[0-9]+-standard_.*_$1\.tar\." | sort -V | tail -n 1 || true
 }
 
 ct_running() { pct status "$1" 2>/dev/null | grep -q 'running'; }
@@ -314,8 +316,8 @@ EOF
 
   fetch_binary "$arch"
 
-  template="$(latest_template)"
-  [[ -n "$template" ]] || die "No se encuentra una plantilla de Debian."
+  template="$(latest_template "$arch")"
+  [[ -n "$template" ]] || die "No se encuentra una plantilla de Debian para $arch."
   if ! pveam list "$TEMPLATE_STORAGE" | grep -q "$template"; then
     log "Descargando la plantilla $template"
     pveam download "$TEMPLATE_STORAGE" "$template" >/dev/null
@@ -323,7 +325,7 @@ EOF
 
   log "Creando el contenedor $CTID"
   pct create "$CTID" "$TEMPLATE_STORAGE:vztmpl/$template" \
-    --hostname "$HOSTNAME_CT" --cores "$CORES" --memory "$MEMORY" --swap "$SWAP" \
+    --arch "$arch" --hostname "$HOSTNAME_CT" --cores "$CORES" --memory "$MEMORY" --swap "$SWAP" \
     --rootfs "$STORAGE:$DISK" --net0 "$net" --ostype debian \
     --unprivileged 1 --features nesting=1 --onboot 1 >/dev/null
   CREATED_CT="$CTID"
