@@ -438,6 +438,22 @@ func homeAssistantConn(secret string) map[string]any {
 	return map[string]any{"name": "Casa", "type": "homeassistant", "base_url": "http://192.0.2.3:8123", "secret": secret, "interval_seconds": 30}
 }
 
+func TestOPNsenseCredentialsAreCleaned(t *testing.T) {
+	in := connectionIn{Name: "Router", Type: "opnsense", BaseURL: "https://192.0.2.1", Username: " key=abc+d= ", IntervalSeconds: 30}
+	secret := "secret=xyz=\n"
+	in.Secret = &secret
+	if code := validateConnection(&in); code != "" {
+		t.Fatalf("validación: %s", code)
+	}
+	if in.Username != "abc+d=" || *in.Secret != "xyz=" {
+		t.Fatalf("credenciales sin limpiar: %q %q", in.Username, *in.Secret)
+	}
+	in.Username = "key=abc\nsecret=xyz"
+	if code := validateConnection(&in); code != "invalid_api_key" {
+		t.Fatalf("clave con salto de línea: %q", code)
+	}
+}
+
 func TestListEntitiesEndpoint(t *testing.T) {
 	c, _ := newServer(t)
 	path := "/api/admin/connections/entities"

@@ -11,6 +11,11 @@ Talaia es un dashboard autoalojado para ver de un vistazo el estado de los servi
 - **Incluido:** dashboard, administración e integraciones de solo lectura con Proxmox VE, Home Assistant y AdGuard Home, más un LXC instalable.
 - **Excluido:** histórico propio, alertas y acciones sobre los servicios, como arrancar máquinas o activar entidades.
 
+## Alcance de la fase 2
+
+- **Incluido:** integraciones de solo lectura con OPNsense, Portainer y WGDashboard, en este orden.
+- **Aparcado:** Grafana, a petición del cliente, porque no lo usa de momento.
+
 ## Estados
 
 - **Implementado:** disponible en el código y cubierto por pruebas.
@@ -83,6 +88,27 @@ Verificado con un clúster real. Los casos aún sin probar en real están en el 
 | RF-54 | Muestra un resumen opcional, activado por defecto: luces, interruptores y otros elementos activos, entidades, no disponibles, actualizaciones e integraciones. No incluye personas, cerraduras, alarmas ni puertas | 4 | Implementado |
 
 Verificado con un Home Assistant real en local y con la instalación del cliente, con Supervisor. Los casos aún sin probar en real están en el [plan de pruebas](04-plan-de-pruebas.md#verificaciones-manuales).
+
+### OPNsense
+
+| ID | Requisito | Hito | Estado |
+|---|---|---|---|
+| RF-70 | Muestra CPU, tiempo encendido y, si los privilegios lo permiten, memoria, disco y versión | 7 | Implementado |
+| RF-71 | Muestra el estado de cada gateway, con su latencia y pérdida si se monitoriza, y distingue los que no se monitorizan | 7 | Implementado |
+| RF-72 | Muestra la velocidad y el total de tráfico de la WAN | 7 | Implementado |
+| RF-73 | Solo hace lecturas, funciona con un usuario de privilegios limitados y avisa si faltan datos por ello | 7 | Implementado |
+
+### Portainer
+
+| ID | Requisito | Hito | Estado |
+|---|---|---|---|
+| RF-80 | Muestra los entornos y sus contenedores en marcha y parados | 8 | Pendiente |
+
+### WGDashboard
+
+| ID | Requisito | Hito | Estado |
+|---|---|---|---|
+| RF-90 | Muestra el estado de los túneles y los peers conectados, consultando WGDashboard | 9 | Pendiente |
 
 ### Instalación
 

@@ -20,6 +20,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -398,6 +399,7 @@ var connectionTypes = map[string]struct {
 	"proxmox":       {options: []string{proxmox.OptionShowGuests}},
 	"homeassistant": {hasEntities: true, options: []string{homeassistant.OptionShowSummary}},
 	"adguard":       {needsUsername: true, options: []string{adguard.OptionShowTopDomains}},
+	"opnsense":      {needsUsername: true},
 }
 
 // proxmoxToken valida el formato usuario@reino!nombre=valor.
@@ -460,6 +462,13 @@ func validateConnection(in *connectionIn) string {
 			return "invalid_link"
 		}
 	}
+	if in.Type == "opnsense" {
+		// El archivo de OPNsense trae las líneas key=… y secret=…: se admite pegarlas enteras.
+		in.Username = strings.TrimPrefix(in.Username, "key=")
+		if strings.ContainsFunc(in.Username, unicode.IsSpace) {
+			return "invalid_api_key"
+		}
+	}
 	if spec.needsUsername && in.Username == "" {
 		return "invalid_username"
 	}
@@ -491,6 +500,9 @@ func validateConnection(in *connectionIn) string {
 		// Los tokens se suelen pegar con un salto de línea, que no sería válido en una cabecera.
 		if in.Type != "adguard" {
 			trimmed := strings.TrimSpace(*in.Secret)
+			if in.Type == "opnsense" {
+				trimmed = strings.TrimPrefix(trimmed, "secret=")
+			}
 			in.Secret = &trimmed
 		}
 		if *in.Secret == "" || len(*in.Secret) > 4096 || strings.ContainsAny(*in.Secret, "\r\n") {

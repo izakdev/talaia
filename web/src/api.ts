@@ -1,4 +1,4 @@
-export type ConnectionType = "proxmox" | "homeassistant" | "adguard";
+export type ConnectionType = "proxmox" | "homeassistant" | "adguard" | "opnsense";
 
 export interface AppState {
   setup_required: boolean;
@@ -117,6 +117,30 @@ export interface AdGuardData {
   period_length: number;
   top_queried?: DomainCount[];
   top_blocked?: DomainCount[];
+}
+
+export interface OPNsenseGateway {
+  name: string;
+  state: "online" | "degraded" | "offline" | "unmonitored";
+  delay_ms?: number;
+  loss_percent?: number;
+}
+
+export interface OPNsenseData {
+  version: string;
+  cpu_percent: number;
+  uptime_seconds: number;
+  memory_used?: number;
+  memory_total?: number;
+  disk_used?: number;
+  disk_total?: number;
+  gateways: OPNsenseGateway[];
+  wan?: {
+    received_bytes: number;
+    sent_bytes: number;
+    receive_bits_per_second?: number;
+    transmit_bits_per_second?: number;
+  };
 }
 
 export interface Count {

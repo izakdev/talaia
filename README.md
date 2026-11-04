@@ -13,6 +13,11 @@ Dashboard autoalojado para ver el estado de tus servicios de un vistazo.
 - Integraciones de solo lectura: Proxmox VE, Home Assistant y AdGuard Home.
 - Instalación y actualización en un LXC autónomo de Proxmox.
 
+## Fase 2
+
+- OPNsense: en desarrollo.
+- Portainer y WGDashboard: pendientes.
+
 ## Instalación en Proxmox VE
 
 Como root, en un nodo de Proxmox:

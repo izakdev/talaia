@@ -10,8 +10,18 @@
 | 4 | Home Assistant: estado, entidades, consumos, recursos y resumen; enlace a cada servicio | Terminado y verificado con la instalación del cliente, en `main` |
 | 5 | Editor: rejilla, varias páginas y temas; login opcional; cambio y recuperación de contraseña | Terminado y validado por el cliente, en `main` |
 | 6 | Distribución: instalador LXC, actualización y documentación final | Terminado y verificado en un Proxmox real, publicado como `v0.1.0` |
+| 7 | OPNsense: gateways, tráfico WAN y recursos | Programado; pendiente de verificar contra el OPNsense del cliente |
+| 8 | Portainer: entornos y contenedores | Pendiente |
+| 9 | WGDashboard: túneles y peers | Pendiente |
 
 ## Historial
+
+### Hito 7 (2026-11-04)
+
+**Añadido:**
+- Integración con OPNsense: CPU, RAM, disco, tiempo encendido, gateways y tráfico WAN.
+- Aviso al probar la conexión si faltan datos por los privilegios del usuario.
+- Fase 2 en los requisitos: OPNsense, Portainer y WGDashboard. Grafana queda aparcado.
 
 ### `v0.1.0` (2026-11-04)
 
@@ -116,6 +126,8 @@ Primera versión estable, con los binarios para amd64 y arm64, las sumas de comp
 | Una conexión tiene un solo contenido | No se pueden mostrar dos vistas distintas de un servicio | Bajo demanda, ver DEC-21 |
 | Arrastrar sin probar en pantallas táctiles | Puede no ir fino en un móvil; hay controles alternativos | Al darse la ocasión |
 | Marcha atrás automática solo probada en CI | No se ha provocado un fallo de arranque en un Proxmox real | Al darse la ocasión |
+| Actualizaciones de OPNsense sin mostrar | Requerirían un `POST`; ver DEC-29 | Sin hito asignado |
+| Velocidad WAN media del intervalo | Se recalcula en cada refresco y se mide de nuevo al reiniciar Talaia | Por diseño: ver DEC-31 |
 | Sistema del contenedor sin actualizaciones automáticas | Hay que actualizarlo con `apt` | Bajo demanda |
 
 ## Consumo medido

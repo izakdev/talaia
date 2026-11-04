@@ -300,6 +300,44 @@ Si no se cumplen, **Probar conexión** te lo indica y el resto del bloque funcio
 
 **Si actualizas desde una versión anterior:** las conexiones ya guardadas tienen el resumen desactivado hasta que lo actives al editarlas.
 
+### OPNsense
+
+| Campo | Qué poner |
+|---|---|
+| URL | La de la interfaz web, con `https://`, por ejemplo `https://opnsense.local` |
+| Clave de API | El valor de `key` en el archivo que descarga OPNsense |
+| Secreto de API | El valor de `secret` en ese archivo |
+| No verificar el certificado TLS | Actívalo si OPNsense usa su certificado autofirmado |
+
+Crea un usuario solo para Talaia, en *System > Access > Users*:
+
+1. Marca la contraseña aleatoria, para que no pueda iniciar sesión en la web.
+2. En **Effective Privileges**, añade estos privilegios:
+
+| Privilegio | Para qué |
+|---|---|
+| `Diagnostics: System Activity` | CPU y tiempo encendido. Imprescindible |
+| El de estado de gateways | Gateways. Imprescindible |
+| `Reporting: Traffic` | Tráfico de la WAN |
+| `Lobby: Dashboard` | RAM, disco y versión |
+
+3. Crea una API key y copia cada valor en su campo.
+
+Los nombres pueden variar según la versión. **Probar conexión** te avisa si faltan datos por los privilegios.
+
+![Bloque de OPNsense](img/19-panel-opnsense.png)
+
+**Estado de OPNsense:**
+
+| Indicador | Significado |
+|---|---|
+| Círculo verde: **Gateways en línea** | Hay gateways con medidas y ninguno falla |
+| Neutro: **Gateways sin monitorizar** | OPNsense no mide sus gateways, así que no se sabe si hay conexión. Para verlo, activa su monitorización en OPNsense, en *System > Gateways* |
+| Triángulo ámbar: **Gateway degradado** | Hay pérdida de paquetes o latencia alta |
+| Cuadrado rojo: **Gateway caído** | Algún gateway ha caído |
+
+La velocidad de la WAN aparece a partir de la segunda lectura y es la media del tiempo de refresco. Los datos de recursos son de OPNsense, y Talaia no muestra sus actualizaciones pendientes.
+
 ## Editar y eliminar conexiones
 
 **Editar:** pulsa **Editar** en la conexión. Deja la credencial vacía para conservar la actual. Si cambias la URL, tendrás que volver a escribirla: así evitas enviarla por error a otro servidor.
@@ -411,5 +449,6 @@ En la administración, abre **Ajustes**.
 - La vista de Proxmox no incluye el almacenamiento.
 - Una conexión tiene un solo contenido: si está en dos páginas, se ve igual en ambas.
 - No se actualiza solo: hay que ejecutar el comando de actualización.
+- El bloque de OPNsense no muestra sus actualizaciones pendientes.
 
 El estado de cada punto está en [Estado y cambios](../proyecto/06-estado-y-cambios.md).

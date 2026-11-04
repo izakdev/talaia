@@ -4,6 +4,7 @@ import { api, type ConnectionState, type ConnectionType, type DashboardState } f
 import { Horizon, LanguageSwitch, Tower } from "./chrome";
 import { useI18n, type Language } from "./i18n";
 import { adguardWidget } from "./widgets/adguard";
+import { opnsenseWidget } from "./widgets/opnsense";
 import { homeAssistantWidget } from "./widgets/homeassistant";
 import { proxmoxWidget } from "./widgets/proxmox";
 import type { Tone, Widget } from "./widgets/types";
@@ -13,6 +14,7 @@ const RETRY_MS = 5000;
 const WIDGETS: Partial<Record<ConnectionType, unknown>> = {
   adguard: adguardWidget,
   homeassistant: homeAssistantWidget,
+  opnsense: opnsenseWidget,
   proxmox: proxmoxWidget,
 };
 

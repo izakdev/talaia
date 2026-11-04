@@ -159,6 +159,7 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 | Nombre | Todos | Obligatorio, hasta 80 caracteres |
 | URL | Todos | `http` o `https`, sin credenciales, parámetros ni fragmento |
 | Usuario | AdGuard | Obligatorio |
+| Clave de API | OPNsense | Obligatoria, sin espacios. Admite pegar la línea `key=…` del archivo |
 | Credencial | Todos | Obligatoria al crear y al cambiar la URL; en otro caso, vacía conserva la actual. Hasta 4096 bytes |
 | Refresco | Todos | De 5 a 3600 segundos, 30 por defecto |
 | Mostrar dominios | AdGuard | Desactivado por defecto |
@@ -173,8 +174,9 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 | Proxmox | API token, `usuario@reino!nombre=valor` |
 | Home Assistant | Token de larga duración |
 | AdGuard | Contraseña |
+| OPNsense | Secreto de API. Admite pegar la línea `secret=…` del archivo |
 
-**Probar conexión:** consulta el servicio una vez con los datos del formulario, sin guardar nada. En Home Assistant, avisa si no hay CPU, memoria ni disco disponibles. Si se cambia algún dato de conexión, el resultado anterior desaparece. Al editar, puede usar la credencial guardada si la URL no ha cambiado.
+**Probar conexión:** consulta el servicio una vez con los datos del formulario, sin guardar nada. En Home Assistant, avisa si no hay CPU, memoria ni disco disponibles. En OPNsense, avisa si faltan datos por los privilegios del usuario. Si se cambia algún dato de conexión, el resultado anterior desaparece. Al editar, puede usar la credencial guardada si la URL no ha cambiado.
 
 ### Selector de entidades
 
@@ -205,6 +207,25 @@ Una misma conexión puede estar en varias páginas, una vez en cada una. Una con
 Se aplican a todos los usuarios del panel. El idioma sigue siendo de cada navegador.
 
 **Contraseña:** pide la actual y dos veces la nueva, de al menos 12 caracteres. Cierra las demás sesiones. Los fallos cuentan para el bloqueo por IP.
+
+**Estados de un bloque de OPNsense:**
+
+| Estado | Cuándo | Indicador |
+|---|---|---|
+| Gateways en línea | Al menos un gateway monitorizado y correcto, y ninguno con fallos | Círculo verde |
+| Gateways sin monitorizar | Ninguno tiene medidas: OPNsense los indica como correctos, pero eso no demuestra que haya conexión | Neutro |
+| Sin gateways | OPNsense no devuelve ninguno | Neutro |
+| Gateway degradado | Alguno con pérdida o latencia alta | Triángulo ámbar |
+| Gateway caído | Alguno caído | Cuadrado rojo |
+| Con fallos | La última consulta ha fallado | Cuadrado rojo, mensaje de error y último dato atenuado |
+
+**Datos de un bloque de OPNsense:**
+
+| Sección | Contenido |
+|---|---|
+| Recursos | CPU, RAM, disco de `/` y tiempo encendido. RAM y disco dependen de los privilegios |
+| Gateways | Nombre y estado; latencia y pérdida si existen |
+| WAN | Velocidad de descarga y subida, y total desde el arranque de la interfaz. La velocidad aparece a partir de la segunda lectura, mientras indica «Midiendo…» |
 
 ## Mensajes de error de los servicios
 

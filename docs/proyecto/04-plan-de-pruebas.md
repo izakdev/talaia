@@ -30,6 +30,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestDashboardIsPublicAndHidesConfiguration` | El dashboard es público, con enlace y sin usuarios ni credenciales | RF-01, RF-25, RNF-03 |
 | `TestConnectionLink` | Rechaza enlaces con otro esquema o con credenciales; uno propio sustituye a la URL de conexión en la API pública | RF-25 |
 | `TestConnectionTestReportsNotes` | La prueba de conexión devuelve los avisos de la integración | RF-53 |
+| `TestOPNsenseCredentialsAreCleaned` | Limpia las líneas `key=` y `secret=` pegadas de OPNsense y rechaza una clave con espacios | RF-73 |
 | `TestMultipleConnectionsOfSameService` | Admite varias conexiones del mismo servicio, ordenadas por nombre | RF-11 |
 | `TestDashboardFollowsConnectionChanges` | Editar y eliminar se refleja; un fallo conserva el último dato | RF-20, RF-21 |
 | `TestDashboardEvents` | El flujo SSE envía el estado inicial y los cambios | RF-20 |
@@ -126,6 +127,18 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestSummary` | Cuenta por dominio, excluye grupos, puertas y garajes, y no publica personas, cerraduras ni alarmas | RF-54 |
 | `TestErrors` | Token incorrecto y respuestas ajenas a Home Assistant. También en AdGuard y Proxmox | RF-21 |
 
+### `internal/integrations/opnsense`
+
+| Prueba | Verifica | Requisitos |
+|---|---|---|
+| `TestCollect` | Interpreta CPU, tiempo encendido, memoria, disco, versión y WAN con la forma de un OPNsense real; solo usa GET | RF-70, RF-72, RF-73 |
+| `TestGatewayStates` | Distingue gateways en línea, degradados, caídos y sin monitorizar, y lee sus medidas | RF-71 |
+| `TestWANSpeedNeedsTwoReadings` | Calcula la velocidad entre lecturas y la omite en la primera y si los contadores bajan | RF-72 |
+| `TestMissingPrivilegesLimitData` | Sin privilegios opcionales, omite esos datos y avisa | RF-73 |
+| `TestPublicDataHidesInfrastructure` | No publica equipo, direcciones, procesos, dispositivos ni credenciales | RF-73, RNF-02 |
+| `TestErrors` | Clasifica credenciales, privilegios imprescindibles, respuestas ajenas y errores del servicio | RF-21, RF-73 |
+| `TestParseSize` | Interpreta los tamaños de `df -h` | RF-70 |
+
 ## Pruebas E2E
 
 | ID | Escenario | Requisitos |
@@ -159,6 +172,8 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-20 | Alta de Home Assistant con selección de entidades | RF-13, RF-51 |
 | E2E-21 | Home Assistant en el panel: consumos, entidades y cambios en vivo | RF-20, RF-50, RF-51, RF-52, RF-53, RF-54 |
 | E2E-22 | Solo las entidades elegidas salen por la API pública | RF-51 |
+| E2E-30 | Alta de OPNsense y privilegios limitados | RF-10, RF-73 |
+| E2E-31 | OPNsense en el panel: recursos, gateways y tráfico WAN | RF-20, RF-70, RF-71, RF-72 |
 
 Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las discrepancias con el servicio real las cubren las verificaciones manuales.
 
@@ -199,13 +214,16 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 | 2026-11-04 | `v0.1.0` | Repositorio público, sin credenciales | Correcto: se descargan el instalador, los binarios y las sumas desde `releases/latest/download`, y las sumas coinciden. Sin IP ni dominios del laboratorio en el historial de Git |
 | 2026-11-04 | `v0.1.0` | Proxmox VE real del cliente, actualización de `v0.1.0-rc.1` a `v0.1.0` con `--binary` | Correcto según la salida del instalador: cambio de versión con copia de seguridad; repetir el comando no hace nada porque ya está en esa versión. No se han vuelto a comprobar los datos tras este cambio |
 | 2026-11-04 | `v0.1.0` | Proxmox VE real del cliente, instalador sin `--binary` | Correcto según la salida del instalador: descarga desde GitHub, suma comprobada (si no coincide, no instala) y reinstalación con `--force` y copia de seguridad, dos veces. Después, captura del cliente con su panel y datos actuales de Home Assistant y Proxmox; el contenido del bloque de AdGuard no se ve en ella |
+| 2026-11-04 | Hito 7, antes de programar | Respuestas de un OPNsense 26.7.1 real, con IP y MAC ocultas | Formatos confirmados: actividad, recursos, disco, información, tráfico y gateways. `core/firmware/running` da `403`. Los gateways del cliente devuelven `~` en las medidas |
 
 **Contraste con fuentes oficiales:**
 - AdGuard Home: especificación OpenAPI.
 - Home Assistant: documentación de la API de Supervisor y código de `hassio/http.py` y del comando `supervisor/api`.
 - Proxmox VE: fuente de la API en `PVE/API2/Cluster.pm`, de `pve-manager`, y documentación de API tokens.
+- OPNsense: referencia de la API para rutas y métodos. El formato de las respuestas no está documentado: se ha tomado del servicio real.
 
 **Aún sin verificar:**
+- **Integración de OPNsense completa contra un OPNsense real.** Sus simuladores usan las respuestas reales de OPNsense 26.7 obtenidas el 2026-11-04, pero el código aún no se ha ejecutado contra él. Es necesario para cerrar el hito 7.
 - **Marcha atrás automática en un Proxmox VE real.** Solo se ha probado en CI (INS-06).
 - **Instalación nueva con descarga desde GitHub en un Proxmox VE real.** La descarga se ha probado al actualizar; las instalaciones reales usaron `--binary`.
 - **Arrastrar en pantallas táctiles.** Solo se ha probado con ratón; los controles de teclado funcionan también con toque.
@@ -253,6 +271,10 @@ Los requisitos pendientes se probarán en su hito.
 | RF-23 | `TestPanelSaveAndValidation`, `TestPanelSaveAndCascade`, E2E-25 |
 | RF-24 | `TestSettingsValidation`, `TestSettingsDefaultsAndSave`, E2E-26 |
 | RF-60 | INS-01, INS-07, INS-08, INS-09, INS-10 |
+| RF-70 | `TestCollect`, `TestParseSize`, E2E-31 |
+| RF-71 | `TestGatewayStates`, E2E-31 |
+| RF-72 | `TestCollect`, `TestWANSpeedNeedsTwoReadings`, E2E-31 |
+| RF-73 | `TestCollect`, `TestMissingPrivilegesLimitData`, `TestPublicDataHidesInfrastructure`, `TestErrors`, `TestOPNsenseCredentialsAreCleaned`, E2E-30 |
 | RF-61 | INS-04, INS-05, INS-06 |
 | RF-62 | `TestSetupRequiresTokenWhenConfigured`, `TestSetupTokenAttemptsAreLimited`, `TestEmptySetupTokenNeverMatches`, E2E-29, INS-02 |
 | RNF-01 | Por diseño: el modelo de datos no tiene tablas de métricas |

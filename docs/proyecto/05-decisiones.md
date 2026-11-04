@@ -145,3 +145,18 @@ Cada decisión recoge su motivo y sus consecuencias. Si una decisión cambia, se
 - **Contexto:** las migraciones de la base de datos no se pueden deshacer, y una versión nueva podría no arrancar.
 - **Decisión:** copiar base de datos y binario antes de actualizar, y restaurar ambos si `/healthz` no responde.
 - **Consecuencias:** no se queda sin servicio. No detecta fallos que no impidan arrancar, por lo que se conservan las 3 últimas copias.
+
+## DEC-29: en OPNsense, solo consultas GET
+- **Contexto:** las actualizaciones pendientes parecen requerir `POST /api/core/firmware/status`, y las integraciones son de solo lectura.
+- **Decisión:** usar solo `GET`. No se muestran las actualizaciones pendientes de OPNsense.
+- **Consecuencias:** un `POST` en ese módulo podría lanzar una comprobación en el cortafuegos, y se evita. El dato se consulta en OPNsense.
+
+## DEC-30: gateways sin monitorizar, en neutro
+- **Contexto:** OPNsense devuelve `none` y «Online» también en gateways sin medidas, con `~` en la latencia y la pérdida. Verde daría a entender que hay Internet sin haberlo comprobado.
+- **Decisión:** tratarlos como un estado propio, «Sin monitorizar», que no pone el bloque en verde por sí solo.
+- **Consecuencias:** un panel sin monitorización se ve en neutro hasta activarla en OPNsense. Se apoya en lo observado en un OPNsense real; falta confirmar que `~` solo aparece con la monitorización desactivada.
+
+## DEC-31: velocidad WAN calculada en memoria
+- **Contexto:** la API da contadores acumulados, y Talaia no guarda histórico.
+- **Decisión:** calcular la velocidad frente a la lectura anterior de la misma conexión, sin persistirla.
+- **Consecuencias:** tras reiniciar Talaia o editar la conexión, la primera lectura indica «Midiendo…». La velocidad es la media del intervalo de refresco, no un valor instantáneo.
