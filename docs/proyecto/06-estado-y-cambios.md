@@ -9,9 +9,13 @@
 | 3 | Proxmox: visión agregada y detalle por nodo | Terminado y verificado con un clúster real, en `main` |
 | 4 | Home Assistant: estado, entidades, consumos, recursos y resumen; enlace a cada servicio | Terminado y verificado con la instalación del cliente, en `main` |
 | 5 | Editor: rejilla, varias páginas y temas; login opcional; cambio y recuperación de contraseña | Terminado y validado por el cliente, en `main` |
-| 6 | Distribución: instalador LXC, actualización y documentación final | Terminado y verificado en un Proxmox real, en `main`; falta publicar `v0.1.0` |
+| 6 | Distribución: instalador LXC, actualización y documentación final | Terminado y verificado en un Proxmox real, publicado como `v0.1.0` |
 
 ## Historial
+
+### `v0.1.0` (2026-11-04)
+
+Primera versión estable, con los binarios para amd64 y arm64, las sumas de comprobación y el instalador. El repositorio sigue siendo privado.
 
 ### Hito 6 (2026-11-02)
 
