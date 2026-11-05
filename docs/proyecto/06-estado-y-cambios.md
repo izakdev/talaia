@@ -11,10 +11,15 @@
 | 5 | Editor: rejilla, varias páginas y temas; login opcional; cambio y recuperación de contraseña | Terminado y validado por el cliente, en `main` |
 | 6 | Distribución: instalador LXC, actualización y documentación final | Terminado y verificado en un Proxmox real, publicado como `v0.1.0` |
 | 7 | OPNsense: gateways, tráfico WAN y recursos | Terminado y verificado con el OPNsense del cliente |
-| 8 | Portainer: entornos y contenedores | Pendiente |
+| 8 | Portainer: entornos y contenedores | Programado; pendiente de verificar contra el Portainer del cliente |
 | 9 | WGDashboard: túneles y peers | Pendiente |
 
 ## Historial
+
+### Hito 8 (2026-11-05)
+
+**Añadido:**
+- Integración con Portainer: entornos, contenedores en marcha y con problemas, y stacks.
 
 ### Hito 7 (2026-11-04)
 
@@ -128,6 +133,7 @@ Primera versión estable, con los binarios para amd64 y arm64, las sumas de comp
 | Marcha atrás automática solo probada en CI | No se ha provocado un fallo de arranque en un Proxmox real | Al darse la ocasión |
 | Actualizaciones de OPNsense sin mostrar | Requerirían un `POST`; ver DEC-29 | Sin hito asignado |
 | Velocidad WAN media del intervalo | Se recalcula en cada refresco y se mide de nuevo al reiniciar Talaia | Por diseño: ver DEC-31 |
+| Portainer sin detalle por contenedor | Los recuentos son de la última instantánea; ver DEC-32 | Por diseño |
 | Sistema del contenedor sin actualizaciones automáticas | Hay que actualizarlo con `apt` | Bajo demanda |
 
 ## Consumo medido

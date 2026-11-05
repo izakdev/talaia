@@ -400,6 +400,7 @@ var connectionTypes = map[string]struct {
 	"homeassistant": {hasEntities: true, options: []string{homeassistant.OptionShowSummary}},
 	"adguard":       {needsUsername: true, options: []string{adguard.OptionShowTopDomains}},
 	"opnsense":      {needsUsername: true},
+	"portainer":     {},
 }
 
 // proxmoxToken valida el formato usuario@reino!nombre=valor.

@@ -340,6 +340,29 @@ Los nombres pueden variar según la versión. **Probar conexión** te avisa si f
 
 La velocidad de la WAN aparece a partir de la segunda lectura y es la media del tiempo de refresco. Los datos de recursos son de OPNsense, y Talaia no muestra sus actualizaciones pendientes.
 
+### Portainer
+
+| Campo | Qué poner |
+|---|---|
+| URL | La de Portainer, por ejemplo `https://portainer.local:9443` |
+| Token de acceso | El que crees en *My account > Access tokens* |
+| No verificar el certificado TLS | Actívalo si Portainer usa su certificado autofirmado |
+
+Usa un usuario solo para Talaia, que no sea administrador, con acceso a los entornos que quieras ver, en *Environments > Manage access*. En Community Edition, ese token también podría modificar los recursos a los que tenga acceso. Talaia solo lo usa para leer, pero guárdalo como un dato sensible.
+
+![Bloque de Portainer](img/20-panel-portainer.png)
+
+**Estado de Portainer:**
+
+| Indicador | Significado |
+|---|---|
+| Círculo verde: **Entornos en línea** | Todos responden y ningún contenedor tiene problemas |
+| Triángulo ámbar: **Contenedores con problemas** | Algún contenedor falla su comprobación de salud |
+| Cuadrado rojo: **Entorno caído** | Portainer no llega a algún entorno |
+| Neutro: **Sin entornos Docker** | No hay ninguno, o el usuario no tiene acceso. Revisa *Manage access* |
+
+Los recuentos son los que Portainer guarda en su última instantánea, así que pueden tener varios minutos, como indica el bloque. Un contenedor parado no cambia el estado, porque puede estarlo a propósito. Para ver cada contenedor, abre Portainer con el enlace del bloque.
+
 ## Editar y eliminar conexiones
 
 **Editar:** pulsa **Editar** en la conexión. Deja la credencial vacía para conservar la actual. Si cambias la URL, tendrás que volver a escribirla: así evitas enviarla por error a otro servidor.

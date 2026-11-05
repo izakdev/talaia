@@ -102,7 +102,8 @@ Verificado con un Home Assistant real en local y con la instalación del cliente
 
 | ID | Requisito | Hito | Estado |
 |---|---|---|---|
-| RF-80 | Muestra los entornos y sus contenedores en marcha y parados | 8 | Pendiente |
+| RF-80 | Muestra cada entorno Docker y, a partir del recuento de Portainer, sus contenedores en marcha y con problemas | 8 | Implementado |
+| RF-81 | Solo hace lecturas, funciona sin un usuario administrador y no publica URL ni datos de los entornos | 8 | Implementado |
 
 ### WGDashboard
 

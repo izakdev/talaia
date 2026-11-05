@@ -11,6 +11,7 @@ import { chromium } from "playwright";
 import { fakeAdGuard, PASSWORD, USER } from "./fake-adguard.mjs";
 import { fakeHomeAssistant, HA_TOKEN } from "./fake-homeassistant.mjs";
 import { fakeOPNsense, OPN_KEY, OPN_SECRET } from "./fake-opnsense.mjs";
+import { fakePortainer, PORTAINER_TOKEN } from "./fake-portainer.mjs";
 import { fakeProxmox, TOKEN } from "./fake-proxmox.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -22,6 +23,7 @@ const adguard = fakeAdGuard(13000);
 const proxmox = fakeProxmox(13001);
 const homeAssistant = fakeHomeAssistant(13002);
 const opnsense = fakeOPNsense(13003);
+const portainer = fakePortainer(13004);
 const dataDir = mkdtempSync(join(tmpdir(), "talaia-e2e-"));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -115,7 +117,7 @@ const scenarios = [
   ["E2E-04", "Catálogo de servicios: búsqueda y navegación", async () => {
     await page.getByRole("link", { name: "Añadir conexión" }).click();
     await page.getByRole("heading", { name: "Elige un servicio" }).waitFor();
-    assert.equal(await page.locator(".catalog button").count(), 4);
+    assert.equal(await page.locator(".catalog button").count(), 5);
     await shot(page, "04-catalogo");
     const search = page.getByLabel("Buscar servicio");
     await search.fill("maquinas");
@@ -626,6 +628,49 @@ const scenarios = [
     await state.getByText("Gateways en línea").waitFor();
     await toAdmin();
   }],
+  ["E2E-32", "Alta de Portainer", async () => {
+    await page.goto(`${BASE}/admin/connections/new`);
+    await page.getByRole("button", { name: /Portainer/ }).click();
+    await page.getByLabel("Nombre", { exact: true }).fill("Contenedores");
+    await page.getByLabel("URL", { exact: true }).fill(portainer.url);
+    await page.locator("dialog input[type=number]").fill("5");
+    const secret = page.locator("dialog input[type=password]");
+    await secret.fill("token-incorrecto");
+    await page.getByRole("button", { name: "Probar conexión" }).click();
+    await page.locator("dialog p[role=status]").getByText("Credenciales rechazadas").waitFor();
+    await secret.fill(PORTAINER_TOKEN);
+    await page.getByRole("button", { name: "Probar conexión" }).click();
+    await page.locator("dialog p[role=status]").getByText("Conexión correcta").waitFor();
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await row("Contenedores").getByText("Funciona").waitFor();
+  }],
+  ["E2E-33", "Portainer en el panel: entornos, contenedores y estados", async () => {
+    await toDashboard();
+    const block = page.locator(".service", { hasText: "Contenedores" });
+    const state = block.locator(".service-state");
+    await state.getByText("Entornos en línea").waitFor();
+    const body = await block.innerText();
+    assert.match(body, /Entornos\s+2\/2/);
+    assert.match(body, /Contenedores en marcha\s+11\/12/);
+    assert.match(body, /Stacks\s+7/);
+    assert.match(body, /Portainer 2\.39-simulado/);
+    await block.locator(".ha-entities li", { hasText: "local" }).getByText("En línea, 7/8 en marcha").waitFor();
+    await block.getByText(/Recuento de Portainer hace 2 minutos/).waitFor();
+    await shot(block, "20-panel-portainer");
+    portainer.state.unhealthy = 2;
+    await state.getByText("Contenedores con problemas").waitFor();
+    await block.locator(".ha-entities li", { hasText: "local" }).getByText("2 con problemas", { exact: false }).waitFor();
+    portainer.state.unhealthy = 0;
+    portainer.state.edgeDown = true;
+    await state.getByText("Entorno caído").waitFor();
+    await block.locator(".ha-entities li", { hasText: "raspberry" }).getByText("Caído", { exact: true }).waitFor();
+    portainer.state.edgeDown = false;
+    portainer.state.empty = true;
+    await state.getByText("Sin entornos Docker").waitFor();
+    portainer.state.empty = false;
+    await state.getByText("Entornos en línea").waitFor();
+    await toAdmin();
+  }],
   ["E2E-12", "Cambio de idioma recordado", async () => {
     await page.getByRole("button", { name: "English" }).click();
     await page.getByRole("heading", { name: "Connections", exact: true }).waitFor();
@@ -655,7 +700,7 @@ const scenarios = [
   }],
   ["E2E-14", "La API pública no expone configuración ni credenciales", async () => {
     const body = await publicDashboard();
-    for (const leak of [USER, PASSWORD, TOKEN, HA_TOKEN, OPN_KEY, OPN_SECRET, "localhost:13002", "192.0.2.11", "192.0.2.50", "cortafuegos.simulado", "proceso-simulado", "pppoe1", "base_url", "link_url", "secret"]) {
+    for (const leak of [USER, PASSWORD, TOKEN, HA_TOKEN, OPN_KEY, OPN_SECRET, "localhost:13002", "192.0.2.11", "192.0.2.50", "cortafuegos.simulado", "proceso-simulado", "pppoe1", PORTAINER_TOKEN, "192.0.2.60", "docker.simulado", "instancia-simulada", "base_url", "link_url", "secret"]) {
       assert.equal(body.includes(leak), false, leak);
     }
     const headers = (await fetch(BASE)).headers;
@@ -673,6 +718,7 @@ try {
   await proxmox.start();
   await homeAssistant.start();
   await opnsense.start();
+  await portainer.start();
   await waitForServer();
   for (const [id, title, run] of scenarios) {
     try {
@@ -691,6 +737,7 @@ try {
   await proxmox.stop().catch(() => {});
   await homeAssistant.stop().catch(() => {});
   await opnsense.stop().catch(() => {});
+  await portainer.stop().catch(() => {});
   rmSync(dataDir, { recursive: true, force: true });
 }
 if (failed) process.exit(1);

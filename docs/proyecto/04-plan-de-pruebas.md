@@ -139,6 +139,16 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestErrors` | Clasifica credenciales, privilegios imprescindibles, respuestas ajenas y errores del servicio | RF-21, RF-73 |
 | `TestParseSize` | Interpreta los tamaños de `df -h` | RF-70 |
 
+### `internal/integrations/portainer`
+
+| Prueba | Verifica | Requisitos |
+|---|---|---|
+| `TestCollectEnvironments` | Lee versión, entornos y recuentos con la forma de un Portainer real, y omite los que no son Docker; solo usa GET | RF-80, RF-81 |
+| `TestEdgeAgentUsesHeartbeat` | Deduce el estado de un agente Edge de su latido | RF-80 |
+| `TestPortainerDataHidesInfrastructure` | No publica URL, claves ni identificador de la instancia | RF-81, RNF-02 |
+| `TestPortainerErrors` | Clasifica el token rechazado y las respuestas ajenas | RF-21, RF-81 |
+| `TestNoEnvironments` | Sin entornos devuelve una lista vacía | RF-80 |
+
 ## Pruebas E2E
 
 | ID | Escenario | Requisitos |
@@ -174,6 +184,8 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-22 | Solo las entidades elegidas salen por la API pública | RF-51 |
 | E2E-30 | Alta de OPNsense y privilegios limitados | RF-10, RF-73 |
 | E2E-31 | OPNsense en el panel: recursos, gateways y tráfico WAN | RF-20, RF-70, RF-71, RF-72 |
+| E2E-32 | Alta de Portainer | RF-10, RF-81 |
+| E2E-33 | Portainer en el panel: entornos, contenedores y estados | RF-20, RF-80 |
 
 Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las discrepancias con el servicio real las cubren las verificaciones manuales.
 
@@ -214,6 +226,7 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 | 2026-11-04 | `v0.1.0` | Repositorio público, sin credenciales | Correcto: se descargan el instalador, los binarios y las sumas desde `releases/latest/download`, y las sumas coinciden. Sin IP ni dominios del laboratorio en el historial de Git |
 | 2026-11-04 | `v0.1.0` | Proxmox VE real del cliente, actualización de `v0.1.0-rc.1` a `v0.1.0` con `--binary` | Correcto según la salida del instalador: cambio de versión con copia de seguridad; repetir el comando no hace nada porque ya está en esa versión. No se han vuelto a comprobar los datos tras este cambio |
 | 2026-11-04 | `v0.1.0` | Proxmox VE real del cliente, instalador sin `--binary` | Correcto según la salida del instalador: descarga desde GitHub, suma comprobada (si no coincide, no instala) y reinstalación con `--force` y copia de seguridad, dos veces. Después, captura del cliente con su panel y datos actuales de Home Assistant y Proxmox; el contenido del bloque de AdGuard no se ve en ella |
+| 2026-11-05 | Hito 8, antes de programar | Respuestas de un Portainer 2.39.1 real con un usuario no administrador | `/api/endpoints` devuelve los recuentos por entorno; la lista de contenedores de Docker llega vacía, así que no se usa |
 | 2026-11-04 | Hito 7, antes de programar | Respuestas de un OPNsense 26.7.1 real, con IP y MAC ocultas | Formatos confirmados: actividad, recursos, disco, información, tráfico y gateways. `core/firmware/running` da `403`. Los gateways del cliente devuelven `~` en las medidas |
 | 2026-11-04 | Hito 7 | OPNsense 26.7.1 real del cliente, con Talaia en Proxmox | Correcto según la captura del cliente: estado en verde, recursos, tiempo encendido, gateway IPv4 con latencia, gateway IPv6 sin monitorizar, velocidad y total de la WAN, y versión. La monitorización desactivada devolvía `~`; al activarla sin indicar IP, el gateway PPPoE pasaba a `Offline`, y responde con una IP pública como Monitor IP. API pública revisada: sin nombre del equipo, direcciones, procesos ni dispositivos. No se han comparado las cifras con la interfaz de OPNsense |
 
@@ -224,6 +237,8 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 - OPNsense: referencia de la API para rutas y métodos. El formato de las respuestas no está documentado: se ha tomado del servicio real.
 
 **Aún sin verificar:**
+- **Integración de Portainer completa contra un Portainer real.** Sus simuladores usan las respuestas de Portainer 2.39.1 obtenidas el 2026-11-05, pero el código aún no se ha ejecutado contra él. Es necesario para cerrar el hito 8.
+- **Agentes Edge y contenedores con problemas en un Portainer real.** Solo se han probado con el simulador.
 - **OPNsense real, casos no probados:** gateway degradado o caído, comparación de las cifras con su interfaz y nombres exactos de los privilegios mínimos.
 - **Marcha atrás automática en un Proxmox VE real.** Solo se ha probado en CI (INS-06).
 - **Instalación nueva con descarga desde GitHub en un Proxmox VE real.** La descarga se ha probado al actualizar; las instalaciones reales usaron `--binary`.
@@ -276,6 +291,8 @@ Los requisitos pendientes se probarán en su hito.
 | RF-71 | `TestGatewayStates`, E2E-31 |
 | RF-72 | `TestCollect`, `TestWANSpeedNeedsTwoReadings`, E2E-31 |
 | RF-73 | `TestCollect`, `TestMissingPrivilegesLimitData`, `TestPublicDataHidesInfrastructure`, `TestErrors`, `TestOPNsenseCredentialsAreCleaned`, E2E-30 |
+| RF-80 | `TestCollectEnvironments`, `TestEdgeAgentUsesHeartbeat`, `TestNoEnvironments`, E2E-33 |
+| RF-81 | `TestCollectEnvironments`, `TestPortainerDataHidesInfrastructure`, `TestPortainerErrors`, E2E-32 |
 | RF-61 | INS-04, INS-05, INS-06 |
 | RF-62 | `TestSetupRequiresTokenWhenConfigured`, `TestSetupTokenAttemptsAreLimited`, `TestEmptySetupTokenNeverMatches`, E2E-29, INS-02 |
 | RNF-01 | Por diseño: el modelo de datos no tiene tablas de métricas |
