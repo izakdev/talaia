@@ -11,7 +11,7 @@
 | 5 | Editor: rejilla, varias páginas y temas; login opcional; cambio y recuperación de contraseña | Terminado y validado por el cliente, en `main` |
 | 6 | Distribución: instalador LXC, actualización y documentación final | Terminado y verificado en un Proxmox real, publicado como `v0.1.0` |
 | 7 | OPNsense: gateways, tráfico WAN y recursos | Terminado y verificado con el OPNsense del cliente |
-| 8 | Portainer: entornos y contenedores | Programado; pendiente de verificar contra el Portainer del cliente |
+| 8 | Portainer: entornos y contenedores | Terminado y verificado con el Portainer del cliente |
 | 9 | WGDashboard: túneles y peers | Pendiente |
 
 ## Historial
