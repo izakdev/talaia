@@ -16,7 +16,8 @@ Dashboard autoalojado para ver el estado de tus servicios de un vistazo.
 ## Fase 2
 
 - OPNsense: gateways, tráfico WAN y recursos.
-- Portainer y WGDashboard: pendientes.
+- Portainer: entornos y contenedores.
+- WGDashboard: pendiente.
 
 ## Instalación en Proxmox VE
 

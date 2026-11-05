@@ -1,4 +1,4 @@
-export type ConnectionType = "proxmox" | "homeassistant" | "adguard" | "opnsense";
+export type ConnectionType = "proxmox" | "homeassistant" | "adguard" | "opnsense" | "portainer";
 
 export interface AppState {
   setup_required: boolean;
@@ -141,6 +141,17 @@ export interface OPNsenseData {
     receive_bits_per_second?: number;
     transmit_bits_per_second?: number;
   };
+}
+
+export interface PortainerEnvironment {
+  name: string;
+  online: boolean;
+  containers?: { running: number; total: number; unhealthy: number; stacks: number; snapshot_at: number };
+}
+
+export interface PortainerData {
+  version: string;
+  environments: PortainerEnvironment[];
 }
 
 export interface Count {

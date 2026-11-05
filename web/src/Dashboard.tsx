@@ -5,6 +5,7 @@ import { Horizon, LanguageSwitch, Tower } from "./chrome";
 import { useI18n, type Language } from "./i18n";
 import { adguardWidget } from "./widgets/adguard";
 import { opnsenseWidget } from "./widgets/opnsense";
+import { portainerWidget } from "./widgets/portainer";
 import { homeAssistantWidget } from "./widgets/homeassistant";
 import { proxmoxWidget } from "./widgets/proxmox";
 import type { Tone, Widget } from "./widgets/types";
@@ -15,6 +16,7 @@ const WIDGETS: Partial<Record<ConnectionType, unknown>> = {
   adguard: adguardWidget,
   homeassistant: homeAssistantWidget,
   opnsense: opnsenseWidget,
+  portainer: portainerWidget,
   proxmox: proxmoxWidget,
 };
 

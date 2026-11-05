@@ -175,6 +175,7 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 | Home Assistant | Token de larga duración |
 | AdGuard | Contraseña |
 | OPNsense | Secreto de API. Admite pegar la línea `secret=…` del archivo |
+| Portainer | Token de acceso |
 
 **Probar conexión:** consulta el servicio una vez con los datos del formulario, sin guardar nada. En Home Assistant, avisa si no hay CPU, memoria ni disco disponibles. En OPNsense, avisa si faltan datos por los privilegios del usuario. Si se cambia algún dato de conexión, el resultado anterior desaparece. Al editar, puede usar la credencial guardada si la URL no ha cambiado.
 
@@ -226,6 +227,18 @@ Se aplican a todos los usuarios del panel. El idioma sigue siendo de cada navega
 | Recursos | CPU, RAM, disco de `/` y tiempo encendido. RAM y disco dependen de los privilegios |
 | Gateways | Nombre y estado; latencia y pérdida si existen |
 | WAN | Velocidad de descarga y subida, y total desde el arranque de la interfaz. La velocidad aparece a partir de la segunda lectura, mientras indica «Midiendo…» |
+
+**Estados de un bloque de Portainer:**
+
+| Estado | Cuándo | Indicador |
+|---|---|---|
+| Entornos en línea | Todos en línea y sin contenedores con problemas | Círculo verde |
+| Contenedores con problemas | Algún contenedor con su comprobación de salud fallida | Triángulo ámbar |
+| Entorno caído | Algún entorno caído | Cuadrado rojo |
+| Sin entornos Docker | Portainer no devuelve ninguno, o el usuario no tiene acceso | Neutro |
+| Con fallos | La última consulta ha fallado | Cuadrado rojo, mensaje de error y último dato atenuado |
+
+**Datos de un bloque de Portainer:** entornos en línea, contenedores en marcha y stacks, sumando los entornos en línea; una fila por entorno con su estado, contenedores en marcha y con problemas; y la antigüedad del recuento más antiguo. Los contenedores parados no cambian el estado, porque pueden estarlo a propósito.
 
 ## Mensajes de error de los servicios
 

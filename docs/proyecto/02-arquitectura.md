@@ -18,6 +18,7 @@ flowchart LR
     PX[Proxmox VE]
     HA[Home Assistant]
     OP[OPNsense]
+    PT[Portainer]
 
     B -->|HTTP y SSE| A
     B --> W
@@ -29,6 +30,7 @@ flowchart LR
     C -->|solo lectura| PX
     C -->|solo lectura| HA
     C -->|solo lectura| OP
+    C -->|solo lectura| PT
 ```
 
 ## Tecnologías
@@ -62,6 +64,7 @@ Los motivos detallados están en [Decisiones](05-decisiones.md).
 | `internal/integrations/proxmox` | Integración con Proxmox VE |
 | `internal/integrations/homeassistant` | Integración con Home Assistant |
 | `internal/integrations/opnsense` | Integración con OPNsense |
+| `internal/integrations/portainer` | Integración con Portainer |
 | `web` | Frontend; `web/embed.go` lo incluye en el binario |
 | `web/src/widgets` | Estado, contenido y pie del bloque de cada integración |
 | `web/src/PanelEditor.tsx` | Editor de páginas y bloques |
@@ -176,6 +179,16 @@ Proxmox filtra `/cluster/resources` según los permisos. Una lista sin nodos se 
 | Opcionales | `GET /api/diagnostics/system/system_information`, `system_resources` y `system_disk`, y `GET /api/diagnostics/traffic/interface`. Un `401` o `403` omite el dato y añade el aviso `limited_privileges` |
 | Velocidad WAN | Diferencia de los contadores de la interfaz `wan` entre dos lecturas. Vive en memoria, así que falta en la primera lectura y si los contadores bajan |
 | Datos públicos | Nunca incluyen el nombre del equipo, direcciones de gateway, procesos, dispositivos de red ni sistemas de archivos |
+
+### Portainer
+
+| Aspecto | Detalle |
+|---|---|
+| Autenticación | Cabecera `X-API-Key` con un token de acceso |
+| Consultas | `GET /api/status`, para la versión, y `GET /api/endpoints`, para los entornos y su última instantánea |
+| Entornos | Solo Docker: tipos 1, 2 y 4. En el tipo 4, agente Edge, el estado sale de `Heartbeat` |
+| Antigüedad | Los recuentos son de la última instantánea de Portainer, no del momento de la consulta. Se publica su fecha |
+| Datos públicos | Nunca incluyen la URL del entorno, sus claves ni el identificador de la instancia |
 
 ## API HTTP
 

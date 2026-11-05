@@ -160,3 +160,8 @@ Cada decisión recoge su motivo y sus consecuencias. Si una decisión cambia, se
 - **Contexto:** la API da contadores acumulados, y Talaia no guarda histórico.
 - **Decisión:** calcular la velocidad frente a la lectura anterior de la misma conexión, sin persistirla.
 - **Consecuencias:** tras reiniciar Talaia o editar la conexión, la primera lectura indica «Midiendo…». La velocidad es la media del intervalo de refresco, no un valor instantáneo.
+
+## DEC-32: en Portainer, recuentos de la instantánea
+- **Contexto:** con un usuario no administrador, la lista de contenedores llega vacía, mientras que `/api/endpoints` da los recuentos de cada entorno. En Community Edition no parece haber un rol de solo lectura, y un administrador daría más permisos de los necesarios.
+- **Decisión:** usar solo los recuentos de la última instantánea, sin consultar Docker a través de Portainer.
+- **Consecuencias:** no hay detalle por contenedor, y los recuentos pueden tener varios minutos, según el intervalo de instantáneas de Portainer. El bloque indica su antigüedad y el detalle se consulta en Portainer.
