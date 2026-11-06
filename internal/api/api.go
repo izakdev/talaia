@@ -401,6 +401,7 @@ var connectionTypes = map[string]struct {
 	"adguard":       {needsUsername: true, options: []string{adguard.OptionShowTopDomains}},
 	"opnsense":      {needsUsername: true},
 	"portainer":     {},
+	"wgdashboard":   {},
 }
 
 // proxmoxToken valida el formato usuario@reino!nombre=valor.

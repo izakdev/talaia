@@ -1,4 +1,4 @@
-export type ConnectionType = "proxmox" | "homeassistant" | "adguard" | "opnsense" | "portainer";
+export type ConnectionType = "proxmox" | "homeassistant" | "adguard" | "opnsense" | "portainer" | "wgdashboard";
 
 export interface AppState {
   setup_required: boolean;
@@ -152,6 +152,21 @@ export interface PortainerEnvironment {
 export interface PortainerData {
   version: string;
   environments: PortainerEnvironment[];
+}
+
+export interface WGDashboardTunnel {
+  name: string;
+  protocol: string;
+  up: boolean;
+  connected_peers: number;
+  total_peers: number;
+  received_bytes: number;
+  sent_bytes: number;
+}
+
+export interface WGDashboardData {
+  version: string;
+  tunnels: WGDashboardTunnel[];
 }
 
 export interface Count {

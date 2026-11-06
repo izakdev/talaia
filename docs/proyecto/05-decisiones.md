@@ -165,3 +165,13 @@ Cada decisión recoge su motivo y sus consecuencias. Si una decisión cambia, se
 - **Contexto:** con un usuario no administrador, la lista de contenedores llega vacía, mientras que `/api/endpoints` da los recuentos de cada entorno. En Community Edition no parece haber un rol de solo lectura, y un administrador daría más permisos de los necesarios.
 - **Decisión:** usar solo los recuentos de la última instantánea, sin consultar Docker a través de Portainer.
 - **Consecuencias:** no hay detalle por contenedor, y los recuentos pueden tener varios minutos, según el intervalo de instantáneas de Portainer. El bloque indica su antigüedad y el detalle se consulta en Portainer.
+
+## DEC-33: en WGDashboard, solo recuentos de peers
+- **Contexto:** la lista de peers incluye sus nombres, que suelen identificar a personas o dispositivos, y el panel puede ser público.
+- **Decisión:** publicar por túnel solo su estado, los peers conectados sobre el total y el tráfico. Un túnel parado da un aviso ámbar y no un fallo, porque puede estar parado a propósito.
+- **Consecuencias:** para saber qué peer está conectado hay que abrir WGDashboard. Basta una consulta por ciclo, sin pedir los peers de cada túnel.
+
+## DEC-34: clave de API de WGDashboard con acceso completo
+- **Contexto:** WGDashboard no tiene claves ni usuarios de solo lectura, y anota en su registro cada petición con clave, incluida la propia clave.
+- **Decisión:** aceptar su clave de API, usar solo `GET`, hacer una única petición con clave por ciclo y pedir la versión sin ella.
+- **Consecuencias:** la clave podría modificar WGDashboard. Talaia la guarda cifrada como las demás, y el manual y el formulario avisan de que da acceso completo.

@@ -12,9 +12,14 @@
 | 6 | Distribución: instalador LXC, actualización y documentación final | Terminado y verificado en un Proxmox real, publicado como `v0.1.0` |
 | 7 | OPNsense: gateways, tráfico WAN y recursos | Terminado y verificado con el OPNsense del cliente |
 | 8 | Portainer: entornos y contenedores | Terminado y verificado con el Portainer del cliente |
-| 9 | WGDashboard: túneles y peers | Pendiente |
+| 9 | WGDashboard: túneles y peers | Programado; pendiente de verificar contra el WGDashboard del cliente |
 
 ## Historial
+
+### Hito 9 (2026-11-06)
+
+**Añadido:**
+- Integración con WGDashboard: túneles, peers conectados y tráfico acumulado.
 
 ### Hito 8 (2026-11-05)
 
@@ -134,6 +139,8 @@ Primera versión estable, con los binarios para amd64 y arm64, las sumas de comp
 | Actualizaciones de OPNsense sin mostrar | Requerirían un `POST`; ver DEC-29 | Sin hito asignado |
 | Velocidad WAN media del intervalo | Se recalcula en cada refresco y se mide de nuevo al reiniciar Talaia | Por diseño: ver DEC-31 |
 | Portainer sin detalle por contenedor | Los recuentos son de la última instantánea; ver DEC-32 | Por diseño |
+| WGDashboard sin detalle por peer | Solo recuentos, para no publicar sus nombres; ver DEC-33 | Por diseño |
+| Clave de WGDashboard con acceso completo | WGDashboard no tiene claves de solo lectura; ver DEC-34 | Depende de WGDashboard |
 | Sistema del contenedor sin actualizaciones automáticas | Hay que actualizarlo con `apt` | Bajo demanda |
 
 ## Consumo medido

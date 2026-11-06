@@ -8,6 +8,7 @@ import { opnsenseWidget } from "./widgets/opnsense";
 import { portainerWidget } from "./widgets/portainer";
 import { homeAssistantWidget } from "./widgets/homeassistant";
 import { proxmoxWidget } from "./widgets/proxmox";
+import { wgdashboardWidget } from "./widgets/wgdashboard";
 import type { Tone, Widget } from "./widgets/types";
 
 const RETRY_MS = 5000;
@@ -18,6 +19,7 @@ const WIDGETS: Partial<Record<ConnectionType, unknown>> = {
   opnsense: opnsenseWidget,
   portainer: portainerWidget,
   proxmox: proxmoxWidget,
+  wgdashboard: wgdashboardWidget,
 };
 
 function useLiveDashboard() {

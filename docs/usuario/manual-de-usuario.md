@@ -363,6 +363,30 @@ Usa un usuario solo para Talaia, que no sea administrador, con acceso a los ento
 
 Los recuentos son los que Portainer guarda en su última instantánea, así que pueden tener varios minutos, como indica el bloque. Un contenedor parado no cambia el estado, porque puede estarlo a propósito. Para ver cada contenedor, abre Portainer con el enlace del bloque.
 
+### WGDashboard
+
+| Campo | Qué poner |
+|---|---|
+| URL | La de WGDashboard, por ejemplo `http://wgdashboard.local:10086` |
+| Clave de API | Una clave creada para Talaia en los ajustes de WGDashboard |
+| No verificar el certificado TLS | Actívalo si WGDashboard usa un certificado autofirmado |
+
+Primero activa las claves de API en los ajustes de WGDashboard y crea una para Talaia. **Esa clave da acceso completo a WGDashboard**, porque no las hay de solo lectura. Talaia solo la usa para leer, pero guárdala como un dato sensible. WGDashboard anota cada consulta en su registro, así que no pongas un refresco más corto de lo necesario.
+
+Si al probar la conexión ves **Credenciales rechazadas**, la clave no existe o las claves de API están desactivadas.
+
+![Bloque de WGDashboard](img/21-panel-wgdashboard.png)
+
+**Estado de WGDashboard:**
+
+| Indicador | Significado |
+|---|---|
+| Círculo verde: **Túneles activos** | Todos los túneles están en marcha |
+| Triángulo ámbar: **Túnel parado** | Algún túnel está parado. Puede estarlo a propósito |
+| Neutro: **Sin túneles** | WGDashboard no tiene ningún túnel |
+
+Un peer cuenta como conectado si ha contactado en los últimos 3 minutos, según WGDashboard. Un peer desconectado no cambia el estado: un móvil, por ejemplo, solo se conecta cuando lo usas. El bloque no muestra los nombres de los peers, para no publicar quién se conecta. Para verlos, abre WGDashboard con el enlace del bloque. El tráfico es el acumulado desde que WGDashboard lo registra.
+
 ## Editar y eliminar conexiones
 
 **Editar:** pulsa **Editar** en la conexión. Deja la credencial vacía para conservar la actual. Si cambias la URL, tendrás que volver a escribirla: así evitas enviarla por error a otro servidor.

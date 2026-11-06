@@ -24,6 +24,7 @@ import (
 	"github.com/izakdev/talaia/internal/integrations/opnsense"
 	"github.com/izakdev/talaia/internal/integrations/portainer"
 	"github.com/izakdev/talaia/internal/integrations/proxmox"
+	"github.com/izakdev/talaia/internal/integrations/wgdashboard"
 	"github.com/izakdev/talaia/internal/secrets"
 	"github.com/izakdev/talaia/internal/store"
 	"github.com/izakdev/talaia/web"
@@ -116,7 +117,7 @@ func run(log *slog.Logger) error {
 	}
 	defer st.Close()
 
-	registry := integrations.Registry{"adguard": adguard.New, "homeassistant": homeassistant.New, "opnsense": opnsense.New, "portainer": portainer.New, "proxmox": proxmox.New}
+	registry := integrations.Registry{"adguard": adguard.New, "homeassistant": homeassistant.New, "opnsense": opnsense.New, "portainer": portainer.New, "proxmox": proxmox.New, "wgdashboard": wgdashboard.New}
 	manager := collector.New(st, registry, log)
 	server, err := api.New(st, manager, registry, log, version, web.Dist())
 	if err != nil {

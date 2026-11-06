@@ -149,6 +149,15 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestPortainerErrors` | Clasifica el token rechazado y las respuestas ajenas | RF-21, RF-81 |
 | `TestNoEnvironments` | Sin entornos devuelve una lista vacía | RF-80 |
 
+### `internal/integrations/wgdashboard`
+
+| Prueba | Verifica | Requisitos |
+|---|---|---|
+| `TestCollectTunnels` | Lee versión, túneles, peers y tráfico con la forma de un WGDashboard real; pide la versión sin clave y solo usa GET | RF-90, RF-91 |
+| `TestWGDashboardDataHidesInfrastructure` | No publica claves, direcciones, puerto, reglas ni ajustes de los peers | RF-91, RNF-02 |
+| `TestWGDashboardErrors` | Clasifica la clave rechazada, las respuestas ajenas y las que WGDashboard marca sin éxito | RF-21, RF-91 |
+| `TestNoTunnels` | Sin túneles devuelve una lista vacía | RF-90 |
+
 ## Pruebas E2E
 
 | ID | Escenario | Requisitos |
@@ -186,6 +195,8 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-31 | OPNsense en el panel: recursos, gateways y tráfico WAN | RF-20, RF-70, RF-71, RF-72 |
 | E2E-32 | Alta de Portainer | RF-10, RF-81 |
 | E2E-33 | Portainer en el panel: entornos, contenedores y estados | RF-20, RF-80 |
+| E2E-34 | Alta de WGDashboard | RF-10, RF-91 |
+| E2E-35 | WGDashboard en el panel: túneles, peers y estados | RF-20, RF-90 |
 
 Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las discrepancias con el servicio real las cubren las verificaciones manuales.
 
@@ -227,6 +238,7 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 | 2026-11-04 | `v0.1.0` | Proxmox VE real del cliente, actualización de `v0.1.0-rc.1` a `v0.1.0` con `--binary` | Correcto según la salida del instalador: cambio de versión con copia de seguridad; repetir el comando no hace nada porque ya está en esa versión. No se han vuelto a comprobar los datos tras este cambio |
 | 2026-11-04 | `v0.1.0` | Proxmox VE real del cliente, instalador sin `--binary` | Correcto según la salida del instalador: descarga desde GitHub, suma comprobada (si no coincide, no instala) y reinstalación con `--force` y copia de seguridad, dos veces. Después, captura del cliente con su panel y datos actuales de Home Assistant y Proxmox; el contenido del bloque de AdGuard no se ve en ella |
 | 2026-11-06 | Hito 8 | Portainer 2.39.1 real del cliente, con Talaia en Proxmox | Correcto según la captura y la confirmación del cliente: dos entornos en línea, 11 de 12 contenedores en marcha, 7 stacks, filas por entorno, antigüedad del recuento y versión |
+| 2026-11-06 | Hito 9, antes de programar | Respuestas de un WGDashboard 4.3.3 real, con claves, direcciones y nombres ocultos | Sobre `{status, message, data}`. Sin clave da `401` «Unauthorized access.» y con una clave inexistente, `401` «API Key does not exist». La versión responde sin clave. Un túnel `wg` activo con un peer sin contacto (`stopped`, «No Handshake») y tráfico en GiB. La respuesta de túneles incluye la clave privada del servidor |
 | 2026-11-05 | Hito 8, antes de programar | Respuestas de un Portainer 2.39.1 real con un usuario no administrador | `/api/endpoints` devuelve los recuentos por entorno; la lista de contenedores de Docker llega vacía, así que no se usa |
 | 2026-11-04 | Hito 7, antes de programar | Respuestas de un OPNsense 26.7.1 real, con IP y MAC ocultas | Formatos confirmados: actividad, recursos, disco, información, tráfico y gateways. `core/firmware/running` da `403`. Los gateways del cliente devuelven `~` en las medidas |
 | 2026-11-04 | Hito 7 | OPNsense 26.7.1 real del cliente, con Talaia en Proxmox | Correcto según la captura del cliente: estado en verde, recursos, tiempo encendido, gateway IPv4 con latencia, gateway IPv6 sin monitorizar, velocidad y total de la WAN, y versión. La monitorización desactivada devolvía `~`; al activarla sin indicar IP, el gateway PPPoE pasaba a `Offline`, y responde con una IP pública como Monitor IP. API pública revisada: sin nombre del equipo, direcciones, procesos ni dispositivos. No se han comparado las cifras con la interfaz de OPNsense |
@@ -236,8 +248,11 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 - Home Assistant: documentación de la API de Supervisor y código de `hassio/http.py` y del comando `supervisor/api`.
 - Proxmox VE: fuente de la API en `PVE/API2/Cluster.pm`, de `pve-manager`, y documentación de API tokens.
 - OPNsense: referencia de la API para rutas y métodos. El formato de las respuestas no está documentado: se ha tomado del servicio real.
+- WGDashboard: código de la v4.3.4, en `src/dashboard.py` y `src/modules/WireguardConfiguration.py`, para rutas, autenticación, registro de accesos y cálculo de los peers conectados.
 
 **Aún sin verificar:**
+- **Integración de WGDashboard completa contra un WGDashboard real.** El simulador usa las respuestas de WGDashboard 4.3.3 obtenidas el 2026-11-06, pero el código aún no se ha ejecutado contra él. Es necesario para cerrar el hito 9.
+- **WGDashboard real, casos no probados:** túnel parado, peers conectados, varios túneles y túneles AmneziaWG. Solo se han probado con el simulador.
 - **Agentes Edge y contenedores con problemas en un Portainer real.** Solo se han probado con el simulador.
 - **OPNsense real, casos no probados:** gateway degradado o caído, comparación de las cifras con su interfaz y nombres exactos de los privilegios mínimos.
 - **Marcha atrás automática en un Proxmox VE real.** Solo se ha probado en CI (INS-06).
@@ -293,6 +308,8 @@ Los requisitos pendientes se probarán en su hito.
 | RF-73 | `TestCollect`, `TestMissingPrivilegesLimitData`, `TestPublicDataHidesInfrastructure`, `TestErrors`, `TestOPNsenseCredentialsAreCleaned`, E2E-30 |
 | RF-80 | `TestCollectEnvironments`, `TestEdgeAgentUsesHeartbeat`, `TestNoEnvironments`, E2E-33 |
 | RF-81 | `TestCollectEnvironments`, `TestPortainerDataHidesInfrastructure`, `TestPortainerErrors`, E2E-32 |
+| RF-90 | `TestCollectTunnels`, `TestNoTunnels`, E2E-35 |
+| RF-91 | `TestCollectTunnels`, `TestWGDashboardDataHidesInfrastructure`, `TestWGDashboardErrors`, E2E-34 |
 | RF-61 | INS-04, INS-05, INS-06 |
 | RF-62 | `TestSetupRequiresTokenWhenConfigured`, `TestSetupTokenAttemptsAreLimited`, `TestEmptySetupTokenNeverMatches`, E2E-29, INS-02 |
 | RNF-01 | Por diseño: el modelo de datos no tiene tablas de métricas |

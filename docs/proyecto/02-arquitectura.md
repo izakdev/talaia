@@ -19,6 +19,7 @@ flowchart LR
     HA[Home Assistant]
     OP[OPNsense]
     PT[Portainer]
+    WG[WGDashboard]
 
     B -->|HTTP y SSE| A
     B --> W
@@ -31,6 +32,7 @@ flowchart LR
     C -->|solo lectura| HA
     C -->|solo lectura| OP
     C -->|solo lectura| PT
+    C -->|solo lectura| WG
 ```
 
 ## Tecnologías
@@ -65,6 +67,7 @@ Los motivos detallados están en [Decisiones](05-decisiones.md).
 | `internal/integrations/homeassistant` | Integración con Home Assistant |
 | `internal/integrations/opnsense` | Integración con OPNsense |
 | `internal/integrations/portainer` | Integración con Portainer |
+| `internal/integrations/wgdashboard` | Integración con WGDashboard |
 | `web` | Frontend; `web/embed.go` lo incluye en el binario |
 | `web/src/widgets` | Estado, contenido y pie del bloque de cada integración |
 | `web/src/PanelEditor.tsx` | Editor de páginas y bloques |
@@ -189,6 +192,17 @@ Proxmox filtra `/cluster/resources` según los permisos. Una lista sin nodos se 
 | Entornos | Solo Docker: tipos 1, 2 y 4. En el tipo 4, agente Edge, el estado sale de `Heartbeat` |
 | Antigüedad | Los recuentos son de la última instantánea de Portainer, no del momento de la consulta. Se publica su fecha |
 | Datos públicos | Nunca incluyen la URL del entorno, sus claves ni el identificador de la instancia |
+
+### WGDashboard
+
+| Aspecto | Detalle |
+|---|---|
+| Autenticación | Cabecera `wg-dashboard-apikey` con una clave de API. WGDashboard no tiene claves de solo lectura; ver DEC-34 |
+| Consultas | `GET /api/getDashboardVersion`, sin clave, y `GET /api/getWireguardConfigurations`, con ella. Una sola petición con clave por ciclo, porque WGDashboard anota cada una en su registro junto con la clave |
+| Respuesta | Sobre `{status, message, data}`. Con `status` falso, la respuesta no es válida; con `401`, la clave se ha rechazado |
+| Peers conectados | Los cuenta WGDashboard: los que han contactado hace menos de 3 minutos |
+| Tráfico | Acumulado y visto desde el servidor. WGDashboard lo da en GiB y se publica en bytes |
+| Datos públicos | Solo nombre, protocolo y estado del túnel, recuentos de peers y tráfico. La respuesta trae la clave privada del servidor, que nunca se decodifica; tampoco se publican direcciones, puerto, reglas ni nombres de peers |
 
 ## API HTTP
 
