@@ -10,11 +10,15 @@
 | 4 | Home Assistant: estado, entidades, consumos, recursos y resumen; enlace a cada servicio | Terminado y verificado con la instalación del cliente, en `main` |
 | 5 | Editor: rejilla, varias páginas y temas; login opcional; cambio y recuperación de contraseña | Terminado y validado por el cliente, en `main` |
 | 6 | Distribución: instalador LXC, actualización y documentación final | Terminado y verificado en un Proxmox real, publicado como `v0.1.0` |
-| 7 | OPNsense: gateways, tráfico WAN y recursos | Terminado y verificado con el OPNsense del cliente |
-| 8 | Portainer: entornos y contenedores | Terminado y verificado con el Portainer del cliente |
-| 9 | WGDashboard: túneles y peers | Terminado y verificado con el WGDashboard del cliente |
+| 7 | OPNsense: gateways, tráfico WAN y recursos | Terminado y verificado con el OPNsense del cliente, publicado en `v0.2.0` |
+| 8 | Portainer: entornos y contenedores | Terminado y verificado con el Portainer del cliente, publicado en `v0.2.0` |
+| 9 | WGDashboard: túneles y peers | Terminado y verificado con el WGDashboard del cliente, publicado en `v0.2.0` |
 
 ## Historial
+
+### `v0.2.0` (2026-11-06)
+
+Segunda versión estable, con las integraciones de la fase 2: OPNsense, Portainer y WGDashboard. Incluye los binarios para amd64 y arm64, las sumas de comprobación y el instalador, y se actualiza desde `v0.1.0` con `talaia-proxmox.sh update`.
 
 ### Hito 9 (2026-11-06)
 
