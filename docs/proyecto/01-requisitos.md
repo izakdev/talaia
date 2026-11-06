@@ -109,7 +109,8 @@ Verificado con un Home Assistant real en local y con la instalación del cliente
 
 | ID | Requisito | Hito | Estado |
 |---|---|---|---|
-| RF-90 | Muestra el estado de los túneles y los peers conectados, consultando WGDashboard | 9 | Pendiente |
+| RF-90 | Muestra cada túnel con su estado y, según WGDashboard, sus peers conectados sobre el total y su tráfico acumulado | 9 | Implementado |
+| RF-91 | Solo hace lecturas y no publica claves, direcciones, puertos ni nombres de peers | 9 | Implementado |
 
 ### Instalación
 

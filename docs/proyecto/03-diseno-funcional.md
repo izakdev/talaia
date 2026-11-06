@@ -176,6 +176,7 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 | AdGuard | Contraseña |
 | OPNsense | Secreto de API. Admite pegar la línea `secret=…` del archivo |
 | Portainer | Token de acceso |
+| WGDashboard | Clave de API |
 
 **Probar conexión:** consulta el servicio una vez con los datos del formulario, sin guardar nada. En Home Assistant, avisa si no hay CPU, memoria ni disco disponibles. En OPNsense, avisa si faltan datos por los privilegios del usuario. Si se cambia algún dato de conexión, el resultado anterior desaparece. Al editar, puede usar la credencial guardada si la URL no ha cambiado.
 
@@ -239,6 +240,17 @@ Se aplican a todos los usuarios del panel. El idioma sigue siendo de cada navega
 | Con fallos | La última consulta ha fallado | Cuadrado rojo, mensaje de error y último dato atenuado |
 
 **Datos de un bloque de Portainer:** entornos en línea, contenedores en marcha y stacks, sumando los entornos en línea; una fila por entorno con su estado, contenedores en marcha y con problemas; y la antigüedad del recuento más antiguo. Los contenedores parados no cambian el estado, porque pueden estarlo a propósito.
+
+**Estados de un bloque de WGDashboard:**
+
+| Estado | Cuándo | Indicador |
+|---|---|---|
+| Túneles activos | Todos los túneles activos | Círculo verde |
+| Túnel parado | Algún túnel parado | Triángulo ámbar |
+| Sin túneles | WGDashboard no tiene ninguno | Neutro |
+| Con fallos | La última consulta ha fallado | Cuadrado rojo, mensaje de error y último dato atenuado |
+
+**Datos de un bloque de WGDashboard:** túneles activos, peers conectados en los túneles activos sobre el total, y tráfico acumulado; una fila por túnel con su estado y sus peers conectados; y el tráfico recibido y enviado. Un túnel parado es un aviso y no un fallo, porque puede estarlo a propósito. Un peer sin contacto reciente no cambia el estado. Los nombres de los peers no se muestran; ver DEC-33.
 
 ## Mensajes de error de los servicios
 

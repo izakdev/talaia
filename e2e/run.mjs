@@ -12,6 +12,7 @@ import { fakeAdGuard, PASSWORD, USER } from "./fake-adguard.mjs";
 import { fakeHomeAssistant, HA_TOKEN } from "./fake-homeassistant.mjs";
 import { fakeOPNsense, OPN_KEY, OPN_SECRET } from "./fake-opnsense.mjs";
 import { fakePortainer, PORTAINER_TOKEN } from "./fake-portainer.mjs";
+import { fakeWGDashboard, WGDASHBOARD_KEY } from "./fake-wgdashboard.mjs";
 import { fakeProxmox, TOKEN } from "./fake-proxmox.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -24,6 +25,7 @@ const proxmox = fakeProxmox(13001);
 const homeAssistant = fakeHomeAssistant(13002);
 const opnsense = fakeOPNsense(13003);
 const portainer = fakePortainer(13004);
+const wgdashboard = fakeWGDashboard(13005);
 const dataDir = mkdtempSync(join(tmpdir(), "talaia-e2e-"));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -117,7 +119,7 @@ const scenarios = [
   ["E2E-04", "Catálogo de servicios: búsqueda y navegación", async () => {
     await page.getByRole("link", { name: "Añadir conexión" }).click();
     await page.getByRole("heading", { name: "Elige un servicio" }).waitFor();
-    assert.equal(await page.locator(".catalog button").count(), 5);
+    assert.equal(await page.locator(".catalog button").count(), 6);
     await shot(page, "04-catalogo");
     const search = page.getByLabel("Buscar servicio");
     await search.fill("maquinas");
@@ -671,6 +673,46 @@ const scenarios = [
     await state.getByText("Entornos en línea").waitFor();
     await toAdmin();
   }],
+  ["E2E-34", "Alta de WGDashboard", async () => {
+    await page.goto(`${BASE}/admin/connections/new`);
+    await page.getByRole("button", { name: /WGDashboard/ }).click();
+    await page.getByLabel("Nombre", { exact: true }).fill("VPN");
+    await page.getByLabel("URL", { exact: true }).fill(wgdashboard.url);
+    await page.locator("dialog input[type=number]").fill("5");
+    const secret = page.locator("dialog input[type=password]");
+    await secret.fill("clave-incorrecta");
+    await page.getByRole("button", { name: "Probar conexión" }).click();
+    await page.locator("dialog p[role=status]").getByText("Credenciales rechazadas").waitFor();
+    await secret.fill(WGDASHBOARD_KEY);
+    await page.getByRole("button", { name: "Probar conexión" }).click();
+    await page.locator("dialog p[role=status]").getByText("Conexión correcta").waitFor();
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await row("VPN").getByText("Funciona").waitFor();
+  }],
+  ["E2E-35", "WGDashboard en el panel: túneles, peers y estados", async () => {
+    await toDashboard();
+    const block = page.locator(".service", { hasText: "VPN" });
+    const state = block.locator(".service-state");
+    await state.getByText("Túneles activos").waitFor();
+    const body = await block.innerText();
+    assert.match(body, /Túneles\s+2\/2/);
+    assert.match(body, /Peers conectados\s+3\/4/);
+    assert.match(body, /Tráfico\s+2,5 GiB/);
+    assert.match(body, /Tráfico acumulado: 768 MiB recibidos y 1,8 GiB enviados/);
+    assert.match(body, /WGDashboard v4\.3-simulado/);
+    await block.locator(".ha-entities li", { hasText: "wg0" }).getByText("Activo, 2/3 peers conectados").waitFor();
+    await shot(block, "21-panel-wgdashboard");
+    wgdashboard.state.stopped = true;
+    await state.getByText("Túnel parado").waitFor();
+    await block.locator(".ha-entities li", { hasText: "wg1" }).getByText("Parado", { exact: true }).waitFor();
+    assert.match(await block.innerText(), /Túneles\s+1\/2/);
+    wgdashboard.state.stopped = false;
+    wgdashboard.state.empty = true;
+    await state.getByText("Sin túneles").waitFor();
+    wgdashboard.state.empty = false;
+    await state.getByText("Túneles activos").waitFor();
+    await toAdmin();
+  }],
   ["E2E-12", "Cambio de idioma recordado", async () => {
     await page.getByRole("button", { name: "English" }).click();
     await page.getByRole("heading", { name: "Connections", exact: true }).waitFor();
@@ -700,7 +742,7 @@ const scenarios = [
   }],
   ["E2E-14", "La API pública no expone configuración ni credenciales", async () => {
     const body = await publicDashboard();
-    for (const leak of [USER, PASSWORD, TOKEN, HA_TOKEN, OPN_KEY, OPN_SECRET, "localhost:13002", "192.0.2.11", "192.0.2.50", "cortafuegos.simulado", "proceso-simulado", "pppoe1", PORTAINER_TOKEN, "192.0.2.60", "docker.simulado", "instancia-simulada", "base_url", "link_url", "secret"]) {
+    for (const leak of [USER, PASSWORD, TOKEN, HA_TOKEN, OPN_KEY, OPN_SECRET, "localhost:13002", "192.0.2.11", "192.0.2.50", "cortafuegos.simulado", "proceso-simulado", "pppoe1", PORTAINER_TOKEN, "192.0.2.60", "docker.simulado", "instancia-simulada", WGDASHBOARD_KEY, "clave-privada-simulada", "clave-publica-simulada", "10.66.0", "51666", "wg-simulado", "vpn.simulado", "192.0.2.53", "base_url", "link_url", "secret"]) {
       assert.equal(body.includes(leak), false, leak);
     }
     const headers = (await fetch(BASE)).headers;
@@ -719,6 +761,7 @@ try {
   await homeAssistant.start();
   await opnsense.start();
   await portainer.start();
+  await wgdashboard.start();
   await waitForServer();
   for (const [id, title, run] of scenarios) {
     try {
@@ -738,6 +781,7 @@ try {
   await homeAssistant.stop().catch(() => {});
   await opnsense.stop().catch(() => {});
   await portainer.stop().catch(() => {});
+  await wgdashboard.stop().catch(() => {});
   rmSync(dataDir, { recursive: true, force: true });
 }
 if (failed) process.exit(1);

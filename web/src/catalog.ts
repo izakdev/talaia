@@ -1,4 +1,4 @@
-import { siAdguard, siHomeassistant, siOpnsense, siPortainer, siProxmox } from "simple-icons";
+import { siAdguard, siHomeassistant, siOpnsense, siPortainer, siProxmox, siWireguard } from "simple-icons";
 import type { ConnectionType } from "./api";
 
 export type ConnectionOption = "show_top_domains" | "show_guests" | "show_summary";
@@ -20,6 +20,7 @@ export const CATALOG: CatalogEntry[] = [
   { type: "proxmox", icon: siProxmox, urlPlaceholder: "https://proxmox.example:8006", hasEntities: false, options: ["show_guests"], defaultOptions: { show_guests: true } },
   { type: "opnsense", icon: siOpnsense, urlPlaceholder: "https://opnsense.local", hasEntities: false, options: [], defaultOptions: {} },
   { type: "portainer", icon: siPortainer, urlPlaceholder: "https://portainer.local:9443", hasEntities: false, options: [], defaultOptions: {} },
+  { type: "wgdashboard", icon: siWireguard, urlPlaceholder: "http://wgdashboard.local:10086", hasEntities: false, options: [], defaultOptions: {} },
 ];
 
 export function catalogEntry(type: ConnectionType): CatalogEntry {
