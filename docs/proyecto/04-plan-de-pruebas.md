@@ -238,6 +238,7 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 | 2026-11-04 | `v0.1.0` | Proxmox VE real del cliente, actualización de `v0.1.0-rc.1` a `v0.1.0` con `--binary` | Correcto según la salida del instalador: cambio de versión con copia de seguridad; repetir el comando no hace nada porque ya está en esa versión. No se han vuelto a comprobar los datos tras este cambio |
 | 2026-11-04 | `v0.1.0` | Proxmox VE real del cliente, instalador sin `--binary` | Correcto según la salida del instalador: descarga desde GitHub, suma comprobada (si no coincide, no instala) y reinstalación con `--force` y copia de seguridad, dos veces. Después, captura del cliente con su panel y datos actuales de Home Assistant y Proxmox; el contenido del bloque de AdGuard no se ve en ella |
 | 2026-11-06 | Hito 8 | Portainer 2.39.1 real del cliente, con Talaia en Proxmox | Correcto según la captura y la confirmación del cliente: dos entornos en línea, 11 de 12 contenedores en marcha, 7 stacks, filas por entorno, antigüedad del recuento y versión |
+| 2026-11-06 | `v0.2.0` | Versión publicada por `release.yml` | Correcto: no preliminar y marcada como la última, con ambos binarios, sumas e instalador. Descargados desde `releases/latest/download`: sumas correctas, binarios ELF amd64 y arm64, el amd64 indica `v0.2.0` e incluye OPNsense, Portainer y WGDashboard, y el instalador es igual al del repositorio. No se ha instalado esta versión en un Proxmox real |
 | 2026-11-06 | Hito 9 (`3611893`) | WGDashboard 4.3.3 real del cliente, con un túnel y un peer, y Talaia en su Proxmox VE | Correcto según dos capturas del cliente. Con el túnel activo: «Túneles activos», 1 de 1 túneles, 0 de 1 peers conectados, 1,5 GiB de tráfico (215 MiB recibidos y 1,3 GiB enviados, igual que en la exploración) y versión. Con el túnel parado: «Túnel parado» en ámbar, 0 de 1 túneles y la fila «Parado». No se ha visto un peer conectado ni se ha revisado la API pública con este servicio |
 | 2026-11-06 | Hito 9, antes de programar | Respuestas de un WGDashboard 4.3.3 real, con claves, direcciones y nombres ocultos | Sobre `{status, message, data}`. Sin clave da `401` «Unauthorized access.» y con una clave inexistente, `401` «API Key does not exist». La versión responde sin clave. Un túnel `wg` activo con un peer sin contacto (`stopped`, «No Handshake») y tráfico en GiB. La respuesta de túneles incluye la clave privada del servidor |
 | 2026-11-05 | Hito 8, antes de programar | Respuestas de un Portainer 2.39.1 real con un usuario no administrador | `/api/endpoints` devuelve los recuentos por entorno; la lista de contenedores de Docker llega vacía, así que no se usa |
@@ -252,6 +253,7 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 - WGDashboard: código de la v4.3.4, en `src/dashboard.py` y `src/modules/WireguardConfiguration.py`, para rutas, autenticación, registro de accesos y cálculo de los peers conectados.
 
 **Aún sin verificar:**
+- **`v0.2.0` en un Proxmox VE real.** Falta actualizar con `talaia-proxmox.sh update`, sin `--binary`, y comprobar que conserva los datos.
 - **WGDashboard real, casos no probados:** peers conectados, varios túneles y túneles AmneziaWG. Solo se han probado con el simulador. Tampoco se ha revisado la API pública con este servicio, aunque la cubren `TestWGDashboardDataHidesInfrastructure` y E2E-14.
 - **Agentes Edge y contenedores con problemas en un Portainer real.** Solo se han probado con el simulador.
 - **OPNsense real, casos no probados:** gateway degradado o caído, comparación de las cifras con su interfaz y nombres exactos de los privilegios mínimos.
@@ -320,6 +322,6 @@ Los requisitos pendientes se probarán en su hito.
 | RNF-06 | Medición manual en reposo, ver [Estado y cambios](06-estado-y-cambios.md#consumo-medido) |
 | RNF-07 | `TestRemoveAndUnsupported`; el recolector solo depende de `integrations.Registry` |
 | RNF-08 | E2E-24 para los controles sin arrastrar; revisión de código y de capturas; sin auditoría formal |
-| RNF-09 | Versiones `v0.1.0-rc.1` y `v0.1.0` publicadas por `release.yml`, con ambos binarios, sumas e instalador |
+| RNF-09 | Versiones `v0.1.0-rc.1`, `v0.1.0` y `v0.2.0` publicadas por `release.yml`, con ambos binarios, sumas e instalador |
 | RNF-10 | Revisión del repositorio |
 | RNF-11 | `make docs-check` |
