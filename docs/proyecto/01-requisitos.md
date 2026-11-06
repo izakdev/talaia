@@ -97,6 +97,7 @@ Verificado con un Home Assistant real en local y con la instalación del cliente
 | RF-71 | Muestra el estado de cada gateway, con su latencia y pérdida si se monitoriza, y distingue los que no se monitorizan | 7 | Implementado |
 | RF-72 | Muestra la velocidad y el total de tráfico de la WAN | 7 | Implementado |
 | RF-73 | Solo hace lecturas, funciona con un usuario de privilegios limitados y avisa si faltan datos por ello | 7 | Implementado |
+| RF-74 | Si se activa, muestra cada instancia de WireGuard con su estado, sus peers conectados sobre el total y su tráfico, sin nombres de peers, claves ni direcciones | 10 | Implementado |
 
 ### Portainer
 

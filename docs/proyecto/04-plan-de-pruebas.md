@@ -138,6 +138,10 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestPublicDataHidesInfrastructure` | No publica equipo, direcciones, procesos, dispositivos ni credenciales | RF-73, RNF-02 |
 | `TestErrors` | Clasifica credenciales, privilegios imprescindibles, respuestas ajenas y errores del servicio | RF-21, RF-73 |
 | `TestParseSize` | Interpreta los tamaños de `df -h` | RF-70 |
+| `TestWireGuardIsOptional` | Sin la opción, no consulta WireGuard ni avisa por su privilegio | RF-74, RF-73 |
+| `TestCollectWireGuard` | Agrupa los peers por instancia, cuenta solo los `online` como conectados, suma el tráfico y no publica claves, endpoints, IP, puertos ni nombres de peers | RF-74, RNF-02 |
+| `TestWireGuardWithoutPrivilege` | Sin el privilegio, omite WireGuard y avisa | RF-74, RF-73 |
+| `TestWireGuardEmptyAndForeign` | Sin instancias devuelve una lista vacía, y una respuesta ajena es un fallo | RF-74 |
 
 ### `internal/integrations/portainer`
 
@@ -197,6 +201,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-33 | Portainer en el panel: entornos, contenedores y estados | RF-20, RF-80 |
 | E2E-34 | Alta de WGDashboard | RF-10, RF-91 |
 | E2E-35 | WGDashboard en el panel: túneles, peers y estados | RF-20, RF-90 |
+| E2E-36 | WireGuard en el bloque de OPNsense, opcional y sin nombres de peers | RF-20, RF-73, RF-74 |
 
 Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las discrepancias con el servicio real las cubren las verificaciones manuales.
 
@@ -238,6 +243,7 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 | 2026-11-04 | `v0.1.0` | Proxmox VE real del cliente, actualización de `v0.1.0-rc.1` a `v0.1.0` con `--binary` | Correcto según la salida del instalador: cambio de versión con copia de seguridad; repetir el comando no hace nada porque ya está en esa versión. No se han vuelto a comprobar los datos tras este cambio |
 | 2026-11-04 | `v0.1.0` | Proxmox VE real del cliente, instalador sin `--binary` | Correcto según la salida del instalador: descarga desde GitHub, suma comprobada (si no coincide, no instala) y reinstalación con `--force` y copia de seguridad, dos veces. Después, captura del cliente con su panel y datos actuales de Home Assistant y Proxmox; el contenido del bloque de AdGuard no se ve en ella |
 | 2026-11-06 | Hito 8 | Portainer 2.39.1 real del cliente, con Talaia en Proxmox | Correcto según la captura y la confirmación del cliente: dos entornos en línea, 11 de 12 contenedores en marcha, 7 stacks, filas por entorno, antigüedad del recuento y versión |
+| 2026-11-06 | Hito 10, antes de programar | `/api/wireguard/service/show` en el OPNsense real del cliente, con el privilegio «VPN: WireGuard: Status», claves y direcciones ocultas | Responde a `GET` con `{rows, rowCount, total, current}`: una instancia `wg0` activa con su nombre en `name` e `ifname`, sin peers en `wg show`. `/api/wireguard/general/get` da `403` con ese privilegio |
 | 2026-11-06 | `v0.2.0` | Versión publicada por `release.yml` | Correcto: no preliminar y marcada como la última, con ambos binarios, sumas e instalador. Descargados desde `releases/latest/download`: sumas correctas, binarios ELF amd64 y arm64, el amd64 indica `v0.2.0` e incluye OPNsense, Portainer y WGDashboard, y el instalador es igual al del repositorio. No se ha instalado esta versión en un Proxmox real |
 | 2026-11-06 | `v0.2.0` | Proxmox VE real del cliente, actualización con el instalador descargado de GitHub y sin `--binary` | Correcto según la salida del instalador y una captura del cliente: descarga de la última versión para amd64, paso de `v0.1.0-16-g3611893` a `v0.2.0` con copia de seguridad, pie con `v0.2.0` y las seis conexiones (AdGuard, Home Assistant, Portainer, Proxmox, OPNsense y WGDashboard) en «Funciona» |
 | 2026-11-06 | Hito 9 (`3611893`) | WGDashboard 4.3.3 real del cliente, con un túnel y un peer, y Talaia en su Proxmox VE | Correcto según dos capturas del cliente. Con el túnel activo: «Túneles activos», 1 de 1 túneles, 0 de 1 peers conectados, 1,5 GiB de tráfico (215 MiB recibidos y 1,3 GiB enviados, igual que en la exploración) y versión. Con el túnel parado: «Túnel parado» en ámbar, 0 de 1 túneles y la fila «Parado». No se ha visto un peer conectado ni se ha revisado la API pública con este servicio |
@@ -251,9 +257,12 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 - Home Assistant: documentación de la API de Supervisor y código de `hassio/http.py` y del comando `supervisor/api`.
 - Proxmox VE: fuente de la API en `PVE/API2/Cluster.pm`, de `pve-manager`, y documentación de API tokens.
 - OPNsense: referencia de la API para rutas y métodos. El formato de las respuestas no está documentado: se ha tomado del servicio real.
+- OPNsense WireGuard: código de `opnsense/core` 26.7, en `Wireguard/Api/ServiceController.php`, `scripts/wireguard/wg_show.py` y `Wireguard/ACL/ACL.xml`, para la forma de los registros, el estado de los peers y los privilegios.
 - WGDashboard: código de la v4.3.4, en `src/dashboard.py` y `src/modules/WireguardConfiguration.py`, para rutas, autenticación, registro de accesos y cálculo de los peers conectados.
 
 **Aún sin verificar:**
+- **WireGuard de OPNsense completo contra un OPNsense real.** El simulador sigue la respuesta real de una instancia sin peers y el código de OPNsense para los peers. Es necesario para cerrar el hito 10.
+- **Peers de WireGuard de OPNsense reales:** conectados, sin contacto reciente y su tráfico. Solo se han probado con el simulador.
 - **WGDashboard real, casos no probados:** peers conectados, varios túneles y túneles AmneziaWG. Solo se han probado con el simulador. Tampoco se ha revisado la API pública con este servicio, aunque la cubren `TestWGDashboardDataHidesInfrastructure` y E2E-14.
 - **Agentes Edge y contenedores con problemas en un Portainer real.** Solo se han probado con el simulador.
 - **OPNsense real, casos no probados:** gateway degradado o caído, comparación de las cifras con su interfaz y nombres exactos de los privilegios mínimos.
@@ -308,6 +317,7 @@ Los requisitos pendientes se probarán en su hito.
 | RF-71 | `TestGatewayStates`, E2E-31 |
 | RF-72 | `TestCollect`, `TestWANSpeedNeedsTwoReadings`, E2E-31 |
 | RF-73 | `TestCollect`, `TestMissingPrivilegesLimitData`, `TestPublicDataHidesInfrastructure`, `TestErrors`, `TestOPNsenseCredentialsAreCleaned`, E2E-30 |
+| RF-74 | `TestWireGuardIsOptional`, `TestCollectWireGuard`, `TestWireGuardWithoutPrivilege`, `TestWireGuardEmptyAndForeign`, E2E-36 |
 | RF-80 | `TestCollectEnvironments`, `TestEdgeAgentUsesHeartbeat`, `TestNoEnvironments`, E2E-33 |
 | RF-81 | `TestCollectEnvironments`, `TestPortainerDataHidesInfrastructure`, `TestPortainerErrors`, E2E-32 |
 | RF-90 | `TestCollectTunnels`, `TestNoTunnels`, E2E-35 |

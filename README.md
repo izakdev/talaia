@@ -15,7 +15,7 @@ Dashboard autoalojado para ver el estado de tus servicios de un vistazo.
 
 ## Fase 2
 
-- OPNsense: gateways, tráfico WAN y recursos.
+- OPNsense: gateways, tráfico WAN, recursos y, opcionalmente, WireGuard.
 - Portainer: entornos y contenedores.
 - WGDashboard: túneles y peers.
 

@@ -18,6 +18,10 @@ import (
 // NoteLimitedPrivileges avisa de que faltan datos por los privilegios del usuario.
 const NoteLimitedPrivileges = "limited_privileges"
 
+// OptionShowWireGuard añade el estado de las instancias de WireGuard. Necesita
+// el privilegio «VPN: WireGuard: Status».
+const OptionShowWireGuard = "show_wireguard"
+
 // Estados públicos de un gateway.
 const (
 	GatewayOnline      = "online"
@@ -33,6 +37,7 @@ const (
 	pathResources   = "/api/diagnostics/system/system_resources"
 	pathDisk        = "/api/diagnostics/system/system_disk"
 	pathTraffic     = "/api/diagnostics/traffic/interface"
+	pathWireGuard   = "/api/wireguard/service/show"
 )
 
 // Gateway es el estado público de un gateway. No incluye sus direcciones.
@@ -51,18 +56,36 @@ type Traffic struct {
 	TransmitBitsPerS *float64 `json:"transmit_bits_per_second,omitempty"`
 }
 
+// WireGuardTunnel es el estado público de una instancia de WireGuard. No incluye
+// claves, direcciones, puertos ni nombres de peers.
+type WireGuardTunnel struct {
+	Name           string `json:"name"`
+	Up             bool   `json:"up"`
+	ConnectedPeers int    `json:"connected_peers"`
+	TotalPeers     int    `json:"total_peers"`
+	ReceivedBytes  int64  `json:"received_bytes"`
+	SentBytes      int64  `json:"sent_bytes"`
+}
+
+// WireGuard agrupa las instancias. Existe solo si la opción está activa y el
+// usuario tiene el privilegio.
+type WireGuard struct {
+	Tunnels []WireGuardTunnel `json:"tunnels"`
+}
+
 // Data es la información pública de un OPNsense. No incluye el nombre del
 // equipo, las direcciones ni los procesos.
 type Data struct {
-	Version       string    `json:"version"`
-	CPUPercent    float64   `json:"cpu_percent"`
-	UptimeSeconds int64     `json:"uptime_seconds"`
-	MemoryUsed    int64     `json:"memory_used,omitempty"`
-	MemoryTotal   int64     `json:"memory_total,omitempty"`
-	DiskUsed      int64     `json:"disk_used,omitempty"`
-	DiskTotal     int64     `json:"disk_total,omitempty"`
-	Gateways      []Gateway `json:"gateways"`
-	WAN           *Traffic  `json:"wan,omitempty"`
+	Version       string     `json:"version"`
+	CPUPercent    float64    `json:"cpu_percent"`
+	UptimeSeconds int64      `json:"uptime_seconds"`
+	MemoryUsed    int64      `json:"memory_used,omitempty"`
+	MemoryTotal   int64      `json:"memory_total,omitempty"`
+	DiskUsed      int64      `json:"disk_used,omitempty"`
+	DiskTotal     int64      `json:"disk_total,omitempty"`
+	Gateways      []Gateway  `json:"gateways"`
+	WAN           *Traffic   `json:"wan,omitempty"`
+	WireGuard     *WireGuard `json:"wireguard,omitempty"`
 	limited       bool
 }
 
@@ -198,7 +221,67 @@ func (c *client) Collect(ctx context.Context) (any, error) {
 			data.WAN = c.wanTraffic(received, sent)
 		}
 	}
+
+	if c.cfg.Options[OptionShowWireGuard] {
+		var wireGuard wireGuardResponse
+		err := c.get(ctx, pathWireGuard, &wireGuard)
+		switch {
+		case integrations.Code(err) == integrations.CodeUnauthorized:
+			data.limited = true
+		case err != nil:
+			return nil, err
+		case wireGuard.Rows == nil:
+			return nil, foreignResponse()
+		default:
+			data.WireGuard = buildWireGuard(*wireGuard.Rows)
+		}
+	}
 	return data, nil
+}
+
+type wireGuardRecord struct {
+	Interface  string `json:"if"`
+	Type       string `json:"type"`
+	Status     string `json:"status"`
+	Name       string `json:"name"`
+	PeerStatus string `json:"peer-status"`
+	Received   int64  `json:"transfer-rx"`
+	Sent       int64  `json:"transfer-tx"`
+}
+
+type wireGuardResponse struct {
+	Rows *[]wireGuardRecord `json:"rows"`
+}
+
+// buildWireGuard agrupa los peers por instancia. Un peer cuenta como conectado
+// si OPNsense lo da por en línea: contacto en los últimos 5 minutos.
+func buildWireGuard(records []wireGuardRecord) *WireGuard {
+	wg := &WireGuard{Tunnels: []WireGuardTunnel{}}
+	index := map[string]int{}
+	for _, r := range records {
+		if r.Type == "interface" {
+			name := r.Name
+			if name == "" {
+				name = r.Interface
+			}
+			index[r.Interface] = len(wg.Tunnels)
+			wg.Tunnels = append(wg.Tunnels, WireGuardTunnel{Name: name, Up: r.Status == "up"})
+		}
+	}
+	for _, r := range records {
+		i, ok := index[r.Interface]
+		if r.Type != "peer" || !ok {
+			continue
+		}
+		tunnel := &wg.Tunnels[i]
+		tunnel.TotalPeers++
+		if r.PeerStatus == "online" {
+			tunnel.ConnectedPeers++
+		}
+		tunnel.ReceivedBytes += r.Received
+		tunnel.SentBytes += r.Sent
+	}
+	return wg
 }
 
 // optional hace una consulta prescindible. Solo la falta de permisos deja sin

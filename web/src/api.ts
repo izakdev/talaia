@@ -141,6 +141,16 @@ export interface OPNsenseData {
     receive_bits_per_second?: number;
     transmit_bits_per_second?: number;
   };
+  wireguard?: { tunnels: OPNsenseTunnel[] };
+}
+
+export interface OPNsenseTunnel {
+  name: string;
+  up: boolean;
+  connected_peers: number;
+  total_peers: number;
+  received_bytes: number;
+  sent_bytes: number;
 }
 
 export interface PortainerEnvironment {

@@ -13,8 +13,14 @@
 | 7 | OPNsense: gateways, tráfico WAN y recursos | Terminado y verificado con el OPNsense del cliente, publicado en `v0.2.0` |
 | 8 | Portainer: entornos y contenedores | Terminado y verificado con el Portainer del cliente, publicado en `v0.2.0` |
 | 9 | WGDashboard: túneles y peers | Terminado y verificado con el WGDashboard del cliente, publicado en `v0.2.0` |
+| 10 | OPNsense: estado de WireGuard | Programado; pendiente de verificar contra el OPNsense del cliente con peers |
 
 ## Historial
+
+### Hito 10 (2026-11-06)
+
+**Añadido:**
+- Opción de OPNsense para mostrar sus instancias de WireGuard: estado, peers conectados y tráfico.
 
 ### `v0.2.0` (2026-11-06)
 

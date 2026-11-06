@@ -233,3 +233,94 @@ func TestParseSize(t *testing.T) {
 		}
 	}
 }
+
+// Forma tomada de un OPNsense 26.7 real, con peers añadidos según el código de
+// wg_show.py y ServiceController.php, y datos inventados.
+const wireGuardBody = `{"total":5,"rowCount":5,"current":1,"rows":[
+	{"if":"wg0","type":"interface","public-key":"clave-publica-servidor","listen-port":"51820","fwmark":"off","endpoint":"51820",
+	 "status":"up","name":"Oficina","latest-handshake-age":null,"latest-handshake-epoch":null,"peer-status":"offline","ifname":"Oficina"},
+	{"if":"wg0","type":"peer","public-key":"clave-publica-movil","endpoint":"198.51.100.7:4500","allowed-ips":"10.8.0.2/32",
+	 "latest-handshake":1793915962,"transfer-rx":1000,"transfer-tx":3000,"persistent-keepalive":"off","name":"movil-de-ana",
+	 "latest-handshake-age":42,"peer-status":"online","ifname":"Oficina"},
+	{"if":"wg0","type":"peer","public-key":"clave-publica-portatil","endpoint":"(none)","allowed-ips":"10.8.0.3/32",
+	 "latest-handshake":0,"transfer-rx":0,"transfer-tx":0,"persistent-keepalive":"off","name":"portatil",
+	 "latest-handshake-age":null,"peer-status":"offline","ifname":"Oficina"},
+	{"if":"wg0","type":"peer","public-key":"clave-publica-tablet","endpoint":"198.51.100.8:4500","allowed-ips":"10.8.0.4/32",
+	 "latest-handshake":1793900000,"transfer-rx":24,"transfer-tx":0,"persistent-keepalive":"off","name":"tablet",
+	 "latest-handshake-age":4000,"peer-status":"stale","ifname":"Oficina"},
+	{"if":"wg1","type":"interface","public-key":"clave-publica-2","listen-port":"51821","fwmark":"off","endpoint":"51821",
+	 "status":"down","name":"Casa","peer-status":"offline","ifname":"Casa"}]}`
+
+func withWireGuard(ts *httptest.Server) integrations.Config {
+	cfg := config(ts)
+	cfg.Options = map[string]bool{OptionShowWireGuard: true}
+	return cfg
+}
+
+func TestWireGuardIsOptional(t *testing.T) {
+	ts := server(t, map[string]string{pathWireGuard: wireGuardBody})
+	got, err := New(config(ts)).Collect(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d := got.(Data); d.WireGuard != nil {
+		t.Fatalf("sin la opción no se consulta WireGuard: %+v", d.WireGuard)
+	}
+	// Sin la opción, que falte el privilegio de WireGuard no limita los datos.
+	got, err = New(config(server(t, nil, pathWireGuard))).Collect(context.Background())
+	if err != nil || len(got.(Data).Notes()) != 0 {
+		t.Fatalf("avisos sin la opción: %v %v", err, got.(Data).Notes())
+	}
+}
+
+func TestCollectWireGuard(t *testing.T) {
+	got, err := New(withWireGuard(server(t, map[string]string{pathWireGuard: wireGuardBody}))).Collect(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	wg := got.(Data).WireGuard
+	if wg == nil || len(wg.Tunnels) != 2 {
+		t.Fatalf("túneles incorrectos: %+v", wg)
+	}
+	want := []WireGuardTunnel{
+		{Name: "Oficina", Up: true, ConnectedPeers: 1, TotalPeers: 3, ReceivedBytes: 1024, SentBytes: 3000},
+		{Name: "Casa", Up: false},
+	}
+	for i := range want {
+		if wg.Tunnels[i] != want[i] {
+			t.Errorf("túnel %d:\n got %+v\nwant %+v", i, wg.Tunnels[i], want[i])
+		}
+	}
+	body, _ := json.Marshal(got)
+	for _, leak := range []string{"clave-publica", "198.51.100", "10.8.0", "51820", "movil-de-ana", "portatil", "tablet"} {
+		if strings.Contains(string(body), leak) {
+			t.Errorf("los datos públicos incluyen %q: %s", leak, body)
+		}
+	}
+}
+
+func TestWireGuardWithoutPrivilege(t *testing.T) {
+	got, err := New(withWireGuard(server(t, nil, pathWireGuard))).Collect(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := got.(Data)
+	if d.WireGuard != nil || len(d.Notes()) != 1 || d.Notes()[0] != NoteLimitedPrivileges {
+		t.Fatalf("sin privilegio: %+v %v", d.WireGuard, d.Notes())
+	}
+}
+
+func TestWireGuardEmptyAndForeign(t *testing.T) {
+	got, err := New(withWireGuard(server(t, map[string]string{pathWireGuard: `{"total":0,"rowCount":0,"current":1,"rows":[]}`}))).Collect(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := json.Marshal(got)
+	if !strings.Contains(string(body), `"wireguard":{"tunnels":[]}`) {
+		t.Fatalf("sin instancias debe ser una lista vacía: %s", body)
+	}
+	_, err = New(withWireGuard(server(t, map[string]string{pathWireGuard: `{"ok":true}`}))).Collect(context.Background())
+	if integrations.Code(err) != integrations.CodeBadResponse {
+		t.Fatalf("respuesta ajena: %v", err)
+	}
+}
