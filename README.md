@@ -2,7 +2,7 @@
 
 Dashboard autoalojado para ver el estado de tus servicios de un vistazo.
 
-> **Estado:** `v0.2.0` publicada, con las integraciones de la fase 2: OPNsense, Portainer y WGDashboard. La instalación, la actualización y el arranque automático en Proxmox VE están verificados en un servidor real.
+> **Estado:** `v0.2.1` publicada, con las integraciones de la fase 2: OPNsense (también su WireGuard), Portainer y WGDashboard. La instalación, la actualización y el arranque automático en Proxmox VE están verificados en un servidor real.
 
 *Talaia* significa «atalaya» en catalán: una torre desde la que se vigila el entorno.
 

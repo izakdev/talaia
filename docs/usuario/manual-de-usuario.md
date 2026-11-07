@@ -2,7 +2,7 @@
 
 Talaia es un panel para ver de un vistazo el estado de los servicios de tu laboratorio doméstico. Está pensado para usarlo como página inicial del navegador.
 
-> **Versión de este manual:** `v0.2.0`. Muestran datos AdGuard Home, Proxmox VE, Home Assistant, OPNsense, Portainer y WGDashboard. Consulta las [limitaciones actuales](#limitaciones-actuales).
+> **Versión de este manual:** `v0.2.1`. Muestran datos AdGuard Home, Proxmox VE, Home Assistant, OPNsense, Portainer y WGDashboard. Consulta las [limitaciones actuales](#limitaciones-actuales).
 
 ## Índice
 
@@ -504,6 +504,6 @@ En la administración, abre **Ajustes**.
 - Una conexión tiene un solo contenido: si está en dos páginas, se ve igual en ambas.
 - No se actualiza solo: hay que ejecutar el comando de actualización.
 - El bloque de OPNsense no muestra sus actualizaciones pendientes.
-- Los bloques de Portainer y WGDashboard no detallan cada contenedor ni cada peer: solo dan recuentos.
+- Los bloques de Portainer y WGDashboard, y el WireGuard de OPNsense, no detallan cada contenedor ni cada peer: solo dan recuentos.
 
 El estado de cada punto está en [Estado y cambios](../proyecto/06-estado-y-cambios.md).
