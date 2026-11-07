@@ -1,4 +1,4 @@
-import type { OPNsenseData, OPNsenseGateway } from "../api";
+import type { OPNsenseData, OPNsenseGateway, OPNsenseTunnel } from "../api";
 import { useI18n } from "../i18n";
 import { formatBytes } from "./homeassistant";
 import type { Widget } from "./types";
@@ -25,6 +25,44 @@ function GatewayRow({ gateway }: { gateway: OPNsenseGateway }) {
       <span>{gateway.name}</span>
       <span>{details.join(", ")}</span>
     </li>
+  );
+}
+
+function TunnelRow({ tunnel }: { tunnel: OPNsenseTunnel }) {
+  const { t } = useI18n();
+  const details = [t(tunnel.up ? "opnsense.wireguard.up" : "opnsense.wireguard.down")];
+  if (tunnel.up) details.push(t("opnsense.wireguard.peers", { connected: tunnel.connected_peers, total: tunnel.total_peers }));
+  return (
+    <li className={tunnel.up ? undefined : "no-data"}>
+      <span>{tunnel.name}</span>
+      <span>{details.join(", ")}</span>
+    </li>
+  );
+}
+
+function WireGuard({ tunnels }: { tunnels: OPNsenseTunnel[] }) {
+  const { t, lang } = useI18n();
+  const decimal = new Intl.NumberFormat(lang, { maximumFractionDigits: 1 });
+  const received = tunnels.reduce((total, tunnel) => total + tunnel.received_bytes, 0);
+  const sent = tunnels.reduce((total, tunnel) => total + tunnel.sent_bytes, 0);
+  return (
+    <div className="ha-section">
+      <h3>{t("opnsense.wireguard")}</h3>
+      {tunnels.length === 0 ? (
+        <p className="service-foot">{t("opnsense.wireguard.none")}</p>
+      ) : (
+        <ul className="ha-entities gateways">
+          {tunnels.map((tunnel) => (
+            <TunnelRow key={tunnel.name} tunnel={tunnel} />
+          ))}
+        </ul>
+      )}
+      {received + sent > 0 && (
+        <p className="service-foot">
+          {t("opnsense.wireguard.traffic", { received: formatBytes(received, decimal), sent: formatBytes(sent, decimal) })}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -92,6 +130,7 @@ function OPNsense({ data }: { data: OPNsenseData }) {
           </dl>
         </div>
       )}
+      {data.wireguard && <WireGuard tunnels={data.wireguard.tunnels} />}
     </>
   );
 }
@@ -102,6 +141,7 @@ export const opnsenseWidget: Widget<OPNsenseData> = {
     if (states.length === 0) return { tone: "muted", label: t("opnsense.noGateways") };
     if (states.includes("offline")) return { tone: "bad", label: t("opnsense.offline") };
     if (states.includes("degraded")) return { tone: "warn", label: t("opnsense.degraded") };
+    if (data.wireguard?.tunnels.some((tunnel) => !tunnel.up)) return { tone: "warn", label: t("opnsense.wireguardDown") };
     // Un gateway sin monitorizar siempre figura como correcto: no demuestra que haya conexión.
     if (!states.includes("online")) return { tone: "muted", label: t("opnsense.unmonitored") };
     return { tone: "good", label: t("opnsense.online") };

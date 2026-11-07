@@ -181,7 +181,8 @@ Proxmox filtra `/cluster/resources` según los permisos. Una lista sin nodos se 
 | Imprescindibles | `GET /api/diagnostics/activity/get_activity`, de cuyas cabeceras salen CPU y tiempo encendido, y `GET /api/routes/gateway/status` |
 | Opcionales | `GET /api/diagnostics/system/system_information`, `system_resources` y `system_disk`, y `GET /api/diagnostics/traffic/interface`. Un `401` o `403` omite el dato y añade el aviso `limited_privileges` |
 | Velocidad WAN | Diferencia de los contadores de la interfaz `wan` entre dos lecturas. Vive en memoria, así que falta en la primera lectura y si los contadores bajan |
-| Datos públicos | Nunca incluyen el nombre del equipo, direcciones de gateway, procesos, dispositivos de red ni sistemas de archivos |
+| WireGuard | Solo con la opción `show_wireguard`: `GET /api/wireguard/service/show`, que es la salida de `wg show all dump` preparada por OPNsense, sin claves privadas ni precompartidas. Necesita el privilegio «VPN: WireGuard: Status». Un `401` o `403` omite la sección y añade el aviso `limited_privileges`; sin la opción, no se consulta. Un peer cuenta como conectado si OPNsense lo da por `online`: contacto en los últimos 5 minutos |
+| Datos públicos | Nunca incluyen el nombre del equipo, direcciones de gateway, procesos, dispositivos de red ni sistemas de archivos. De WireGuard, solo el nombre y el estado de cada instancia, los recuentos de peers y el tráfico; nunca claves, endpoints, IP permitidas, puertos ni nombres de peers |
 
 ### Portainer
 

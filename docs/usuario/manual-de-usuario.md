@@ -320,6 +320,7 @@ Crea un usuario solo para Talaia, en *System > Access > Users*:
 | El de estado de gateways | Gateways. Imprescindible |
 | `Reporting: Traffic` | Tráfico de la WAN |
 | `Lobby: Dashboard` | RAM, disco y versión |
+| `VPN: WireGuard: Status` | Estado de WireGuard, solo si activas su opción |
 
 3. Crea una API key y copia cada valor en su campo.
 
@@ -339,6 +340,10 @@ Los nombres pueden variar según la versión. **Probar conexión** te avisa si f
 **Si al activar la monitorización un gateway pasa a Offline:** muchos operadores no responden a ping en la IP del gateway, sobre todo con PPPoE. Indica en **Monitor IP** una IP pública, como `9.9.9.9`, distinta de tus DNS de subida. Deja sin monitorizar los gateways que no tengan salida real, por ejemplo IPv6: de lo contrario, aparecerá **Gateway caído**.
 
 La velocidad de la WAN aparece a partir de la segunda lectura y es la media del tiempo de refresco. Los datos de recursos son de OPNsense, y Talaia no muestra sus actualizaciones pendientes.
+
+**WireGuard en OPNsense:** si usas WireGuard en OPNsense, activa **Mostrar el estado de WireGuard** en la conexión y añade al usuario el privilegio `VPN: WireGuard: Status`. Ese privilegio también permite arrancar y parar WireGuard; Talaia solo lo usa para leer. El bloque añade una sección con cada instancia, si está activa o caída, sus peers conectados sobre el total y el tráfico. Si una instancia cae, el estado pasa a **Túnel WireGuard caído**, en ámbar, salvo que haya un gateway con fallos. Un peer cuenta como conectado si ha contactado en los últimos 5 minutos, según OPNsense. Los nombres de los peers no se muestran.
+
+![Bloque de OPNsense con WireGuard](img/22-panel-opnsense-wireguard.png)
 
 ### Portainer
 

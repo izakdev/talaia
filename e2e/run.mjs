@@ -713,6 +713,39 @@ const scenarios = [
     await state.getByText("Túneles activos").waitFor();
     await toAdmin();
   }],
+  ["E2E-36", "WireGuard en el bloque de OPNsense, opcional y sin nombres de peers", async () => {
+    assert.doesNotMatch(await publicDashboard(), /"wireguard"/);
+    await row("Cortafuegos").getByRole("button", { name: "Editar" }).click();
+    await page.getByLabel(/estado de WireGuard/).check();
+    opnsense.state.wireguard = false;
+    await page.getByRole("button", { name: "Probar conexión" }).click();
+    await page.locator("dialog p[role=status]").getByText("Conexión correcta").waitFor();
+    await page.getByText("Faltan algunos datos").waitFor();
+    opnsense.state.wireguard = true;
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await page.locator("dialog").waitFor({ state: "detached" });
+    await toDashboard();
+    const block = page.locator(".service", { hasText: "Cortafuegos" });
+    const state = block.locator(".service-state");
+    await block.locator(".ha-entities li", { hasText: "Acceso remoto" }).getByText("Activa, 1/2 peers conectados").waitFor();
+    await block.getByText("Tráfico de WireGuard: 512 MiB recibidos y 1,5 GiB enviados").waitFor();
+    await state.getByText("Gateways en línea").waitFor();
+    await block.getByText(/Mbit\/s/).first().waitFor({ timeout: 20000 });
+    await shot(block, "22-panel-opnsense-wireguard");
+    const body = await publicDashboard();
+    for (const leak of ["peer-simulado", "clave-publica", "198.51.100", "10.77.0", "51777"]) {
+      assert.equal(body.includes(leak), false, leak);
+    }
+    opnsense.state.tunnelDown = true;
+    await state.getByText("Túnel WireGuard caído").waitFor();
+    await block.locator(".ha-entities li", { hasText: "Acceso remoto" }).getByText("Caída", { exact: true }).waitFor();
+    opnsense.state.gateway = "down";
+    await state.getByText("Gateway caído").waitFor();
+    opnsense.state.gateway = "none";
+    opnsense.state.tunnelDown = false;
+    await state.getByText("Gateways en línea").waitFor();
+    await toAdmin();
+  }],
   ["E2E-12", "Cambio de idioma recordado", async () => {
     await page.getByRole("button", { name: "English" }).click();
     await page.getByRole("heading", { name: "Connections", exact: true }).waitFor();

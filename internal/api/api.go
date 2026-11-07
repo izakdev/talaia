@@ -29,6 +29,7 @@ import (
 	"github.com/izakdev/talaia/internal/integrations"
 	"github.com/izakdev/talaia/internal/integrations/adguard"
 	"github.com/izakdev/talaia/internal/integrations/homeassistant"
+	"github.com/izakdev/talaia/internal/integrations/opnsense"
 	"github.com/izakdev/talaia/internal/integrations/proxmox"
 	"github.com/izakdev/talaia/internal/store"
 )
@@ -399,7 +400,7 @@ var connectionTypes = map[string]struct {
 	"proxmox":       {options: []string{proxmox.OptionShowGuests}},
 	"homeassistant": {hasEntities: true, options: []string{homeassistant.OptionShowSummary}},
 	"adguard":       {needsUsername: true, options: []string{adguard.OptionShowTopDomains}},
-	"opnsense":      {needsUsername: true},
+	"opnsense":      {needsUsername: true, options: []string{opnsense.OptionShowWireGuard}},
 	"portainer":     {},
 	"wgdashboard":   {},
 }

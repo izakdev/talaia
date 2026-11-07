@@ -218,6 +218,7 @@ Se aplican a todos los usuarios del panel. El idioma sigue siendo de cada navega
 | Gateways sin monitorizar | Ninguno tiene medidas: OPNsense los indica como correctos, pero eso no demuestra que haya conexión | Neutro |
 | Sin gateways | OPNsense no devuelve ninguno | Neutro |
 | Gateway degradado | Alguno con pérdida o latencia alta | Triángulo ámbar |
+| Túnel WireGuard caído | Con la opción de WireGuard, alguna instancia caída y ningún gateway con fallos | Triángulo ámbar |
 | Gateway caído | Alguno caído | Cuadrado rojo |
 | Con fallos | La última consulta ha fallado | Cuadrado rojo, mensaje de error y último dato atenuado |
 
@@ -228,6 +229,7 @@ Se aplican a todos los usuarios del panel. El idioma sigue siendo de cada navega
 | Recursos | CPU, RAM, disco de `/` y tiempo encendido. RAM y disco dependen de los privilegios |
 | Gateways | Nombre y estado; latencia y pérdida si existen |
 | WAN | Velocidad de descarga y subida, y total desde el arranque de la interfaz. La velocidad aparece a partir de la segunda lectura, mientras indica «Midiendo…» |
+| WireGuard | Solo con la opción activa: una fila por instancia con su estado y sus peers conectados sobre el total, y el tráfico recibido y enviado. Sin nombres de peers; ver DEC-35 |
 
 **Estados de un bloque de Portainer:**
 

@@ -175,3 +175,8 @@ Cada decisión recoge su motivo y sus consecuencias. Si una decisión cambia, se
 - **Contexto:** WGDashboard no tiene claves ni usuarios de solo lectura, y anota en su registro cada petición con clave, incluida la propia clave.
 - **Decisión:** aceptar su clave de API, usar solo `GET`, hacer una única petición con clave por ciclo y pedir la versión sin ella.
 - **Consecuencias:** la clave podría modificar WGDashboard. Talaia la guarda cifrada como las demás, y el manual y el formulario avisan de que da acceso completo.
+
+## DEC-35: WireGuard de OPNsense como opción de la conexión
+- **Contexto:** OPNsense incluye WireGuard y da su estado en `/api/wireguard/service/show`, pero necesita el privilegio «VPN: WireGuard: Status», que además permite arrancar, parar y reconfigurar el servicio. Muchas instalaciones no usan WireGuard.
+- **Decisión:** mostrarlo solo si se activa la opción «Mostrar el estado de WireGuard», con los mismos criterios que WGDashboard (DEC-33): por instancia, estado, peers conectados sobre el total y tráfico, sin nombres de peers. Una instancia caída da un aviso ámbar, por debajo de un gateway con fallos.
+- **Consecuencias:** las conexiones existentes no cambian ni reciben avisos de privilegios nuevos. Quien active la opción debe añadir el privilegio, y el manual avisa de su alcance. Talaia solo usa `GET`.

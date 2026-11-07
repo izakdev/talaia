@@ -13,8 +13,17 @@
 | 7 | OPNsense: gateways, tráfico WAN y recursos | Terminado y verificado con el OPNsense del cliente, publicado en `v0.2.0` |
 | 8 | Portainer: entornos y contenedores | Terminado y verificado con el Portainer del cliente, publicado en `v0.2.0` |
 | 9 | WGDashboard: túneles y peers | Terminado y verificado con el WGDashboard del cliente, publicado en `v0.2.0` |
+| 10 | OPNsense: estado de WireGuard | Terminado y verificado con el OPNsense del cliente y un peer conectado; pendiente de fusionar |
 
 ## Historial
+
+### Hito 10 (2026-11-06)
+
+**Añadido:**
+- Opción de OPNsense para mostrar sus instancias de WireGuard: estado, peers conectados y tráfico.
+
+**Verificado:**
+- Con el OPNsense 26.7.1_1 del cliente y un peer conectado, instalado en su Proxmox VE con `talaia-proxmox.sh update --binary`.
 
 ### `v0.2.0` (2026-11-06)
 

@@ -5,7 +5,7 @@ export const OPN_KEY = "clave-de-api-de-prueba";
 export const OPN_SECRET = "secreto-de-api-de-prueba";
 
 export function fakeOPNsense(port) {
-  const state = { gateway: "none", monitored: true, limited: false, received: 88000000000, sent: 21000000000 };
+  const state = { gateway: "none", monitored: true, limited: false, received: 88000000000, sent: 21000000000, wireguard: true, tunnelDown: false };
   const authorized = (req) =>
     req.headers.authorization === `Basic ${Buffer.from(`${OPN_KEY}:${OPN_SECRET}`).toString("base64")}`;
   const routes = {
@@ -57,12 +57,38 @@ export function fakeOPNsense(port) {
       };
     },
   };
+  // Forma de /api/wireguard/service/show de un OPNsense 26.7 real; los peers siguen
+  // el código de wg_show.py y ServiceController.php.
+  const peer = (name, status, age, rx, tx) => ({
+    if: "wg0",
+    type: "peer",
+    "public-key": `clave-publica-${name}`,
+    endpoint: "198.51.100.7:4500",
+    "allowed-ips": "10.77.0.2/32",
+    "latest-handshake": age === null ? 0 : Math.floor(Date.now() / 1000) - age,
+    "transfer-rx": rx,
+    "transfer-tx": tx,
+    "persistent-keepalive": "off",
+    name,
+    "latest-handshake-age": age,
+    "peer-status": status,
+    ifname: "Acceso remoto",
+  });
+  routes["/api/wireguard/service/show"] = () => {
+    const rows = [
+      { if: "wg0", type: "interface", "public-key": "clave-publica-servidor", "listen-port": "51777", fwmark: "off", endpoint: "51777",
+        status: state.tunnelDown ? "down" : "up", name: "Acceso remoto", "latest-handshake-age": null, "peer-status": "offline", ifname: "Acceso remoto" },
+      peer("peer-simulado-movil", "online", 30, 536870912, 1610612736),
+      peer("peer-simulado-portatil", "offline", null, 0, 0),
+    ];
+    return { total: rows.length, rowCount: rows.length, current: 1, rows };
+  };
   const handler = (req, res) => {
     if (!authorized(req)) {
       res.writeHead(401).end();
       return;
     }
-    if (state.limited && req.url.startsWith("/api/diagnostics/system/")) {
+    if ((state.limited && req.url.startsWith("/api/diagnostics/system/")) || (!state.wireguard && req.url.startsWith("/api/wireguard/"))) {
       res.writeHead(403).end(JSON.stringify({ status: 403, message: "Forbidden" }));
       return;
     }
