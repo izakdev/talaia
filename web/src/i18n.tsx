@@ -238,6 +238,11 @@ const es = {
   "status.checking": "Consultando…",
   "status.noResponse": "Con fallos",
   "dashboard.admin.short": "Administración",
+  "watch.checking": "Consultando los servicios…",
+  "watch.ok.one": "El servicio está en orden",
+  "watch.ok.other": "Los {count} servicios están en orden",
+  "watch.attention.one": "Necesita atención:",
+  "watch.attention.other": "{count} servicios necesitan atención:",
   "dashboard.live.lost": "Sin actualización en vivo. Reintentando; los datos pueden estar desactualizados.",
   "dashboard.unavailable": "No se han podido cargar los servicios.",
   "age.checked": "Actualizado {age}",
@@ -555,6 +560,11 @@ const en: Record<Key, string> = {
   "status.checking": "Checking…",
   "status.noResponse": "Failing",
   "dashboard.admin.short": "Administration",
+  "watch.checking": "Checking services…",
+  "watch.ok.one": "The service is fine",
+  "watch.ok.other": "All {count} services are fine",
+  "watch.attention.one": "Needs attention:",
+  "watch.attention.other": "{count} services need attention:",
   "dashboard.live.lost": "Live updates lost. Retrying; data may be out of date.",
   "dashboard.unavailable": "Services could not be loaded.",
   "age.checked": "Updated {age}",
@@ -646,7 +656,7 @@ function initialLanguage(): Language {
   return navigator.language.toLowerCase().startsWith("es") ? "es" : "en";
 }
 
-interface I18n {
+export interface I18n {
   lang: Language;
   setLang: (lang: Language) => void;
   t: (key: Key, vars?: Record<string, string | number>) => string;

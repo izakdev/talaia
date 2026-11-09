@@ -14,6 +14,7 @@
 | 8 | Portainer: entornos y contenedores | Terminado y verificado con el Portainer del cliente, publicado en `v0.2.0` |
 | 9 | WGDashboard: túneles y peers | Terminado y verificado con el WGDashboard del cliente, publicado en `v0.2.0` |
 | 10 | OPNsense: estado de WireGuard | Terminado y verificado con el OPNsense del cliente y un peer conectado, publicado en `v0.2.1` |
+| 11 | Panel de un vistazo: estado global en la atalaya y bloques con aviso visibles | Terminado y verificado con el panel real del cliente; pendiente de fusionar |
 
 ## Historial
 
@@ -26,6 +27,15 @@
 - `systemctl enable` ya no oculta sus errores.
 
 **Sin verificar:** las pruebas INS-11 e INS-12 simulan los fallos en CI. No se han provocado en un Proxmox VE real, y la causa exacta del fallo observado allí no se pudo reproducir.
+
+### Hito 11 (2026-11-09)
+
+**Añadido:**
+- Resumen del estado de todos los servicios en la cabecera del panel, con enlace a cada bloque que necesita atención, y la atalaya del color del peor estado.
+
+**Cambiado:**
+- Los bloques con aviso o fallo llevan un borde superior ámbar o rojo, y ningún bloque lleva sombra.
+- Las cifras de los bloques son un escalón más pequeñas.
 
 ### Herramientas de desarrollo (2026-11-09)
 
