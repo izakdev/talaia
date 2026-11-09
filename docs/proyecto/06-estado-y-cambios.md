@@ -17,6 +17,12 @@
 
 ## Historial
 
+### Herramientas de desarrollo (2026-11-09)
+
+**Añadido:**
+- Skills de Claude Code para publicar una versión, añadir una integración y explorar la API real de un servicio, y un subagente que revisa cada hito antes del PR.
+- Hooks que impiden escribir en el repositorio IP domésticas y otros datos del laboratorio, formatean el Go y comprueban la documentación al editarla.
+
 ### `v0.2.1` (2026-11-07)
 
 Versión de mantenimiento con el hito 10: el bloque de OPNsense puede mostrar el estado de WireGuard. Incluye los binarios para amd64 y arm64, las sumas de comprobación y el instalador, y se actualiza desde `v0.2.0` con `talaia-proxmox.sh update`.
