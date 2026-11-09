@@ -103,7 +103,12 @@ function watch(dashboard: DashboardState | undefined, t: I18n["t"]) {
   }
   const worst = watched.reduce<Tone>((tone, item) => (SEVERITY[item.tone] > SEVERITY[tone] ? item.tone : tone), "good");
   const checking = watched.length > 0 && watched.every((item) => item.tone === "muted" && !item.connection.data);
+  const updated = watched.reduce<string | null>((latest, item) => {
+    const at = item.connection.last_success_at;
+    return at && (!latest || at > latest) ? at : latest;
+  }, null);
   return {
+    updated,
     tone: checking ? ("muted" as Tone) : worst,
     total: watched.length,
     attention: watched
@@ -164,7 +169,8 @@ function WatchSummary({
 }
 
 export default function Dashboard({ path, navigate }: { path: string; navigate: (path: string) => void }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  const now = useNow(10000);
   const live = useLiveDashboard();
   const dashboard = useQuery({ queryKey: ["dashboard"], queryFn: api.dashboard });
   const link = (to: string, label: string, className: string, current?: boolean) => (
@@ -213,6 +219,9 @@ export default function Dashboard({ path, navigate }: { path: string; navigate: 
         <div className="lookout-title">
           <span className="wordmark">Talaia</span>
           <WatchSummary summary={summary} goTo={goTo} />
+          {summary.updated && summary.tone !== "muted" && (
+            <span className="watch-age">{t("age.checked", { age: relativeTime(summary.updated, now, lang) })}</span>
+          )}
         </div>
         {link("/admin", t("dashboard.admin.short"), "quiet")}
         <LanguageSwitch />
@@ -275,7 +284,8 @@ export function Service({ connection }: { connection: ConnectionState }) {
   const state = serviceState(connection, t);
 
   const age = connection.last_success_at ? relativeTime(connection.last_success_at, now, lang) : null;
-  const freshness = failed ? (age ? t("age.last", { age }) : t("age.never")) : age && t("age.checked", { age });
+  // Cuando todo va bien, la antigüedad está en la cabecera; el bloque solo la indica si su dato es viejo.
+  const freshness = failed ? (age ? t("age.last", { age }) : t("age.never")) : null;
   const version = data ? widget.footer(data) : "";
 
   return (
@@ -305,8 +315,7 @@ export function Service({ connection }: { connection: ConnectionState }) {
       {failed && <p role="status" className="service-notice">{collectError(connection.error)}</p>}
       {data ? <widget.Body data={data} /> : null}
       <p className="service-foot">
-        {freshness}
-        {version && ` (${version})`}
+        {freshness && version ? `${freshness} (${version})` : freshness || version}
       </p>
     </section>
   );

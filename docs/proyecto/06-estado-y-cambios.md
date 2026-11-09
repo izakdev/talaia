@@ -15,8 +15,16 @@
 | 9 | WGDashboard: túneles y peers | Terminado y verificado con el WGDashboard del cliente, publicado en `v0.2.0` |
 | 10 | OPNsense: estado de WireGuard | Terminado y verificado con el OPNsense del cliente y un peer conectado, publicado en `v0.2.1` |
 | 11 | Panel de un vistazo: estado global en la atalaya y bloques con aviso visibles | Terminado y verificado con el panel real del cliente, publicado en `v0.2.2` |
+| 12 | Pulido del panel: antigüedad en la cabecera, secciones coherentes y bloques sin huecos | Programado; pendiente de revisión del cliente |
 
 ## Historial
+
+### Hito 12 (2026-11-09)
+
+**Cambiado:**
+- La antigüedad de los datos aparece una sola vez, en la cabecera del panel. Un bloque solo indica la suya si falla, y su pie da el servicio y su versión.
+- Cada sección de un bloque lleva una línea encima y ninguna debajo.
+- Un bloque mide lo que su contenido, sin estirarse hasta la altura de su fila.
 
 ### Espaciado de cifras y direcciones (2026-11-09)
 

@@ -117,7 +117,7 @@ Cuando hay servicios, cada uno tiene su propio bloque. Su nombre es un enlace qu
 
 ![Panel con un servicio de AdGuard](img/07-panel.png)
 
-**De un vistazo:** junto al nombre de Talaia verás si todo va bien, por ejemplo «Los 6 servicios están en orden». Si algún servicio tiene un aviso o falla, la cabecera lo dice y nombra cada servicio, aunque esté en otra página; pulsa un nombre para ir a su bloque. La luz de la atalaya también cambia: ámbar con avisos y roja con fallos. Esos bloques llevan además una franja del mismo color en su borde superior.
+**De un vistazo:** junto al nombre de Talaia verás si todo va bien, por ejemplo «Los 6 servicios están en orden», y cuándo se actualizaron los datos por última vez. Si algún servicio tiene un aviso o falla, la cabecera lo dice y nombra cada servicio, aunque esté en otra página; pulsa un nombre para ir a su bloque. La luz de la atalaya también cambia: ámbar con avisos y roja con fallos. Esos bloques llevan además una franja del mismo color en su borde superior.
 
 **Estado de AdGuard:**
 
@@ -418,7 +418,7 @@ En la administración, abre **Panel**. Cada conexión nueva se añade sola a la 
 
 **Pulsa Guardar panel** para aplicar los cambios, o **Descartar** para deshacerlos.
 
-**Cómo se ve después:** en el panel, cada bloque crece si su contenido lo necesita, aunque en el editor aparezca recortado. En pantallas estrechas, los bloques se apilan en una sola columna.
+**Cómo se ve después:** en el panel, cada bloque mide lo que su contenido: crece si lo necesita, aunque en el editor aparezca recortado, y no deja huecos en blanco si le diste más alto. En pantallas estrechas, los bloques se apilan en una sola columna.
 
 **Privacidad:** un servicio que no esté en ninguna página no sale por la API pública, aunque Talaia lo siga consultando.
 
