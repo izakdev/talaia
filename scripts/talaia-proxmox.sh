@@ -371,6 +371,12 @@ EOF
   echo "El código solo sirve una vez. Hasta usarlo, nadie más puede crear el administrador."
 }
 
+# Varios arranques seguidos agotan el límite de systemd, y entonces se niega a arrancar.
+start_service() {
+  ct_exec "$CTID" systemctl reset-failed talaia || true
+  ct_exec "$CTID" systemctl start talaia
+}
+
 # Lo llama el trap ERR, que se ejecuta en la función donde falló el comando.
 update_step_failed() {
   local status="$1" command="$2" line="$3"
@@ -407,7 +413,7 @@ rollback_update() {
   elif [[ -n "$UPDATE_BACKUP" ]]; then
     ct_exec "$CTID" rm -rf "$UPDATE_BACKUP"
   fi
-  ct_exec "$CTID" systemctl start talaia
+  start_service
   if wait_healthy "$CTID"; then
     running="$(ct_exec "$CTID" /usr/local/bin/talaia -version 2>/dev/null || echo "desconocida")"
     die "Actualización cancelada. Sigue en marcha la versión $running.$hint"
@@ -455,7 +461,7 @@ cmd_update() {
   log "Instalando la versión nueva"
   pct push "$CTID" "$WORK_DIR/talaia" /usr/local/bin/talaia --perms 0755
   push_setup_and_run "$CTID" ""
-  ct_exec "$CTID" systemctl start talaia
+  start_service
 
   if ! wait_healthy "$CTID"; then
     warn "La versión nueva no arranca. Se restaura la anterior."

@@ -25,6 +25,7 @@
 - Un fallo al copiar la base de datos se ignoraba, y la marcha atrás podía borrar la base de datos sin tener copia. Ahora ese fallo detiene la actualización y solo se restaura una copia completa.
 - La pregunta «¿Continuar?» se escribe en la terminal: con `2>archivo` no se veía y parecía que el script se colgaba.
 - `systemctl enable` ya no oculta sus errores.
+- Varios intentos seguidos podían agotar el límite de arranques de systemd e impedir que Talaia volviera a arrancar. El instalador limpia ese límite antes de arrancar el servicio al actualizar.
 
 **Sin verificar:** las pruebas INS-11 e INS-12 simulan los fallos en CI. No se han provocado en un Proxmox VE real, y la causa exacta del fallo observado allí no se pudo reproducir.
 
