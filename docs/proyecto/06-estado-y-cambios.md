@@ -14,9 +14,13 @@
 | 8 | Portainer: entornos y contenedores | Terminado y verificado con el Portainer del cliente, publicado en `v0.2.0` |
 | 9 | WGDashboard: túneles y peers | Terminado y verificado con el WGDashboard del cliente, publicado en `v0.2.0` |
 | 10 | OPNsense: estado de WireGuard | Terminado y verificado con el OPNsense del cliente y un peer conectado, publicado en `v0.2.1` |
-| 11 | Panel de un vistazo: estado global en la atalaya y bloques con aviso visibles | Terminado y verificado con el panel real del cliente; pendiente de fusionar |
+| 11 | Panel de un vistazo: estado global en la atalaya y bloques con aviso visibles | Terminado y verificado con el panel real del cliente, publicado en `v0.2.2` |
 
 ## Historial
+
+### `v0.2.2` (2026-11-09)
+
+Versión de mantenimiento con el hito 11, que resume el estado de todos los servicios en la cabecera del panel, y un instalador que ya no deja Talaia parado sin avisar si falla una actualización. Incluye los binarios para amd64 y arm64, las sumas de comprobación y el instalador, y se actualiza desde `v0.2.1` con `talaia-proxmox.sh update`.
 
 ### Actualización más robusta (2026-11-09)
 
