@@ -61,7 +61,7 @@ curl -fsSL https://github.com/izakdev/talaia/releases/latest/download/talaia-pro
 bash talaia-proxmox.sh update --ctid ID
 ```
 
-Hace una copia de la base de datos y del binario, y actualiza. **Si la versión nueva no arranca, vuelve sola a la anterior.** Las copias, hasta 3, quedan en `/var/lib/talaia/backups` dentro del contenedor.
+Hace una copia de la base de datos y del binario, y actualiza. **Si la versión nueva no arranca o falla algún paso, vuelve sola a la anterior**, te dice qué paso ha fallado y confirma qué versión sigue en marcha. Las copias, hasta 3, quedan en `/var/lib/talaia/backups` dentro del contenedor.
 
 Para actualizar el sistema del contenedor:
 

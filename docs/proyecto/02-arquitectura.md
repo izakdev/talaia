@@ -360,7 +360,8 @@ sequenceDiagram
 | Sin red dentro | El host descarga y empuja el binario, de modo que el contenedor no necesita acceso a Internet para instalar |
 | Servicio | Usuario `talaia`, sin privilegios ni capacidades, con el sistema de archivos protegido salvo `/var/lib/talaia`, y `GOMEMLIMIT=400MiB` |
 | Rutas | Binario en `/usr/local/bin/talaia`, configuración en `/etc/talaia/talaia.env` y datos en `/var/lib/talaia` |
-| Actualización | Para el servicio, copia la base de datos y el binario en `backups/`, y arranca la versión nueva. Si no responde, restaura ambos. Conserva 3 copias |
+| Actualización | Para el servicio, copia la base de datos y el binario en `backups/`, y arranca la versión nueva. Si no responde o falla cualquier paso con el servicio parado, indica el comando y la línea, restaura ambos si la copia está completa, vuelve a arrancar el servicio y termina con error. Si la copia no se completó, no se ha cambiado nada: la descarta y solo vuelve a arrancar. Conserva 3 copias |
+| Confirmación | La pregunta se escribe en `/dev/tty`, no en stderr. Sin terminal, hay que usar `--yes` |
 
 **Publicación del instalador:** cada versión incluye también el script.
 

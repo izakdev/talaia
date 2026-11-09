@@ -140,6 +140,42 @@ expect "servicio" "$(inside systemctl is-active talaia)" active
 expect "entrar tras restaurar" "$(api POST /api/auth/login "{\"username\":\"admin\",\"password\":\"$PASSWORD\"}")" 200
 pass "INS-06 Marcha atrás automática"
 
+# INS-11: si falla un paso con el servicio parado, lo dice y vuelve a dejar Talaia en marcha.
+# Los fallos simulados no escriben nada: el mensaje tiene que ser del instalador.
+expect_update_undone() {
+  local step="$1" copies line
+  copies="$(inside sh -c 'ls /var/lib/talaia/backups | wc -l')"
+  if "$INSTALLER" update --yes --ctid "$CT" --version v0.0.1 >"$WORK/out" 2>&1; then fail "$step: dio por buena una actualización fallida"; fi
+  grep -qE "Ha fallado un paso de la actualización \(línea [0-9]+, código [0-9]+\): .*$step" "$WORK/out" \
+    || { cat "$WORK/out" >&2; fail "$step: falta el paso que ha fallado"; }
+  # La línea indicada debe ser la del comando que ha fallado.
+  line="$(sed -n 's/.*(línea \([0-9]*\), código.*/\1/p' "$WORK/out")"
+  sed -n "${line}p" "$INSTALLER" | grep -qF "$step" || fail "$step: la línea $line no es la del paso"
+  grep -q "Sigue en marcha la versión v0.0.2" "$WORK/out" || { cat "$WORK/out" >&2; fail "$step: falta el aviso de restauración"; }
+  expect "$step: versión" "$(inside /usr/local/bin/talaia -version)" v0.0.2
+  expect "$step: servicio" "$(inside systemctl is-active talaia)" active
+  expect "$step: entrar" "$(api POST /api/auth/login "{\"username\":\"admin\",\"password\":\"$PASSWORD\"}")" 200
+  inside curl -sS -b /tmp/cookies "http://127.0.0.1:$PORT/api/admin/connections" | grep -q Prueba || fail "$step: se ha perdido la conexión"
+  expect "$step: copias" "$(inside sh -c 'ls /var/lib/talaia/backups | wc -l')" "$((copies + $2))"
+}
+STUB_FAIL_PUSH=/usr/local/bin/talaia expect_update_undone "pct push" 1
+STUB_FAIL_PUSH=/root/talaia-setup.sh expect_update_undone "pct push" 1
+STUB_FAIL_EXEC="bash /root/talaia-setup.sh" expect_update_undone "bash /root/talaia-setup.sh" 1
+# Sin copia completa no se toca la base de datos, y la copia a medias no se conserva.
+STUB_FAIL_EXEC="cp -a /usr/local/bin/talaia" expect_update_undone "cp -a /usr/local/bin/talaia" 0
+pass "INS-11 Marcha atrás si falla un paso con el servicio parado"
+
+# INS-12: la confirmación pregunta en la terminal, aunque stderr vaya a un archivo.
+printf 'n\n' | script -qec "$INSTALLER update --ctid $CT --version v0.0.1 2>$WORK/err" "$WORK/tty" >/dev/null || true
+grep -q "¿Continuar?" "$WORK/tty" || fail "la pregunta no aparece en la terminal"
+if grep -q "¿Continuar?" "$WORK/err"; then fail "la pregunta no debe ir a stderr"; fi
+grep -q "Cancelado" "$WORK/err" || { cat "$WORK/err" >&2; fail "falta el aviso de cancelación"; }
+if setsid "$INSTALLER" update --ctid "$CT" --version v0.0.1 >"$WORK/out" 2>&1 </dev/null; then fail "actualizó sin confirmar"; fi
+grep -q "Sin terminal para confirmar" "$WORK/out" || { cat "$WORK/out" >&2; fail "falta el motivo sin terminal"; }
+expect "versión sin cambios" "$(inside /usr/local/bin/talaia -version)" v0.0.2
+expect "servicio sin parar" "$(inside systemctl is-active talaia)" active
+pass "INS-12 Confirmación en la terminal"
+
 # INS-07: una suma incorrecta no crea nada.
 if "$INSTALLER" install --yes --ctid 901 --version v0.0.9 >"$WORK/out" 2>&1; then fail "aceptó una suma incorrecta"; fi
 grep -q "suma de comprobación no coincide" "$WORK/out" || { cat "$WORK/out" >&2; fail "falta el motivo"; }
@@ -160,4 +196,4 @@ CT=903
 expect "última versión" "$(inside /usr/local/bin/talaia -version)" v0.0.2
 pass "INS-09 Contenedor existente y última versión"
 
-echo "10 pruebas del instalador correctas"
+echo "12 pruebas del instalador correctas"

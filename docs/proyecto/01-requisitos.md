@@ -118,7 +118,7 @@ Verificado con un Home Assistant real en local y con la instalación del cliente
 | ID | Requisito | Hito | Estado |
 |---|---|---|---|
 | RF-60 | Un comando en el host Proxmox crea y configura un LXC autónomo, no privilegiado y con arranque automático | 6 | Implementado |
-| RF-61 | Un comando actualiza Talaia con copia de seguridad y vuelve a la versión anterior si la nueva no arranca | 6 | Implementado |
+| RF-61 | Un comando actualiza Talaia con copia de seguridad y vuelve a la versión anterior si la nueva no arranca o falla algún paso con el servicio parado | 6 | Implementado |
 | RF-62 | El primer arranque instalado está protegido con un código de un solo uso, para que nadie en la red cree antes el administrador | 6 | Implementado |
 
 ## Requisitos no funcionales

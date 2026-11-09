@@ -23,12 +23,16 @@ case "$command" in
     source="$1"
     target="$2"
     shift 2
+    # Fallo simulado, sin mensaje, de la copia a esa ruta.
+    if [[ "$target" == "${STUB_FAIL_PUSH:-}" ]]; then exit 1; fi
     docker cp -q "$source" "$name:$target"
     if [[ "${1:-}" == "--perms" ]]; then docker exec "$name" chmod "$2" "$target"; fi
     docker exec "$name" chown root:root "$target"
     ;;
   exec)
     [[ "$1" == "--" ]] && shift
+    # Fallo simulado, sin mensaje, de los comandos que contengan ese texto.
+    if [[ -n "${STUB_FAIL_EXEC:-}" && "$*" == *"$STUB_FAIL_EXEC"* ]]; then exit 1; fi
     docker exec -i "$name" "$@"
     ;;
   *)

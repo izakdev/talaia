@@ -28,6 +28,10 @@ FORCE=0
 
 WORK_DIR=""
 CREATED_CT=""
+CT_COMMAND=""
+# Copia de la actualización en curso, para poder deshacerla si falla un paso.
+UPDATE_BACKUP=""
+UPDATE_BACKUP_DONE=0
 
 log() { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33mAviso:\033[0m %s\n' "$*" >&2; }
@@ -180,6 +184,7 @@ ct_running() { pct status "$1" 2>/dev/null | grep -q 'running'; }
 ct_exec() {
   local id="$1"
   shift
+  CT_COMMAND="pct exec $id -- $*"
   pct exec "$id" -- "$@"
 }
 
@@ -240,7 +245,7 @@ CapabilityBoundingSet=
 WantedBy=multi-user.target
 UNIT
 systemctl daemon-reload
-systemctl enable talaia >/dev/null 2>&1
+systemctl --quiet enable talaia
 INNER
 }
 
@@ -282,9 +287,11 @@ container_ip() {
 
 confirm() {
   ((ASSUME_YES == 1)) && return 0
-  local answer
-  if [[ ! -r /dev/tty ]]; then die "Sin terminal para confirmar. Usa --yes."; fi
-  read -r -p "$1 [s/N] " answer </dev/tty
+  local answer=""
+  if ! { : >/dev/tty; } 2>/dev/null; then die "Sin terminal para confirmar. Usa --yes."; fi
+  # A la terminal y no a stderr: con 2>archivo, la pregunta desaparecería y parecería colgado.
+  printf '%s [s/N] ' "$1" >/dev/tty
+  read -r answer </dev/tty || true
   [[ "$answer" =~ ^[sSyY] ]] || die "Cancelado."
 }
 
@@ -364,6 +371,51 @@ EOF
   echo "El código solo sirve una vez. Hasta usarlo, nadie más puede crear el administrador."
 }
 
+# Lo llama el trap ERR, que se ejecuta en la función donde falló el comando.
+update_step_failed() {
+  local status="$1" command="$2" line="$3"
+  # $BASH_COMMAND llega sin expandir: de ct_exec interesa qué le pidieron y desde dónde.
+  if [[ "${FUNCNAME[1]:-}" == ct_exec ]]; then
+    command="$CT_COMMAND"
+    line="${BASH_LINENO[1]}"
+  fi
+  warn "Ha fallado un paso de la actualización (línea $line, código $status): $command"
+  rollback_update
+}
+
+disarm_update_traps() {
+  trap - ERR INT TERM HUP
+  set +E
+}
+
+# Deshace la actualización y termina con un error. Si la copia no se completó, aún no se
+# había cambiado nada: se descarta la copia a medias y basta con volver a arrancar.
+rollback_update() {
+  local hint="" running
+  disarm_update_traps
+  set +e
+  # Una interrupción o una sesión cortada no deben dejar la marcha atrás a medias.
+  trap '' INT TERM HUP
+  if ! ct_running "$CTID"; then pct start "$CTID"; sleep 5; fi
+  ct_exec "$CTID" systemctl stop talaia
+  if ((UPDATE_BACKUP_DONE == 1)); then
+    hint=" Copia de seguridad en $UPDATE_BACKUP, dentro del contenedor."
+    ct_exec "$CTID" cp -a "$UPDATE_BACKUP/talaia.previous" /usr/local/bin/talaia \
+      || warn "No se pudo restaurar el binario anterior."
+    ct_exec "$CTID" bash -c "[[ ! -e '$UPDATE_BACKUP/talaia.db' ]] || { rm -f '$DATA_DIR'/talaia.db* && cp -a '$UPDATE_BACKUP'/talaia.db* '$DATA_DIR'/; }" \
+      || warn "No se pudo restaurar la base de datos."
+  elif [[ -n "$UPDATE_BACKUP" ]]; then
+    ct_exec "$CTID" rm -rf "$UPDATE_BACKUP"
+  fi
+  ct_exec "$CTID" systemctl start talaia
+  if wait_healthy "$CTID"; then
+    running="$(ct_exec "$CTID" /usr/local/bin/talaia -version 2>/dev/null || echo "desconocida")"
+    die "Actualización cancelada. Sigue en marcha la versión $running.$hint"
+  fi
+  show_failure_logs "$CTID"
+  die "Tampoco arranca la versión anterior.$hint"
+}
+
 cmd_update() {
   local arch current new stamp backup
   [[ -n "$CTID" ]] || die "Indica el contenedor con --ctid."
@@ -386,11 +438,21 @@ cmd_update() {
 
   stamp="$(date +%Y%m%d-%H%M%S)"
   backup="$DATA_DIR/backups/$stamp"
-  ct_exec "$CTID" systemctl stop talaia
-  ct_exec "$CTID" install -d -m 0700 -o talaia -g talaia "$DATA_DIR/backups" "$backup"
-  ct_exec "$CTID" bash -c "cp -a '$DATA_DIR'/talaia.db* '$backup'/ 2>/dev/null || true"
-  ct_exec "$CTID" cp -a /usr/local/bin/talaia "$backup/talaia.previous"
 
+  # Desde aquí, Talaia está parado: ningún fallo puede terminar sin volver a arrancarlo.
+  set -E
+  trap 'update_step_failed "$?" "$BASH_COMMAND" "$LINENO"' ERR
+  trap 'warn "Actualización interrumpida."; rollback_update' INT TERM HUP
+
+  log "Parando Talaia y haciendo la copia de seguridad"
+  ct_exec "$CTID" systemctl stop talaia
+  UPDATE_BACKUP="$backup"
+  ct_exec "$CTID" install -d -m 0700 -o talaia -g talaia "$DATA_DIR/backups" "$backup"
+  ct_exec "$CTID" bash -c "[[ ! -e '$DATA_DIR/talaia.db' ]] || cp -a '$DATA_DIR'/talaia.db* '$backup'/"
+  ct_exec "$CTID" cp -a /usr/local/bin/talaia "$backup/talaia.previous"
+  UPDATE_BACKUP_DONE=1
+
+  log "Instalando la versión nueva"
   pct push "$CTID" "$WORK_DIR/talaia" /usr/local/bin/talaia --perms 0755
   push_setup_and_run "$CTID" ""
   ct_exec "$CTID" systemctl start talaia
@@ -398,18 +460,13 @@ cmd_update() {
   if ! wait_healthy "$CTID"; then
     warn "La versión nueva no arranca. Se restaura la anterior."
     show_failure_logs "$CTID"
-    ct_exec "$CTID" systemctl stop talaia || true
-    ct_exec "$CTID" cp -a "$backup/talaia.previous" /usr/local/bin/talaia
-    ct_exec "$CTID" bash -c "rm -f '$DATA_DIR'/talaia.db*; cp -a '$backup'/talaia.db* '$DATA_DIR'/ 2>/dev/null || true"
-    ct_exec "$CTID" systemctl start talaia
-    if wait_healthy "$CTID"; then
-      die "Actualización cancelada. Sigue en marcha la versión $current."
-    fi
-    die "Tampoco arranca la versión anterior. Copia de seguridad en $backup, dentro del contenedor."
+    rollback_update
   fi
+  disarm_update_traps
 
-  # Conserva solo las copias más recientes.
-  ct_exec "$CTID" bash -c "cd '$DATA_DIR/backups' && ls -1 | sort -r | tail -n +$((BACKUPS_KEPT + 1)) | xargs -r rm -rf"
+  # Conserva solo las copias más recientes. Talaia ya funciona: si falla, no es grave.
+  ct_exec "$CTID" bash -c "cd '$DATA_DIR/backups' && ls -1 | sort -r | tail -n +$((BACKUPS_KEPT + 1)) | xargs -r rm -rf" \
+    || warn "No se pudieron borrar las copias antiguas de $DATA_DIR/backups."
   log "Talaia actualizado a $new. Copia de la versión anterior en $backup, dentro del contenedor."
 }
 

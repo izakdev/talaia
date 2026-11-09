@@ -17,6 +17,16 @@
 
 ## Historial
 
+### Actualización más robusta (2026-11-09)
+
+**Corregido:**
+- Si fallaba un paso de `talaia-proxmox.sh update` con el servicio parado, el script podía terminar sin ningún mensaje y dejar Talaia parado. Ahora indica el comando y la línea, restaura la copia si está completa, vuelve a arrancar el servicio y termina con error. También lo hace si se interrumpe o se corta la sesión.
+- Un fallo al copiar la base de datos se ignoraba, y la marcha atrás podía borrar la base de datos sin tener copia. Ahora ese fallo detiene la actualización y solo se restaura una copia completa.
+- La pregunta «¿Continuar?» se escribe en la terminal: con `2>archivo` no se veía y parecía que el script se colgaba.
+- `systemctl enable` ya no oculta sus errores.
+
+**Sin verificar:** las pruebas INS-11 e INS-12 simulan los fallos en CI. No se han provocado en un Proxmox VE real, y la causa exacta del fallo observado allí no se pudo reproducir.
+
 ### Herramientas de desarrollo (2026-11-09)
 
 **Añadido:**
