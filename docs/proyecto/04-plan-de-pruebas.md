@@ -202,7 +202,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-34 | Alta de WGDashboard | RF-10, RF-91 |
 | E2E-35 | WGDashboard en el panel: túneles, peers y estados | RF-20, RF-90 |
 | E2E-36 | WireGuard en el bloque de OPNsense, opcional y sin nombres de peers | RF-20, RF-73, RF-74 |
-| E2E-37 | La atalaya resume el peor estado y lleva al bloque | RF-26 |
+| E2E-37 | La atalaya resume el peor estado y la antigüedad, y lleva al bloque | RF-26 |
 
 Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las discrepancias con el servicio real las cubren las verificaciones manuales.
 

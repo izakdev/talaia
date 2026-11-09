@@ -261,6 +261,7 @@ dialog::backdrop { background: rgb(7 43 53 / 0.6); }
 .watch { font-size: 0.9375rem; color: var(--ink); line-height: 1.4; padding-block: 0.25rem; }
 .watch .service-state { font-size: inherit; }
 .watch .service-state svg { width: 0.875rem; height: 0.875rem; }
+.watch-age { color: var(--ink-soft); font-size: 0.8125rem; }
 .watch-item { font-weight: 600; text-decoration-thickness: 2px; text-underline-offset: 3px; }
 .watch-item.warn { text-decoration-color: var(--alert-warn); }
 .watch-item.bad { text-decoration-color: var(--alert-bad); }
@@ -271,7 +272,7 @@ dialog::backdrop { background: rgb(7 43 53 / 0.6); }
 .lookout-main { width: 100%; max-width: 92rem; margin-inline: auto; padding: clamp(1.25rem, 3vw, 2.5rem) clamp(1rem, 4vw, 3rem) 3rem; display: grid; gap: 1.5rem; align-content: start; }
 .live-lost { color: var(--warn); font-weight: 550; }
 .panel-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-rows: minmax(0.5rem, auto); column-gap: 1.5rem; }
-.panel-grid > div { display: flex; min-width: 0; padding-bottom: 1.5rem; }
+.panel-grid > div { display: flex; align-items: flex-start; min-width: 0; padding-bottom: 1.5rem; }
 .page-tabs { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; border-bottom: 1px solid var(--line); }
 .page-tab { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0.25rem 0.125rem; color: var(--ink-soft); background: none; border: 0; border-bottom: 3px solid transparent; border-radius: 0; font-weight: 500; text-decoration: none; }
 .page-tab:hover { color: var(--ink); }
@@ -298,7 +299,10 @@ dialog::backdrop { background: rgb(7 43 53 / 0.6); }
 .service-state.muted { color: var(--ink-soft); font-weight: 500; }
 .service-notice { color: var(--danger); font-size: 0.9375rem; }
 .service.stale .figures, .service.stale .tops { opacity: 0.62; }
-.figures { display: flex; flex-wrap: wrap; gap: 0.75rem 2.5rem; margin: 0; padding-block: 1rem; border-block: 1px solid var(--line); }
+/* Secciones de un bloque: una línea encima de cada una, nunca debajo. */
+.figures, .ha-section, .tops, .nodes { border-top: 1px solid var(--line); padding-top: 1rem; }
+.ha-section .figures { border-top: 0; padding-top: 0.25rem; }
+.figures { display: flex; flex-wrap: wrap; gap: 0.75rem 2.5rem; margin: 0; }
 .figures div { display: grid; align-content: start; }
 .figures.compact { gap: 0.75rem 1.5rem; }
 .figures.compact dd { font-size: clamp(1.375rem, 2.1vw, 1.625rem); }
@@ -334,6 +338,7 @@ details > summary { cursor: pointer; list-style-position: outside; margin-left: 
 .guest-id { color: var(--ink-soft); }
 .no-guests { color: var(--ink-soft); font-size: 0.875rem; margin: 0.25rem 0 0.5rem 1rem; }
 .ha-section { display: grid; gap: 0.25rem; }
+.ha-section h3 + .figures { margin-top: 0.25rem; }
 .ha-section h3 { margin: 0; font-size: 0.9375rem; font-weight: 600; }
 .ha-entities { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr)); gap: 0 2.5rem; }
 .ha-entities li { display: flex; justify-content: space-between; gap: 1rem; padding-block: 0.1875rem; font-size: 0.9375rem; }
