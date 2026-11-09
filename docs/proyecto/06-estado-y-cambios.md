@@ -18,6 +18,11 @@
 
 ## Historial
 
+### Espaciado de cifras y direcciones (2026-11-09)
+
+**Corregido:**
+- Las direcciones de Conexiones y algunos valores de los bloques (tops de AdGuard, tabla de VM y LXC, entidades de Home Assistant) se veían con espacios alrededor de los puntos y las comas, como `https : //…`. Usaban dígitos de ancho fijo, que en Schibsted Grotesk también ensanchan la puntuación (ver DEC-36). Ahora solo los usan los porcentajes de las barras de los nodos, que no llevan puntuación.
+
 ### `v0.2.2` (2026-11-09)
 
 Versión de mantenimiento con el hito 11, que resume el estado de todos los servicios en la cabecera del panel, y un instalador que ya no deja Talaia parado sin avisar si falla una actualización. Incluye los binarios para amd64 y arm64, las sumas de comprobación y el instalador, y se actualiza desde `v0.2.1` con `talaia-proxmox.sh update`.
