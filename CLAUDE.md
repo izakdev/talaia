@@ -28,6 +28,14 @@ make e2e
 make docs-check
 ```
 
+## Herramientas de Claude Code
+
+En `.claude/`, versionadas con el proyecto:
+
+- Skills: `publicar` (publicar una versión), `nueva-integracion` (añadir un servicio o una opción) y `explorar-api` (consultar la API real sin ver secretos).
+- Subagente `revisor-de-hito`: revisa la documentación obligatoria, las fugas y la verificación real antes del commit o del PR.
+- Hooks: bloquean IP domésticas y las expresiones de `.claude/datos-laboratorio.local` (lista privada, fuera de Git) al escribir en el repositorio; formatean el Go editado y ejecutan `docs-check` al tocar la documentación.
+
 ## Convenciones
 
 - Una rama y un pull request por hito; si el anterior no está fusionado, la rama parte de él.
