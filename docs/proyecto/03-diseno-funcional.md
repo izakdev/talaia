@@ -53,7 +53,9 @@ Mientras no exista un administrador, todas las rutas muestran el asistente de pr
 
 **Con servicios:** cada página muestra sus bloques en la posición elegida en el editor. Con más de una página aparecen pestañas.
 
-- **Recuadro:** cada bloque tiene fondo, borde y una sombra ligera, para distinguirlo de los demás. Los bloques de una misma fila igualan su altura.
+- **Recuadro:** cada bloque tiene fondo y borde, sin sombra. Si su estado es un aviso o un fallo, el borde superior es grueso y ámbar o rojo, para verlo a distancia. Los bloques de una misma fila igualan su altura.
+- **Resumen en la cabecera:** junto al nombre, el estado de todos los servicios del panel, de cualquier página. Si todos están bien, «Los N servicios están en orden»; si no, «N servicios necesitan atención:» y sus nombres, con los fallos primero. Cada nombre lleva a su bloque, en su página, y le da el foco. Los servicios en neutro, como «Sin túneles», no cuentan como avisos.
+- **Atalaya:** la luz y el haz de la cabecera toman el color del peor estado: el acento elegido si todo va bien, ámbar con avisos y rojo con fallos, con el haz más intenso y la línea inferior del mismo color. Al cambiar el peor estado, el haz vuelve a barrer una vez, salvo con movimiento reducido.
 - **Altura:** un bloque crece si su contenido lo necesita, sin solaparse.
 - **Pantallas de menos de 900 px:** los bloques se apilan en una columna, de arriba abajo y de izquierda a derecha.
 - **Página vacía:** indica que no tiene servicios.
@@ -65,6 +67,7 @@ Mientras no exista un administrador, todas las rutas muestran el asistente de pr
 | Actualización | En vivo. Si se pierde, muestra un aviso y reintenta |
 | Antigüedad | «Actualizado hace…», recalculado cada 10 segundos |
 | Estado | Se indica con texto y forma, no solo con color |
+| Cifras | Un escalón por debajo del nombre y del estado, para que el estado se lea primero |
 
 **Estados de un bloque de AdGuard:**
 

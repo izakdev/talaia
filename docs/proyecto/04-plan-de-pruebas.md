@@ -179,7 +179,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-11 | Editar y eliminar conexiones | RF-10, RF-14 |
 | E2E-12 | Cambio de idioma recordado | RF-05 |
 | E2E-24 | Editor: arrastrar, controles de teclado, descartar y guardar | RF-22, RNF-08 |
-| E2E-25 | Varias páginas y servicios fuera del panel | RF-22, RF-23 |
+| E2E-25 | Varias páginas, servicios fuera del panel y aviso desde otra página | RF-22, RF-23, RF-26 |
 | E2E-26 | Tema y color de acento | RF-24 |
 | E2E-27 | Inicio de sesión opcional para ver el panel | RF-07 |
 | E2E-28 | Cambio y recuperación de contraseña | RF-08 |
@@ -202,6 +202,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-34 | Alta de WGDashboard | RF-10, RF-91 |
 | E2E-35 | WGDashboard en el panel: túneles, peers y estados | RF-20, RF-90 |
 | E2E-36 | WireGuard en el bloque de OPNsense, opcional y sin nombres de peers | RF-20, RF-73, RF-74 |
+| E2E-37 | La atalaya resume el peor estado y lleva al bloque | RF-26 |
 
 Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las discrepancias con el servicio real las cubren las verificaciones manuales.
 
@@ -243,6 +244,7 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 | 2026-11-04 | `v0.1.0` | Proxmox VE real del cliente, actualización de `v0.1.0-rc.1` a `v0.1.0` con `--binary` | Correcto según la salida del instalador: cambio de versión con copia de seguridad; repetir el comando no hace nada porque ya está en esa versión. No se han vuelto a comprobar los datos tras este cambio |
 | 2026-11-04 | `v0.1.0` | Proxmox VE real del cliente, instalador sin `--binary` | Correcto según la salida del instalador: descarga desde GitHub, suma comprobada (si no coincide, no instala) y reinstalación con `--force` y copia de seguridad, dos veces. Después, captura del cliente con su panel y datos actuales de Home Assistant y Proxmox; el contenido del bloque de AdGuard no se ve en ella |
 | 2026-11-06 | Hito 8 | Portainer 2.39.1 real del cliente, con Talaia en Proxmox | Correcto según la captura y la confirmación del cliente: dos entornos en línea, 11 de 12 contenedores en marcha, 7 stacks, filas por entorno, antigüedad del recuento y versión |
+| 2026-11-09 | Hito 11 (sin confirmar, `v0.2.1-6-g933d621-dirty`) | Panel real del cliente con seis servicios, instalado con `talaia-proxmox.sh update --binary` | Correcto según tres capturas del cliente: «Los 6 servicios están en orden» con la atalaya del acento elegido; con la protección de AdGuard desactivada, «Necesita atención: Adguard» con el triángulo, haz y línea inferior en ámbar, y el bloque de AdGuard con su borde superior ámbar; cifras más pequeñas en todos los bloques. No se ha visto un fallo real (rojo) ni el salto a un bloque de otra página |
 | 2026-11-09 | `v0.2.1` | Proxmox VE real del cliente, actualización con el instalador descargado de GitHub y sin `--binary` | Correcto según la salida del instalador y una captura del cliente: descarga de la última versión para amd64, paso de `v0.2.0-4-g016a514` a `v0.2.1` y copia de seguridad de la anterior. En la captura, el pie indica `v0.2.1` y los bloques de Portainer, Proxmox y AdGuard muestran datos actuales en verde; el bloque de OPNsense no se ve en ella |
 | 2026-11-07 | `v0.2.1` | Versión publicada por `release.yml` | Correcto: no preliminar y marcada como la última, con ambos binarios, sumas e instalador. Descargados desde `releases/latest/download`: sumas correctas, binarios ELF amd64 y arm64, el amd64 indica `v0.2.1` e incluye el WireGuard de OPNsense, y el instalador es igual al del repositorio. Aún no se ha instalado esta versión en un Proxmox real |
 | 2026-11-07 | Hito 10 (`016a514`) | OPNsense 26.7.1_1 real del cliente, con una instancia y un peer conectado, y Talaia actualizado en su Proxmox VE con el instalador y `--binary` | Correcto según la salida del instalador y una captura del cliente: paso de `v0.2.0` a `v0.2.0-4-g016a514` con copia de seguridad, sección WireGuard con la instancia «Activa, 1/1 peers conectados», su tráfico (75,8 KiB recibidos y 85,3 KiB enviados) y estado general «Gateways en línea». No se ha visto una instancia caída ni un peer sin contacto reciente, ni se ha revisado la API pública con este servicio |
@@ -313,6 +315,7 @@ Los requisitos pendientes se probarán en su hito.
 | RF-08 | `TestChangePassword`, `TestPasswordChangeAndReset`, E2E-28, INS-03 |
 | RF-22 | `TestPanelSaveAndValidation`, `TestUnplacedConnectionIsHidden`, `TestNewConnectionsFillTwoColumns`, `TestPanelSaveAndCascade`, E2E-24, E2E-25 |
 | RF-23 | `TestPanelSaveAndValidation`, `TestPanelSaveAndCascade`, E2E-25 |
+| RF-26 | E2E-25, E2E-37 |
 | RF-24 | `TestSettingsValidation`, `TestSettingsDefaultsAndSave`, E2E-26 |
 | RF-60 | INS-01, INS-07, INS-08, INS-09, INS-10 |
 | RF-70 | `TestCollect`, `TestParseSize`, E2E-31 |

@@ -17,6 +17,8 @@
   --error-on-sea: #ffc2bb;
   --good: #1a6b4f;
   --focus: #0b7c94;
+  --alert-warn: #e07b00;
+  --alert-bad: #d6332a;
   font-family: "Schibsted Grotesk Variable", system-ui, sans-serif;
   color: var(--ink);
   background: var(--page);
@@ -37,6 +39,8 @@
     --warn: #ffcb66;
     --good: #7fd8b2;
     --focus: #6fd3e6;
+    --alert-warn: #ffa53d;
+    --alert-bad: #ff6b5e;
     color-scheme: dark;
   }
 }
@@ -55,6 +59,8 @@
     --warn: #ffcb66;
     --good: #7fd8b2;
     --focus: #6fd3e6;
+    --alert-warn: #ffa53d;
+    --alert-bad: #ff6b5e;
     color-scheme: dark;
 }
 :root[data-theme="light"] { color-scheme: light; }
@@ -112,8 +118,8 @@ label { display: grid; gap: 0.3rem; font-weight: 550; font-size: 0.9375rem; }
 .masonry { fill: var(--masonry); }
 .door { fill: var(--door); }
 .beacon { fill: var(--beacon); }
-.beam { fill: var(--beacon); opacity: 0.2; pointer-events: none; transform-origin: 64px 30px; animation: sweep 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
-@keyframes sweep { from { transform: rotate(14deg); opacity: 0; } to { transform: rotate(0); opacity: 0.2; } }
+.beam { fill: var(--beacon); opacity: var(--beam-opacity, 0.2); pointer-events: none; transform-origin: 64px 30px; animation: sweep 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@keyframes sweep { from { transform: rotate(14deg); opacity: 0; } to { transform: rotate(0); opacity: var(--beam-opacity, 0.2); } }
 .sea { background: var(--sea); color: var(--on-sea); padding: clamp(1.75rem, 5vw, 3.5rem) clamp(1rem, 8vw, 7rem) 3rem; }
 .sea-content { display: grid; gap: 1.25rem; justify-items: start; max-width: 30rem; }
 .sea-content > p { color: var(--on-sea-soft); font-size: 1.0625rem; }
@@ -247,7 +253,17 @@ dialog::backdrop { background: rgb(7 43 53 / 0.6); }
   min-height: 6.5rem; padding: 0.5rem clamp(1rem, 4vw, 3rem);
   background: var(--sky); border-bottom: 3px solid var(--sea); overflow: hidden;
 }
-.lookout-sky .wordmark { margin-right: auto; margin-left: 3.5rem; }
+.lookout-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 1.25rem; margin-right: auto; margin-left: 3.5rem; min-width: 0; }
+/* El faro avisa: la luz y el haz toman el color del peor estado del panel. */
+.lookout-sky[data-watch="warn"] { --beacon: var(--alert-warn); border-bottom-color: var(--alert-warn); }
+.lookout-sky[data-watch="bad"] { --beacon: var(--alert-bad); border-bottom-color: var(--alert-bad); }
+.lookout-sky[data-watch="warn"] .beam, .lookout-sky[data-watch="bad"] .beam { --beam-opacity: 0.38; }
+.watch { font-size: 0.9375rem; color: var(--ink); line-height: 1.4; padding-block: 0.25rem; }
+.watch .service-state { font-size: inherit; }
+.watch .service-state svg { width: 0.875rem; height: 0.875rem; }
+.watch-item { font-weight: 600; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.watch-item.warn { text-decoration-color: var(--alert-warn); }
+.watch-item.bad { text-decoration-color: var(--alert-bad); }
 .lookout-sky .tower { left: clamp(1rem, 4vw, 3rem); height: 88%; }
 .lookout-sky a.quiet { display: inline-flex; align-items: center; min-height: 2.75rem; text-decoration: none; }
 .lookout-sky a.quiet:hover { text-decoration: underline; }
@@ -264,14 +280,17 @@ dialog::backdrop { background: rgb(7 43 53 / 0.6); }
   display: grid; flex: 1; align-content: start; gap: 1rem; min-width: 0;
   padding: 1.25rem 1.5rem; background: var(--surface);
   border: 1px solid var(--line); border-radius: 4px;
-  box-shadow: 0 1px 3px rgb(7 43 53 / 0.08);
+  scroll-margin-top: 1rem;
 }
+.service.tone-warn { border-top: 5px solid var(--alert-warn); }
+.service.tone-bad { border-top: 5px solid var(--alert-bad); }
+.service:focus-visible { outline-offset: 3px; }
 .service-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.25rem 1rem; }
 .service-link { display: inline-flex; align-items: center; gap: 0.375rem; color: inherit; text-decoration: none; }
 .service-link:hover { text-decoration: underline; }
 .service-link svg { width: 0.875rem; height: 0.875rem; flex: none; color: var(--ink-soft); }
 .service-head h2 { font-size: 1.375rem; letter-spacing: -0.01em; overflow-wrap: anywhere; }
-.service-state { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; }
+.service-state { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; font-size: 1.0625rem; }
 .service-state svg { width: 1rem; height: 1rem; flex: none; }
 .service-state.good { color: var(--good); }
 .service-state.warn { color: var(--warn); }
@@ -282,10 +301,10 @@ dialog::backdrop { background: rgb(7 43 53 / 0.6); }
 .figures { display: flex; flex-wrap: wrap; gap: 0.75rem 2.5rem; margin: 0; padding-block: 1rem; border-block: 1px solid var(--line); }
 .figures div { display: grid; align-content: start; }
 .figures.compact { gap: 0.75rem 1.5rem; }
-.figures.compact dd { font-size: clamp(1.5rem, 2.4vw, 1.875rem); }
+.figures.compact dd { font-size: clamp(1.375rem, 2.1vw, 1.625rem); }
 .figures dt { color: var(--ink-soft); font-size: 0.875rem; }
 .figures dd small { margin-top: 0.125rem; font-size: 0.8125rem; font-weight: 400; letter-spacing: 0; line-height: 1.3; color: var(--ink-soft); }
-.figures dd { margin: 0; font-size: clamp(1.75rem, 3vw, 2.25rem); line-height: 1.15; font-weight: 650; letter-spacing: -0.02em; }
+.figures dd { margin: 0; font-size: clamp(1.5rem, 2.5vw, 1.875rem); line-height: 1.15; font-weight: 600; letter-spacing: -0.015em; }
 .tops { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 1rem 2.5rem; }
 .tops h3 { margin: 0 0 0.25rem; font-size: 0.9375rem; font-weight: 600; }
 .tops ol { list-style: none; margin: 0; padding: 0; }
@@ -330,6 +349,8 @@ details > summary { cursor: pointer; list-style-position: outside; margin-left: 
   .panel-grid > div { grid-column: 1 / -1 !important; grid-row: auto !important; }
 }
 @media (max-width: 720px) {
+  .lookout-sky { flex-wrap: wrap; justify-content: flex-end; }
+  .lookout-title { flex-basis: 100%; display: grid; gap: 0; margin-left: 3rem; padding-top: 0.25rem; }
   .node-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .node-name, .node-offline { grid-column: 1 / -1; }
   .connections li { grid-template-columns: 1fr; }

@@ -117,6 +117,8 @@ Cuando hay servicios, cada uno tiene su propio bloque. Su nombre es un enlace qu
 
 ![Panel con un servicio de AdGuard](img/07-panel.png)
 
+**De un vistazo:** junto al nombre de Talaia verás si todo va bien, por ejemplo «Los 6 servicios están en orden». Si algún servicio tiene un aviso o falla, la cabecera lo dice y nombra cada servicio, aunque esté en otra página; pulsa un nombre para ir a su bloque. La luz de la atalaya también cambia: ámbar con avisos y roja con fallos. Esos bloques llevan además una franja del mismo color en su borde superior.
+
 **Estado de AdGuard:**
 
 | Indicador | Significado |
@@ -186,7 +188,7 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 
 Solo aparecen las entidades que elijas. Los sensores de potencia y energía van en **Consumos** y el resto en **Entidades**. Los consumos no se suman, para no contar dos veces un medidor general y sus enchufes: si quieres un total, crea un sensor agregado en Home Assistant y elígelo aquí.
 
-**Si un servicio falla,** su bloque indica el motivo y mantiene atenuado el último dato conocido, junto con su antigüedad. Se recupera solo cuando el servicio vuelve.
+**Si un servicio falla,** la cabecera y la atalaya se ponen en rojo, y su bloque indica el motivo y mantiene atenuado el último dato conocido, junto con su antigüedad. Se recupera solo cuando el servicio vuelve.
 
 ![Bloque de un servicio con fallos](img/09-panel-con-fallos.png)
 
