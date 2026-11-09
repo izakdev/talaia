@@ -180,3 +180,8 @@ Cada decisión recoge su motivo y sus consecuencias. Si una decisión cambia, se
 - **Contexto:** OPNsense incluye WireGuard y da su estado en `/api/wireguard/service/show`, pero necesita el privilegio «VPN: WireGuard: Status», que además permite arrancar, parar y reconfigurar el servicio. Muchas instalaciones no usan WireGuard.
 - **Decisión:** mostrarlo solo si se activa la opción «Mostrar el estado de WireGuard», con los mismos criterios que WGDashboard (DEC-33): por instancia, estado, peers conectados sobre el total y tráfico, sin nombres de peers. Una instancia caída da un aviso ámbar, por debajo de un gateway con fallos.
 - **Consecuencias:** las conexiones existentes no cambian ni reciben avisos de privilegios nuevos. Quien active la opción debe añadir el privilegio, y el manual avisa de su alcance. Talaia solo usa `GET`.
+
+## DEC-36: el estado global, en la atalaya
+- **Contexto:** el panel debe decir de un vistazo si algo va mal, pero cada bloque daba su estado solo en su esquina, y un fallo en otra página no se veía. Las cifras grandes, todas del mismo peso, competían con el estado.
+- **Decisión:** la cabecera resume el peor estado de todos los servicios del panel y nombra los que necesitan atención; la luz y el haz de la atalaya toman su color. Los bloques con aviso o fallo llevan un borde superior grueso de ese color y los demás pierden la sombra. Las cifras bajan un escalón. El cálculo del estado es el mismo para el bloque y para la cabecera.
+- **Consecuencias:** con el acento ámbar por defecto, un aviso apenas cambia el color de la luz, así que el aviso se lee en el texto, en el triángulo, en la intensidad del haz y en la línea inferior. Las cifras no usan dígitos de ancho fijo, porque en Schibsted Grotesk separan la coma decimal.

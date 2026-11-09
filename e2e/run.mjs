@@ -198,6 +198,25 @@ const scenarios = [
     await adguard.start();
     await page.getByText("Protección activa").waitFor();
   }],
+  ["E2E-37", "La atalaya resume el peor estado y lleva al bloque", async () => {
+    const sky = page.locator(".lookout-sky");
+    await sky.getByText("El servicio está en orden").waitFor();
+    assert.equal(await sky.getAttribute("data-watch"), "good");
+    assert.equal(await page.locator(".service.tone-good").count(), 1);
+    adguard.state.protection = false;
+    await sky.getByText("Necesita atención:").waitFor();
+    assert.equal(await sky.getAttribute("data-watch"), "warn");
+    assert.equal(await page.locator(".service.tone-warn").count(), 1);
+    adguard.state.protection = true;
+    await adguard.stop();
+    await page.locator('.lookout-sky[data-watch="bad"]').waitFor();
+    assert.equal(await page.locator(".service.tone-bad").count(), 1);
+    await sky.getByRole("link", { name: "AdGuard principal" }).click();
+    await page.waitForFunction(() => document.activeElement?.id?.startsWith("servicio-"));
+    assert.match(await page.evaluate(() => document.activeElement.innerText), /AdGuard principal/);
+    await adguard.start();
+    await sky.getByText("El servicio está en orden").waitFor();
+  }],
   ["E2E-10", "Conexión guardada con un servicio inaccesible", async () => {
     await toAdmin();
     await page.getByRole("link", { name: "Añadir conexión" }).click();
@@ -435,7 +454,7 @@ const scenarios = [
     assert.ok(columns.includes("1 / span 8") || columns.some((c) => c.endsWith("span 8")), String(columns));
     await page.getByRole("link", { name: "Administración" }).click();
   }],
-  ["E2E-25", "Varias páginas y servicios fuera del panel", async () => {
+  ["E2E-25", "Varias páginas, servicios fuera del panel y aviso desde otra página", async () => {
     await toEditor();
     await page.getByRole("button", { name: "Añadir página" }).click();
     await page.getByLabel("Nombre de la página").fill("Red");
@@ -459,6 +478,15 @@ const scenarios = [
     await page.reload();
     await page.locator(".panel-grid .service", { hasText: "AdGuard principal" }).waitFor();
     assert.equal(await page.locator(".panel-grid .service", { hasText: "Clúster de casa" }).count(), 0);
+    // Un servicio de otra página que falla se ve en la cabecera y su enlace lleva a esa página.
+    await tabs.getByRole("link", { name: "Inicio" }).click();
+    await adguard.stop();
+    const sky = page.locator(".lookout-sky");
+    await sky.getByRole("link", { name: "AdGuard principal" }).click();
+    await page.locator(".panel-grid .service.tone-bad", { hasText: "AdGuard principal" }).waitFor();
+    assert.match(page.url(), /\/p\//);
+    await adguard.start();
+    await page.locator('.lookout-sky[data-watch="good"]').waitFor();
 
     // Deja una única página con todo, para los escenarios siguientes.
     await page.getByRole("link", { name: "Administración" }).click();
