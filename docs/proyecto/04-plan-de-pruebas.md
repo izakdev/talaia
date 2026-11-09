@@ -222,6 +222,8 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 | INS-08 | Una instalación fallida elimina el contenedor creado | RF-60 |
 | INS-09 | No reutiliza ni borra un contenedor existente; por defecto instala la última versión | RF-60 |
 | INS-10 | Rechaza opciones no válidas sin tocar nada | RF-60 |
+| INS-11 | Si falla un paso con el servicio parado (`pct push`, configuración o copia), indica el comando y la línea, y deja en marcha la versión anterior con sus datos, sin conservar copias incompletas | RF-61 |
+| INS-12 | La confirmación pregunta en la terminal aunque stderr vaya a un archivo, y sin terminal se niega sin parar el servicio | RF-61 |
 
 ## Verificaciones manuales
 
@@ -270,7 +272,7 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 - **WGDashboard real, casos no probados:** peers conectados, varios túneles y túneles AmneziaWG. Solo se han probado con el simulador. Tampoco se ha revisado la API pública con este servicio, aunque la cubren `TestWGDashboardDataHidesInfrastructure` y E2E-14.
 - **Agentes Edge y contenedores con problemas en un Portainer real.** Solo se han probado con el simulador.
 - **OPNsense real, casos no probados:** gateway degradado o caído, comparación de las cifras con su interfaz y nombres exactos de los privilegios mínimos.
-- **Marcha atrás automática en un Proxmox VE real.** Solo se ha probado en CI (INS-06).
+- **Marcha atrás automática en un Proxmox VE real.** Solo se ha probado en CI (INS-06 e INS-11).
 - **Instalación nueva con descarga desde GitHub en un Proxmox VE real.** La descarga se ha probado al actualizar; las instalaciones reales usaron `--binary`.
 - **Arrastrar en pantallas táctiles.** Solo se ha probado con ratón; los controles de teclado funcionan también con toque.
 - **Recursos con un token sin permisos de administrador.** La falta de Supervisor se ha probado en real; el rechazo por permisos, solo por el código de Home Assistant.
@@ -327,7 +329,7 @@ Los requisitos pendientes se probarán en su hito.
 | RF-81 | `TestCollectEnvironments`, `TestPortainerDataHidesInfrastructure`, `TestPortainerErrors`, E2E-32 |
 | RF-90 | `TestCollectTunnels`, `TestNoTunnels`, E2E-35 |
 | RF-91 | `TestCollectTunnels`, `TestWGDashboardDataHidesInfrastructure`, `TestWGDashboardErrors`, E2E-34 |
-| RF-61 | INS-04, INS-05, INS-06 |
+| RF-61 | INS-04, INS-05, INS-06, INS-11, INS-12 |
 | RF-62 | `TestSetupRequiresTokenWhenConfigured`, `TestSetupTokenAttemptsAreLimited`, `TestEmptySetupTokenNeverMatches`, E2E-29, INS-02 |
 | RNF-01 | Por diseño: el modelo de datos no tiene tablas de métricas |
 | RNF-02 | `TestCollect` y `TestClusterAggregates` usan solo lecturas; por diseño, el cliente solo ofrece `GetJSON` |
