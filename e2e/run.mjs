@@ -204,7 +204,8 @@ const scenarios = [
     assert.equal(await sky.getAttribute("data-watch"), "good");
     // Con todo en orden, la antigüedad va en la cabecera y el pie del bloque solo da la versión.
     await sky.getByText(/^Actualizado /).waitFor();
-    assert.match(await page.locator(".lookout > footer").innerText(), /^Talaia v/);
+    // En CI el binario se compila sin versión y dice «dev».
+    assert.match(await page.locator(".lookout > footer").innerText(), /^Talaia \S+$/);
     for (const foot of await page.locator(".service-foot").allInnerTexts()) assert.doesNotMatch(foot, /Actualizado/);
     assert.equal(await page.locator(".service.tone-good").count(), 1);
     adguard.state.protection = false;
