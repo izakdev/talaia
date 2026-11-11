@@ -15,7 +15,7 @@
 | 9 | WGDashboard: túneles y peers | Terminado y verificado con el WGDashboard del cliente, publicado en `v0.2.0` |
 | 10 | OPNsense: estado de WireGuard | Terminado y verificado con el OPNsense del cliente y un peer conectado, publicado en `v0.2.1` |
 | 11 | Panel de un vistazo: estado global en la atalaya y bloques con aviso visibles | Terminado y verificado con el panel real del cliente, publicado en `v0.2.2` |
-| 12 | Pulido del panel: antigüedad en la cabecera, secciones coherentes y bloques sin huecos | Programado y publicado en `v0.2.3`; pendiente de revisión del cliente |
+| 12 | Pulido del panel: antigüedad en la cabecera, secciones coherentes y bloques sin huecos | Terminado y verificado con el panel real del cliente, publicado en `v0.2.3` |
 
 ## Historial
 
@@ -23,6 +23,11 @@
 
 **Cambiado:**
 - README en inglés, con `README.es.md` en español: qué resuelve Talaia, una captura del panel con un aviso, los servicios compatibles, la instalación rápida y más capturas.
+
+### Versión en el panel (2026-11-11)
+
+**Añadido:**
+- El pie del panel muestra la versión de Talaia, como el de la administración. Hasta ahora solo se veía al iniciar sesión.
 
 ### `v0.2.3` (2026-11-11)
 

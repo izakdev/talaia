@@ -168,7 +168,15 @@ function WatchSummary({
   );
 }
 
-export default function Dashboard({ path, navigate }: { path: string; navigate: (path: string) => void }) {
+export default function Dashboard({
+  path,
+  navigate,
+  version,
+}: {
+  path: string;
+  navigate: (path: string) => void;
+  version: string;
+}) {
   const { t, lang } = useI18n();
   const now = useNow(10000);
   const live = useLiveDashboard();
@@ -256,6 +264,7 @@ export default function Dashboard({ path, navigate }: { path: string; navigate: 
           })}
         </div>
       </main>
+      <footer>Talaia {version}</footer>
     </div>
   );
 }

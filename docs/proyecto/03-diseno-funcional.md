@@ -69,6 +69,7 @@ Mientras no exista un administrador, todas las rutas muestran el asistente de pr
 | Antigüedad | En la cabecera, «Actualizado hace…» con el dato más reciente, recalculado cada 10 segundos. Un bloque solo indica la suya si falla («Último dato hace…»); si no, su pie da solo el servicio y su versión |
 | Estado | Se indica con texto y forma, no solo con color |
 | Cifras | Un escalón por debajo del nombre y del estado, para que el estado se lea primero |
+| Versión de Talaia | Al pie de la página, como en la administración |
 
 **Estados de un bloque de AdGuard:**
 
