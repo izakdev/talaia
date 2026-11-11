@@ -19,6 +19,11 @@
 
 ## Historial
 
+### Portada del repositorio (2026-11-12)
+
+**Cambiado:**
+- README en inglés, con `README.es.md` en español: qué resuelve Talaia, una captura del panel con un aviso, los servicios compatibles, la instalación rápida y más capturas.
+
 ### Versión en el panel (2026-11-11)
 
 **Añadido:**
