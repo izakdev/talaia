@@ -15,9 +15,13 @@
 | 9 | WGDashboard: túneles y peers | Terminado y verificado con el WGDashboard del cliente, publicado en `v0.2.0` |
 | 10 | OPNsense: estado de WireGuard | Terminado y verificado con el OPNsense del cliente y un peer conectado, publicado en `v0.2.1` |
 | 11 | Panel de un vistazo: estado global en la atalaya y bloques con aviso visibles | Terminado y verificado con el panel real del cliente, publicado en `v0.2.2` |
-| 12 | Pulido del panel: antigüedad en la cabecera, secciones coherentes y bloques sin huecos | Programado; pendiente de revisión del cliente |
+| 12 | Pulido del panel: antigüedad en la cabecera, secciones coherentes y bloques sin huecos | Programado y publicado en `v0.2.3`; pendiente de revisión del cliente |
 
 ## Historial
+
+### `v0.2.3` (2026-11-11)
+
+Versión de mantenimiento con el hito 12, que pule el panel (antigüedad en la cabecera, secciones coherentes y bloques sin huecos), y la corrección del espaciado de la puntuación en direcciones y valores. Incluye los binarios para amd64 y arm64, las sumas de comprobación y el instalador, y se actualiza desde `v0.2.2` con `talaia-proxmox.sh update`.
 
 ### Hito 12 (2026-11-09)
 
