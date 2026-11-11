@@ -198,12 +198,13 @@ const scenarios = [
     await adguard.start();
     await page.getByText("Protección activa").waitFor();
   }],
-  ["E2E-37", "La atalaya resume el peor estado y la antigüedad, y lleva al bloque", async () => {
+  ["E2E-37", "La atalaya resume el peor estado y la antigüedad, lleva al bloque, y el pie da la versión", async () => {
     const sky = page.locator(".lookout-sky");
     await sky.getByText("El servicio está en orden").waitFor();
     assert.equal(await sky.getAttribute("data-watch"), "good");
     // Con todo en orden, la antigüedad va en la cabecera y el pie del bloque solo da la versión.
     await sky.getByText(/^Actualizado /).waitFor();
+    assert.match(await page.locator(".lookout > footer").innerText(), /^Talaia v/);
     for (const foot of await page.locator(".service-foot").allInnerTexts()) assert.doesNotMatch(foot, /Actualizado/);
     assert.equal(await page.locator(".service.tone-good").count(), 1);
     adguard.state.protection = false;

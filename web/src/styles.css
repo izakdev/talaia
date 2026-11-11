@@ -247,7 +247,7 @@ dialog::backdrop { background: rgb(7 43 53 / 0.6); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* Dashboard: la torre sigue en el horizonte y los servicios quedan debajo, a la vista. */
-.lookout { min-height: 100dvh; display: grid; grid-template-rows: auto 1fr; overflow-x: clip; }
+.lookout { min-height: 100dvh; display: grid; grid-template-rows: auto 1fr auto; overflow-x: clip; }
 .lookout-sky {
   position: relative; display: flex; justify-content: flex-end; align-items: center; gap: 0.5rem;
   min-height: 6.5rem; padding: 0.5rem clamp(1rem, 4vw, 3rem);
