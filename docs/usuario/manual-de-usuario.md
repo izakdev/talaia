@@ -2,7 +2,7 @@
 
 Talaia es un panel para ver de un vistazo el estado de los servicios de tu laboratorio doméstico. Está pensado para usarlo como página inicial del navegador.
 
-> **Versión de este manual:** `v0.2.2`. Muestran datos AdGuard Home, Proxmox VE, Home Assistant, OPNsense, Portainer y WGDashboard. Consulta las [limitaciones actuales](#limitaciones-actuales).
+> **Versión de este manual:** `v0.2.3`. Muestran datos AdGuard Home, Proxmox VE, Home Assistant, OPNsense, Portainer y WGDashboard. Consulta las [limitaciones actuales](#limitaciones-actuales).
 
 ## Índice
 
