@@ -1,7 +1,7 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: build web test run clean e2e screenshots docs-check dist test-installer
+.PHONY: build web test run clean e2e screenshots social-preview docs-check dist test-installer
 
 build: web
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o bin/talaia ./cmd/talaia
@@ -41,6 +41,12 @@ e2e: build
 screenshots: build
 	npm --prefix e2e ci
 	npm --prefix e2e run screenshots
+
+# Imagen de vista previa del repositorio para GitHub y redes sociales.
+social-preview:
+	npm --prefix web ci
+	npm --prefix e2e ci
+	npm --prefix e2e run social-preview
 
 docs-check:
 	python3 scripts/check_docs.py
