@@ -19,6 +19,11 @@
 
 ## Historial
 
+### Portada del repositorio (2026-11-12)
+
+**Cambiado:**
+- README en inglés, con `README.es.md` en español: qué resuelve Talaia, una captura del panel con un aviso, los servicios compatibles, la instalación rápida y más capturas.
+
 ### `v0.2.3` (2026-11-11)
 
 Versión de mantenimiento con el hito 12, que pule el panel (antigüedad en la cabecera, secciones coherentes y bloques sin huecos), y la corrección del espaciado de la puntuación en direcciones y valores. Incluye los binarios para amd64 y arm64, las sumas de comprobación y el instalador, y se actualiza desde `v0.2.2` con `talaia-proxmox.sh update`.

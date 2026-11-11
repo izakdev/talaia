@@ -4,7 +4,7 @@ Dashboard autoalojado en Go y React. Empieza por [docs/README.md](docs/README.md
 
 ## Documentación obligatoria
 
-Un cambio no está terminado hasta que su documentación está actualizada en el mismo cambio. Idioma: español.
+Un cambio no está terminado hasta que su documentación está actualizada en el mismo cambio. Idioma: español, salvo `README.md`, que está en inglés y tiene su versión en español en `README.es.md`: cambia siempre los dos.
 
 | Si cambia… | Actualiza |
 |---|---|

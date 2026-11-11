@@ -21,7 +21,8 @@ Comprueba que `main` tiene fusionados todos los hitos que van en la versión y q
 
 No hay ningún archivo de versión en el código: `release.yml` la toma de la etiqueta con `-X main.version`. Solo cambia la documentación:
 
-- `README.md`: la línea `> **Estado:** \`vX.Y.Z\` publicada, …` con lo que incluye.
+- `README.md` (en inglés): la línea `> **Status:** \`vX.Y.Z\` released. …`.
+- `README.es.md`: la línea `> **Estado:** \`vX.Y.Z\` publicada. …`.
 - `docs/usuario/manual-de-usuario.md`: la línea `> **Versión de este manual:** \`vX.Y.Z\`. …` y, si hace falta, «Limitaciones actuales».
 - `docs/proyecto/06-estado-y-cambios.md`:
   - En la tabla de hitos, cada hito incluido pasa a «…, publicado en \`vX.Y.Z\`».

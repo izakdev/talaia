@@ -40,11 +40,31 @@ async function waitForServer(url = BASE) {
   throw new Error("Talaia no ha arrancado");
 }
 
-async function shot(page, name) {
+async function shot(page, name, dir = screenshotsDir) {
   if (!screenshotsDir) return;
   // Deja terminar la animación inicial del haz de luz.
   await sleep(1700);
-  await page.screenshot({ path: join(screenshotsDir, `${name}.png`) });
+  await page.screenshot({ path: join(dir, `${name}.png`) });
+}
+
+// Portada del README: el panel completo, con un aviso, en inglés y en español.
+async function coverShots() {
+  if (!screenshotsDir) return;
+  const dir = join(root, "docs/img");
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  wgdashboard.state.stopped = true;
+  await page.getByRole("link", { name: "View dashboard" }).click();
+  await page.getByText("Needs attention:").waitFor();
+  await page.getByText(/Mbit\/s/).first().waitFor();
+  await shot(page, "portada-en", dir);
+  await page.getByRole("button", { name: "Español" }).click();
+  await page.getByText("Necesita atención:").waitFor();
+  await shot(page, "portada-es", dir);
+  wgdashboard.state.stopped = false;
+  await page.getByText("Los 6 servicios están en orden").waitFor();
+  await page.getByRole("button", { name: "English" }).click();
+  await page.getByRole("link", { name: "Administration" }).click();
+  await page.setViewportSize({ width: 1280, height: 800 });
 }
 
 const publicDashboard = async () => (await fetch(`${BASE}/api/dashboard`)).text();
@@ -781,6 +801,8 @@ const scenarios = [
     await page.getByRole("button", { name: "English" }).click();
     await page.getByRole("heading", { name: "Connections", exact: true }).waitFor();
     await page.reload();
+    await page.getByRole("heading", { name: "Connections", exact: true }).waitFor();
+    await coverShots();
     await page.getByRole("heading", { name: "Connections", exact: true }).waitFor();
     await page.getByRole("button", { name: "Español" }).click();
     await page.getByRole("heading", { name: "Conexiones", exact: true }).waitFor();

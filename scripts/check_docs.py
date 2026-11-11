@@ -46,7 +46,7 @@ for req, state in rows:
         errors.append(f"Requisito {state.split(':')[0].lower()} sin trazabilidad: {req}")
 
 # Los enlaces e imágenes relativos existen.
-for path in [*DOCS.rglob("*.md"), ROOT / "README.md", ROOT / "CLAUDE.md"]:
+for path in [*DOCS.rglob("*.md"), ROOT / "README.md", ROOT / "README.es.md", ROOT / "CLAUDE.md"]:
     for target in re.findall(r"\]\(([^)\s]+)\)", path.read_text(encoding="utf-8")):
         if re.match(r"[a-z]+://", target) or target.startswith("#"):
             continue

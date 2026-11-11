@@ -195,3 +195,9 @@ Cada decisión recoge su motivo y sus consecuencias. Si una decisión cambia, se
 - **Contexto:** cada bloque repetía «Actualizado hace…» aunque todo estuviera al día, las secciones internas llevaban líneas de forma desigual, y un bloque se estiraba hasta la altura de su fila y dejaba huecos en blanco dentro del recuadro.
 - **Decisión:** la cabecera da una sola antigüedad, la del dato más reciente; un bloque solo da la suya si falla. Cada sección lleva una línea encima y ninguna debajo. Un bloque mide lo que su contenido, sin estirarse.
 - **Consecuencias:** los bloques de una fila pueden acabar a distinta altura, y el espacio sobrante queda fuera del recuadro. Para saber cuándo respondió un servicio concreto que funciona, hay que fiarse de la cabecera, porque todos se consultan en el mismo ciclo.
+
+## DEC-39: README en inglés, con versión en español
+- **Contexto:** la comunidad que puede descubrir Talaia (foros de homelab y autoalojamiento, listas como awesome-selfhosted) busca y lee en inglés, y la portada del repositorio estaba solo en español y sin capturas.
+- **Decisión:** `README.md` en inglés y `README.es.md` en español, con el mismo contenido y una captura de portada en cada idioma, generada por las pruebas E2E en `docs/img/`. El resto de la documentación sigue en español.
+- **Consecuencias:** hay que mantener los dos README a la vez, también al publicar una versión. Los enlaces de ambos los comprueba `make docs-check`.
+
