@@ -59,7 +59,7 @@ export default function App() {
     );
   }
   if (state.data.require_login && !state.data.user) return <Credentials mode="login" title={t("login.dashboard")} />;
-  return <Dashboard path={path} navigate={navigate} />;
+  return <Dashboard path={path} navigate={navigate} version={state.data.version} />;
 }
 
 // El instalador da un enlace con el código, que se quita de la barra de direcciones.

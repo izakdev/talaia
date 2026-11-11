@@ -19,6 +19,11 @@
 
 ## Historial
 
+### Versión en el panel (2026-11-11)
+
+**Añadido:**
+- El pie del panel muestra la versión de Talaia, como el de la administración. Hasta ahora solo se veía al iniciar sesión.
+
 ### `v0.2.3` (2026-11-11)
 
 Versión de mantenimiento con el hito 12, que pule el panel (antigüedad en la cabecera, secciones coherentes y bloques sin huecos), y la corrección del espaciado de la puntuación en direcciones y valores. Incluye los binarios para amd64 y arm64, las sumas de comprobación y el instalador, y se actualiza desde `v0.2.2` con `talaia-proxmox.sh update`.
