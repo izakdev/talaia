@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "test": "node run.mjs",
-    "screenshots": "node run.mjs --screenshots"
+    "screenshots": "node run.mjs --screenshots",
+    "social-preview": "node social-preview.mjs"
   },
   "devDependencies": {
     "playwright": "1.63.0",

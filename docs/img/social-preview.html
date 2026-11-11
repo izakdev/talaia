@@ -1,0 +1,66 @@
+<!doctype html>
+<!-- Imagen de vista previa del repositorio (1280 × 640). Se genera con `make social-preview`. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: "Schibsted Grotesk"; src: url(../../web/node_modules/@fontsource-variable/schibsted-grotesk/files/schibsted-grotesk-latin-wght-normal.woff2) format("woff2"); font-weight: 400 900; }
+  html, body { margin: 0; width: 1280px; height: 640px; overflow: hidden; background: #041a21; }
+  .scene { position: relative; width: 1280px; height: 640px; font-family: "Schibsted Grotesk", sans-serif; }
+  svg { position: absolute; inset: 0; }
+  .text { position: absolute; left: 520px; top: 200px; color: #edf5f3; }
+  h1 { margin: 0; font-size: 150px; line-height: 1; font-weight: 700; letter-spacing: -0.035em; }
+  p { margin: 22px 0 0 6px; font-size: 38px; line-height: 1.2; font-weight: 450; color: #a9c6c6; letter-spacing: -0.005em; }
+</style>
+</head>
+<body>
+<div class="scene">
+  <svg viewBox="0 0 1280 640" width="1280" height="640">
+    <defs>
+      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#031820"/>
+        <stop offset="1" stop-color="#0e3d49"/>
+      </linearGradient>
+      <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#062a34"/>
+        <stop offset="1" stop-color="#03141a"/>
+      </linearGradient>
+      <linearGradient id="beam" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#ffb400" stop-opacity="0.55"/>
+        <stop offset="0.55" stop-color="#ffb400" stop-opacity="0.16"/>
+        <stop offset="1" stop-color="#ffb400" stop-opacity="0.04"/>
+      </linearGradient>
+      <radialGradient id="glow">
+        <stop offset="0" stop-color="#ffd166" stop-opacity="0.9"/>
+        <stop offset="0.35" stop-color="#ffb400" stop-opacity="0.35"/>
+        <stop offset="1" stop-color="#ffb400" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="reflect" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#ffb400" stop-opacity="0.22"/>
+        <stop offset="1" stop-color="#ffb400" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <!-- Cielo y mar; el horizonte está en y = 470. -->
+    <rect width="1280" height="470" fill="url(#sky)"/>
+    <rect y="470" width="1280" height="170" fill="url(#sea)"/>
+    <line x1="0" y1="470.5" x2="1280" y2="470.5" stroke="#1d5866" stroke-width="1"/>
+    <!-- El haz barre hacia la derecha, detrás del texto. -->
+    <path d="M220 215 L1280 92 L1280 352 Z" fill="url(#beam)"/>
+    <!-- Reflejo de la luz en el mar. -->
+    <rect x="210" y="474" width="34" height="150" fill="url(#reflect)"/>
+    <!-- La torre de chrome.tsx, a escala: viewBox 120×200 → 180×300, base sobre el horizonte. -->
+    <g transform="translate(130 170) scale(1.5)">
+      <path d="M36 200 46 62h28l10 138Z" fill="#021116"/>
+      <path d="M40 62V44h6v6h7v-6h6v6h7v-6h6v6h7v12Z" transform="translate(-1 0)" fill="#021116"/>
+      <path d="M54 200v-22a6 6 0 0 1 12 0v22Z" fill="#ffb400" fill-opacity="0.55"/>
+    </g>
+    <circle cx="220" cy="215" r="70" fill="url(#glow)"/>
+    <circle cx="220" cy="215" r="10.5" fill="#ffd166"/>
+  </svg>
+  <div class="text">
+    <h1>Talaia</h1>
+    <p>Self-hosted homelab status page</p>
+  </div>
+</div>
+</body>
+</html>

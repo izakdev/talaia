@@ -23,6 +23,7 @@
 
 **Cambiado:**
 - README en inglés, con `README.es.md` en español: qué resuelve Talaia, una captura del panel con un aviso, los servicios compatibles, la instalación rápida y más capturas.
+- Imagen de vista previa para GitHub y redes sociales (`docs/img/social-preview.png`, 1280 × 640): la atalaya de noche con su haz. Se genera desde `docs/img/social-preview.html` con `make social-preview`, y se sube a mano en los ajustes del repositorio.
 
 ### Versión en el panel (2026-11-11)
 
