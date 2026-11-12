@@ -177,7 +177,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-09 | Caída y recuperación del servicio | RF-21 |
 | E2E-10 | Conexión guardada con un servicio inaccesible | RF-10, RF-21 |
 | E2E-11 | Editar y eliminar conexiones | RF-10, RF-14 |
-| E2E-12 | Cambio de idioma recordado | RF-05 |
+| E2E-12 | Cambio de idioma recordado y aplicado a las demás pestañas | RF-05 |
 | E2E-24 | Editor: arrastrar, controles de teclado, descartar y guardar | RF-22, RNF-08 |
 | E2E-25 | Varias páginas, servicios fuera del panel y aviso desde otra página | RF-22, RF-23, RF-26 |
 | E2E-26 | Tema y color de acento | RF-24 |

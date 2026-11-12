@@ -273,6 +273,6 @@ Se aplican a todos los usuarios del panel. El idioma sigue siendo de cada navega
 
 ## Idioma y apariencia
 
-- **Idioma:** se toma del navegador y, si no es español, se usa inglés. La elección manual se recuerda en ese navegador.
+- **Idioma:** se toma del navegador y, si no es español, se usa inglés. La elección manual se recuerda en ese navegador y se aplica al momento a sus otras pestañas abiertas.
 - **Apariencia:** tema y acento se eligen en los ajustes.
 - **Movimiento:** al abrir la página, el haz de la torre hace un único barrido, que se omite si el sistema pide reducir el movimiento.

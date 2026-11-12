@@ -201,3 +201,8 @@ Cada decisión recoge su motivo y sus consecuencias. Si una decisión cambia, se
 - **Decisión:** `README.md` en inglés y `README.es.md` en español, con el mismo contenido y una captura de portada en cada idioma, generada por las pruebas E2E en `docs/img/`. El resto de la documentación sigue en español.
 - **Consecuencias:** hay que mantener los dos README a la vez, también al publicar una versión. Los enlaces de ambos los comprueba `make docs-check`.
 
+## DEC-40: manual de usuario en inglés, como traducción
+- **Contexto:** con el README en inglés (DEC-39), quien llega al repositorio desde fuera encontraba el manual solo en español. La documentación del proyecto la leen quienes desarrollan Talaia y no necesita traducción.
+- **Decisión:** `docs/user/user-manual.md` es la traducción al inglés del manual, que sigue siendo la referencia, con capturas propias en `docs/user/img/`. `make screenshots` toma cada captura en los dos idiomas: tras la española, cambia el idioma desde otra pestaña del mismo navegador, y la página lo aplica sin recargar gracias a que el idioma se sincroniza entre pestañas.
+- **Consecuencias:** cualquier cambio visible para el usuario se escribe en los dos manuales. `make docs-check` comprueba que ambos usan las mismas capturas y tienen las mismas secciones. Los nombres de los servicios simulados siguen en español en las capturas en inglés, porque son datos del usuario.
+

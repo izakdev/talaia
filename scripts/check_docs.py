@@ -9,6 +9,7 @@ DOCS = ROOT / "docs"
 PLAN = DOCS / "proyecto/04-plan-de-pruebas.md"
 REQUIREMENTS = DOCS / "proyecto/01-requisitos.md"
 MANUAL = DOCS / "usuario/manual-de-usuario.md"
+MANUAL_EN = DOCS / "user/user-manual.md"
 
 errors = []
 plan = PLAN.read_text(encoding="utf-8")
@@ -58,6 +59,18 @@ manual = MANUAL.read_text(encoding="utf-8")
 for image in sorted((DOCS / "usuario/img").glob("*.png")):
     if f"img/{image.name}" not in manual:
         errors.append(f"Captura sin usar en el manual: {image.name}")
+
+# El manual en inglés es la traducción del español: mismas capturas y mismas secciones.
+manual_en = MANUAL_EN.read_text(encoding="utf-8")
+images_es = set(re.findall(r"\(img/([\w-]+\.png)\)", manual))
+images_en = set(re.findall(r"\(img/([\w-]+\.png)\)", manual_en))
+errors += [f"El manual en inglés no usa la captura {name}" for name in sorted(images_es - images_en)]
+errors += [f"El manual en inglés usa una captura que el español no tiene: {name}" for name in sorted(images_en - images_es)]
+errors += [f"Falta la captura en inglés: docs/user/img/{name}" for name in sorted(images_en) if not (DOCS / "user/img" / name).exists()]
+sections_es = len(re.findall(r"^#{2,3} ", manual, re.M))
+sections_en = len(re.findall(r"^#{2,3} ", manual_en, re.M))
+if sections_es != sections_en:
+    errors.append(f"Los manuales no tienen las mismas secciones: {sections_es} en español y {sections_en} en inglés")
 
 if errors:
     print("\n".join(errors))

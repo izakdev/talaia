@@ -676,6 +676,14 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       // El idioma solo se recuerda si hay almacenamiento.
     }
   }, [lang]);
+  // Si se cambia el idioma en otra pestaña, esta también cambia.
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === "talaia.lang" && (event.newValue === "es" || event.newValue === "en")) setLang(event.newValue);
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
   const value = useMemo<I18n>(() => {
     const dict = dictionaries[lang];
     const t: I18n["t"] = (key, vars) =>

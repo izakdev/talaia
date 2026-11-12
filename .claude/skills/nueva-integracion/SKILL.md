@@ -62,6 +62,7 @@ Pregunta al usuario las decisiones de producto que no se deducen: qué mostrar, 
 | `docs/proyecto/05-decisiones.md` | Una `DEC-NN` nueva por decisión (qué se publica, privilegios…); no se reescriben las anteriores |
 | `docs/proyecto/06-estado-y-cambios.md` | Fila del hito («Programado; pendiente de verificar contra el servicio del cliente»), entrada en «Historial» y limitaciones nuevas |
 | `docs/usuario/manual-de-usuario.md` | Sección del servicio en «Añadir una conexión»: cómo crear la credencial con el mínimo privilegio, qué muestra el bloque y sus estados; la captura nueva; limitaciones |
+| `docs/user/user-manual.md` | La traducción al inglés de lo mismo, con los textos de la interfaz en inglés (`web/src/i18n.tsx`) |
 | `README.md` | La lista de integraciones, si cambia |
 
 ## 5. Comprobaciones

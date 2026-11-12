@@ -33,7 +33,7 @@ Talaia es un dashboard autoalojado para ver de un vistazo el estado de los servi
 | RF-02 | La administración está separada y exige iniciar sesión | 1 | Implementado |
 | RF-03 | Un asistente crea el administrador en el primer arranque y no se puede repetir | 1 | Implementado |
 | RF-04 | El administrador puede iniciar y cerrar sesión; los intentos fallidos repetidos se bloquean | 1 | Implementado |
-| RF-05 | La interfaz está disponible en español e inglés | 1 | Implementado |
+| RF-05 | La interfaz está disponible en español e inglés; el idioma elegido se recuerda y se aplica a las demás pestañas del navegador | 1 | Implementado |
 | RF-06 | La interfaz se adapta a móvil y sigue el modo claro u oscuro del sistema | 1 | Implementado |
 | RF-07 | El dashboard puede exigir inicio de sesión si se configura así, también para quien ya lo tenga abierto | 5 | Implementado |
 | RF-08 | El administrador puede cambiar su contraseña desde la web y recuperarla con acceso al equipo | 5 | Implementado |
