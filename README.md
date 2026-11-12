@@ -55,16 +55,12 @@ Binaries for Linux amd64 and arm64 are also attached to every [release](https://
 
 | Phone, dark theme | Panel editor | Service catalogue |
 |---|---|---|
-| ![Dashboard on a phone in dark mode](docs/usuario/img/10-movil-oscuro.png) | ![Drag-and-drop panel editor](docs/usuario/img/15-editor-panel.png) | ![Catalogue of supported services](docs/usuario/img/04-catalogo.png) |
-
-These screenshots come from the user manual and show the Spanish interface; English is one click away.
+| ![Dashboard on a phone in dark mode](docs/user/img/10-movil-oscuro.png) | ![Drag-and-drop panel editor](docs/user/img/15-editor-panel.png) | ![Catalogue of supported services](docs/user/img/04-catalogo.png) |
 
 ## Documentation
 
-The documentation is in Spanish:
-
-- [User manual](docs/usuario/manual-de-usuario.md): installation, every service, troubleshooting.
-- [Project documentation](docs/README.md): requirements, architecture, decisions and test plan.
+- [User manual](docs/user/user-manual.md): installation, every service, troubleshooting.
+- [Project documentation](docs/README.md), in Spanish: requirements, architecture, decisions and test plan.
 
 ## Development
 

@@ -19,6 +19,12 @@
 
 ## Historial
 
+### Manual en inglés (2026-11-12)
+
+**Añadido:**
+- Manual de usuario en inglés, `docs/user/user-manual.md`, con capturas de la interfaz en inglés. El README en inglés enlaza con él.
+- Al cambiar el idioma en una pestaña, las demás pestañas abiertas de Talaia en ese navegador también cambian.
+
 ### Portada del repositorio (2026-11-12)
 
 **Cambiado:**

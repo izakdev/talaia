@@ -2,7 +2,7 @@
 
 | Documento | Contenido | Destinatario |
 |---|---|---|
-| [Manual de usuario](usuario/manual-de-usuario.md) | Instalación, uso de la aplicación y solución de problemas | Quien usa o administra Talaia |
+| [Manual de usuario](usuario/manual-de-usuario.md) ([en inglés](user/user-manual.md)) | Instalación, uso de la aplicación y solución de problemas | Quien usa o administra Talaia |
 | [Requisitos](proyecto/01-requisitos.md) | Requisitos funcionales y no funcionales, con su estado | Cliente y desarrollo |
 | [Arquitectura](proyecto/02-arquitectura.md) | Componentes, flujos, API, datos y seguridad | Desarrollo |
 | [Diseño funcional](proyecto/03-diseno-funcional.md) | Pantallas, comportamiento, reglas y mensajes | Cliente y desarrollo |

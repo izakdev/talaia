@@ -2,6 +2,8 @@
 
 Talaia es un panel para ver de un vistazo el estado de los servicios de tu laboratorio doméstico. Está pensado para usarlo como página inicial del navegador.
 
+*[English version](../user/user-manual.md).*
+
 > **Versión de este manual:** `v0.2.3`. Muestran datos AdGuard Home, Proxmox VE, Home Assistant, OPNsense, Portainer y WGDashboard. Consulta las [limitaciones actuales](#limitaciones-actuales).
 
 ## Índice
@@ -281,7 +283,7 @@ Crea el token en Home Assistant: entra en tu perfil, abre **Seguridad** y, en **
 | URL | La de tu Home Assistant, por ejemplo `http://homeassistant.local:8123` |
 | Token de larga duración | El que has copiado |
 | Entidades en el panel | Las que quieras ver |
-| Mostrar el resumen | Activado por defecto. Solo cuenta elementos, sin personas, cerraduras, alarmas ni puertas |
+| Mostrar el resumen de luces, interruptores y otros elementos | Activado por defecto. Solo cuenta elementos, sin personas, cerraduras, alarmas ni puertas |
 
 **Para elegir las entidades:**
 
@@ -437,7 +439,7 @@ En la administración, abre **Ajustes**.
 
 ## Idioma y apariencia
 
-- **Idioma:** Talaia usa el de tu navegador si es español y, si no, inglés. El botón **English** o **Español** lo cambia y se recuerda en ese navegador.
+- **Idioma:** Talaia usa el de tu navegador si es español y, si no, inglés. El botón **English** o **Español** lo cambia, se recuerda en ese navegador y se aplica a sus otras pestañas abiertas.
 - **Modo claro u oscuro:** por defecto sigue tu sistema. Puedes fijarlo en [Ajustes](#ajustes).
 - **Móvil:** la interfaz se adapta a pantallas pequeñas.
 

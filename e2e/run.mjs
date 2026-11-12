@@ -45,6 +45,29 @@ async function shot(page, name, dir = screenshotsDir) {
   // Deja terminar la animación inicial del haz de luz.
   await sleep(1700);
   await page.screenshot({ path: join(dir, `${name}.png`) });
+  if (dir !== screenshotsDir) return;
+  // La misma captura para el manual en inglés, sin perder el estado de la página.
+  await setLanguage(page, "en");
+  await page.screenshot({ path: join(root, "docs/user/img", `${name}.png`) });
+  await setLanguage(page, "es");
+}
+
+// Cambia el idioma desde otra pestaña del mismo navegador: la página lo recibe
+// por el evento storage y cambia sin recargar, con diálogos y formularios abiertos.
+const languageHelpers = new WeakMap();
+async function setLanguage(target, lang) {
+  // Algunas capturas son de un bloque (un Locator), no de la página.
+  const page = typeof target.context === "function" ? target : target.page();
+  const context = page.context();
+  let helper = languageHelpers.get(context);
+  if (!helper) {
+    helper = await context.newPage();
+    await helper.goto(`${BASE}/healthz`);
+    languageHelpers.set(context, helper);
+  }
+  await helper.evaluate((value) => localStorage.setItem("talaia.lang", value), lang);
+  await page.waitForFunction((value) => document.documentElement.lang === value, lang);
+  await sleep(200);
 }
 
 // Portada del README: el panel completo, con un aviso, en inglés y en español.
@@ -799,15 +822,19 @@ const scenarios = [
     await state.getByText("Gateways en línea").waitFor();
     await toAdmin();
   }],
-  ["E2E-12", "Cambio de idioma recordado", async () => {
+  ["E2E-12", "Cambio de idioma recordado y aplicado a las demás pestañas", async () => {
     await page.getByRole("button", { name: "English" }).click();
     await page.getByRole("heading", { name: "Connections", exact: true }).waitFor();
     await page.reload();
     await page.getByRole("heading", { name: "Connections", exact: true }).waitFor();
     await coverShots();
     await page.getByRole("heading", { name: "Connections", exact: true }).waitFor();
-    await page.getByRole("button", { name: "Español" }).click();
+    // Cambiarlo en otra pestaña lo cambia también en esta, sin recargar.
+    const other = await context.newPage();
+    await other.goto(BASE);
+    await other.getByRole("button", { name: "Español" }).click();
     await page.getByRole("heading", { name: "Conexiones", exact: true }).waitFor();
+    await other.close();
   }],
   ["E2E-13", "Móvil y modo oscuro sin desbordamiento", async () => {
     const mobile = await browser.newContext({

@@ -17,11 +17,11 @@ Lee `CLAUDE.md` y comprueba cada fila de su tabla «Documentación obligatoria»
 
 - Requisito nuevo o cambiado → `docs/proyecto/01-requisitos.md`, con el hito y el estado.
 - Componentes, API, datos, seguridad o despliegue → `docs/proyecto/02-arquitectura.md`.
-- Pantallas, reglas, mensajes o claves nuevas en `web/src/i18n.tsx` → `docs/proyecto/03-diseno-funcional.md` y `docs/usuario/manual-de-usuario.md`.
+- Pantallas, reglas, mensajes o claves nuevas en `web/src/i18n.tsx` → `docs/proyecto/03-diseno-funcional.md`, `docs/user/user-manual.md` y `docs/usuario/manual-de-usuario.md`.
 - Cada `func Test…` nuevo y cada `["E2E-NN"` nuevo → `docs/proyecto/04-plan-de-pruebas.md`, con su fila en la trazabilidad.
 - Decisión técnica → una `DEC-NN` nueva en `docs/proyecto/05-decisiones.md`. Las anteriores no se reescriben: avisa si el diff modifica una DEC existente.
 - Cualquier entrega → `docs/proyecto/06-estado-y-cambios.md`, en la tabla de hitos y en el historial.
-- Algo visible para el usuario → el manual y, si cambia la interfaz, una captura en `docs/usuario/img/` que el manual use.
+- Algo visible para el usuario → los dos manuales (español e inglés, con el mismo contenido) y, si cambia la interfaz, una captura en `docs/usuario/img/` y su equivalente en inglés en `docs/user/img/`.
 - Textos en español en la documentación y en los mensajes de commit (`git log main..HEAD --format=%s`).
 
 Ejecuta `make docs-check` e incluye su salida si falla.

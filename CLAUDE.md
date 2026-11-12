@@ -4,17 +4,17 @@ Dashboard autoalojado en Go y React. Empieza por [docs/README.md](docs/README.md
 
 ## Documentación obligatoria
 
-Un cambio no está terminado hasta que su documentación está actualizada en el mismo cambio. Idioma: español, salvo `README.md`, que está en inglés y tiene su versión en español en `README.es.md`: cambia siempre los dos.
+Un cambio no está terminado hasta que su documentación está actualizada en el mismo cambio. Idioma: español, salvo `README.md`, que está en inglés y tiene su versión en español en `README.es.md`, y el manual de usuario en inglés, `docs/user/user-manual.md`, traducción del español: cambia siempre ambas versiones.
 
 | Si cambia… | Actualiza |
 |---|---|
 | Un requisito o su estado | `docs/proyecto/01-requisitos.md` |
 | Componentes, API, datos, seguridad o despliegue | `docs/proyecto/02-arquitectura.md` |
-| Pantallas, reglas o mensajes | `docs/proyecto/03-diseno-funcional.md` y el manual de usuario |
+| Pantallas, reglas o mensajes | `docs/proyecto/03-diseno-funcional.md` y los dos manuales de usuario |
 | Pruebas | `docs/proyecto/04-plan-de-pruebas.md`, incluida la trazabilidad |
 | Una decisión técnica | `docs/proyecto/05-decisiones.md`; no se reescriben las anteriores |
 | Cualquier entrega o limitación | `docs/proyecto/06-estado-y-cambios.md` |
-| Algo visible para el usuario | `docs/usuario/manual-de-usuario.md` y, con `make screenshots`, sus capturas |
+| Algo visible para el usuario | `docs/usuario/manual-de-usuario.md`, su traducción `docs/user/user-manual.md` y, con `make screenshots`, las capturas de ambos |
 
 Al cerrar un hito o una integración, registra también la verificación contra el servicio real en el plan de pruebas y los datos sin verificar.
 
