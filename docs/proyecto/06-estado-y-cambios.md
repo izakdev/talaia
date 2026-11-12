@@ -19,6 +19,10 @@
 
 ## Historial
 
+### `v0.2.4` (2026-11-12)
+
+Versión de mantenimiento: el pie del panel muestra la versión de Talaia, y el idioma elegido se aplica a las demás pestañas abiertas del navegador. Coincide con la nueva portada del repositorio y el manual de usuario en inglés. Incluye los binarios para amd64 y arm64, las sumas de comprobación y el instalador, y se actualiza desde `v0.2.3` con `talaia-proxmox.sh update`.
+
 ### Manual en inglés (2026-11-12)
 
 **Añadido:**

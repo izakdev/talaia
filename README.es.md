@@ -10,7 +10,7 @@
 
 ![Panel de Talaia: un túnel está parado, así que la cabecera y el bloque de la VPN se ponen en ámbar](docs/img/portada-es.png)
 
-> **Estado:** `v0.2.3` publicada. La instalación, la actualización y el arranque automático en Proxmox VE están verificados en un servidor real.
+> **Estado:** `v0.2.4` publicada. La instalación, la actualización y el arranque automático en Proxmox VE están verificados en un servidor real.
 
 *Talaia* significa «atalaya» en catalán: una torre desde la que se vigila el entorno.
 
