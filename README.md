@@ -10,7 +10,7 @@
 
 ![Talaia dashboard: one tunnel is stopped, so the header and the VPN block turn amber](docs/img/portada-en.png)
 
-> **Status:** `v0.2.3` released. Installing, updating and starting on boot in Proxmox VE are verified on a real server.
+> **Status:** `v0.2.4` released. Installing, updating and starting on boot in Proxmox VE are verified on a real server.
 
 *Talaia* is Catalan for "watchtower": a tower from which you keep an eye on your surroundings.
 
