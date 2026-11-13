@@ -165,7 +165,7 @@ footer { padding: 1rem clamp(1rem, 4vw, 3rem); color: var(--ink-soft); font-size
 .admin-tabs a:hover { color: var(--ink); }
 .admin-tabs a[aria-current="page"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--beacon); }
 .admin { grid-template-rows: auto auto 1fr auto; }
-.panel-wide { max-width: 92rem; }
+.panel-wide { max-width: none; }
 .editor-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
 .editor-actions .warn, .editor-actions [role="status"] { font-size: 0.9375rem; margin-right: 0.5rem; }
 .editor-pages { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 1.25rem; border-bottom: 1px solid var(--line); }

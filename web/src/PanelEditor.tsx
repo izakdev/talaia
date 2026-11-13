@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ReactGridLayout, { useContainerWidth, type Layout } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
@@ -18,10 +18,14 @@ if (!document.getElementById("react-draggable-style-el")) {
 }
 
 const COLUMNS = 12;
-const MIN_WIDTH = 2;
+const MIN_WIDTH = 3;
+// Anchos que recorren los botones: un cuarto, un tercio, media fila, dos tercios y la fila.
+const WIDTHS = [3, 4, 6, 8, 12];
+const ROW_HEIGHT = 28;
+const MARGIN = 16;
 const MIN_HEIGHT = 2;
 const MAX_HEIGHT = 60;
-const NEW_WIDTH = 6;
+const NEW_WIDTH = 4;
 const NEW_HEIGHT = 10;
 const MAX_PAGES = 20;
 
@@ -31,6 +35,24 @@ function randomId() {
 }
 
 const byPosition = (a: PlacedWidget, b: PlacedWidget) => a.y - b.y || a.x - b.x;
+
+// Lo que decide el usuario: páginas, orden, columnas y ancho. La altura la mide el
+// editor y la «y» la recoloca la rejilla, así que no cuentan como cambios.
+const layoutKey = (pages: Page[]) =>
+  JSON.stringify(
+    pages.map((p) => ({
+      ...p,
+      widgets: [...p.widgets].sort(byPosition).map(({ id, connection_id, x, w }) => ({ id, connection_id, x, w })),
+    })),
+  );
+
+// Alto en filas de la rejilla para un contenido de `px` píxeles.
+const rowsFor = (px: number) => Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, Math.ceil((px + MARGIN) / (ROW_HEIGHT + MARGIN))));
+
+function nextWidth(current: number, delta: number) {
+  if (delta > 0) return WIDTHS.find((w) => w > current) ?? COLUMNS;
+  return [...WIDTHS].reverse().find((w) => w < current) ?? MIN_WIDTH;
+}
 
 // Coloca los widgets en orden, por filas, sin solapes. Es la base de los controles
 // de teclado, que no dependen de arrastrar.
@@ -84,7 +106,7 @@ function Editor({
   const [saved, setSaved] = useState(initial);
   const [selected, setSelected] = useState(initial[0]?.id ?? "");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const dirty = useMemo(() => JSON.stringify(pages) !== JSON.stringify(saved), [pages, saved]);
+  const dirty = useMemo(() => layoutKey(pages) !== layoutKey(saved), [pages, saved]);
   const page = pages.find((p) => p.id === selected) ?? pages[0];
 
   useEffect(() => {
@@ -106,6 +128,18 @@ function Editor({
   const updatePage = (change: (page: Page) => Page) =>
     setPages((all) => all.map((p) => (p.id === page.id ? change(p) : p)));
   const setWidgets = (widgets: PlacedWidget[]) => updatePage((p) => ({ ...p, widgets }));
+  // Ajusta la altura de cada bloque a la medida de su vista previa.
+  const setHeights = useCallback(
+    (rows: Record<string, number>) =>
+      setPages((all) =>
+        all.map((p) =>
+          p.widgets.some((w) => rows[w.id] !== undefined && rows[w.id] !== w.h)
+            ? { ...p, widgets: p.widgets.map((w) => (rows[w.id] !== undefined ? { ...w, h: rows[w.id] } : w)) }
+            : p,
+        ),
+      ),
+    [],
+  );
 
   const addPage = () => {
     const id = randomId();
@@ -143,7 +177,7 @@ function Editor({
   };
   const resizeWidget = (id: string, delta: number) => {
     const ordered = [...page.widgets].sort(byPosition).map((w) =>
-      w.id === id ? { ...w, w: Math.min(COLUMNS, Math.max(MIN_WIDTH, w.w + delta)) } : w,
+      w.id === id ? { ...w, w: nextWidth(w.w, delta) } : w,
     );
     setWidgets(reflow(ordered));
   };
@@ -262,6 +296,7 @@ function Editor({
           names={connectionNames}
           states={states}
           onChange={setWidgets}
+          onHeights={setHeights}
           onMove={moveWidget}
           onResize={resizeWidget}
           onRemove={removeWidget}
@@ -277,6 +312,7 @@ function Grid({
   names,
   states,
   onChange,
+  onHeights,
   onMove,
   onResize,
   onRemove,
@@ -285,15 +321,38 @@ function Grid({
   names: { id: string; name: string; type: ConnectionState["type"] }[];
   states: ConnectionState[];
   onChange: (widgets: PlacedWidget[]) => void;
+  onHeights: (rows: Record<string, number>) => void;
   onMove: (id: string, delta: number) => void;
   onResize: (id: string, delta: number) => void;
   onRemove: (id: string) => void;
 }) {
   const { t } = useI18n();
   const { width, containerRef, mounted } = useContainerWidth();
+  // Mide la barra y la vista previa de cada bloque para darle la altura de su contenido.
+  const observer = useRef<ResizeObserver | null>(null);
+  useEffect(() => {
+    observer.current = new ResizeObserver((entries) => {
+      const rows: Record<string, number> = {};
+      for (const entry of entries) {
+        const box = entry.target as HTMLElement;
+        const card = box.closest(".editor-widget");
+        const bar = card?.querySelector(".editor-widget-bar") as HTMLElement | null;
+        const preview = card?.querySelector(".editor-widget-preview") as HTMLElement | null;
+        if (!box.dataset.id || !bar || !preview) continue;
+        const padding = parseFloat(getComputedStyle(preview).paddingTop) + parseFloat(getComputedStyle(preview).paddingBottom);
+        rows[box.dataset.id] = rowsFor(bar.offsetHeight + box.offsetHeight + padding + 2);
+      }
+      onHeights(rows);
+    });
+    document.querySelectorAll<HTMLElement>(".editor-widget-content").forEach((el) => observer.current?.observe(el));
+    return () => observer.current?.disconnect();
+  }, [onHeights]);
+  const measure = useCallback((element: HTMLDivElement | null) => {
+    if (element) observer.current?.observe(element);
+  }, []);
   const layout = widgets.map((w) => ({
     i: w.id, x: w.x, y: w.y, w: w.w, h: w.h,
-    minW: MIN_WIDTH, minH: MIN_HEIGHT, maxH: MAX_HEIGHT,
+    minW: MIN_WIDTH, minH: w.h, maxH: w.h,
   }));
   const handleLayout = (next: Layout) => {
     const changed = widgets.some((w) => {
@@ -314,9 +373,9 @@ function Grid({
         <ReactGridLayout
           width={width}
           layout={layout}
-          gridConfig={{ cols: COLUMNS, rowHeight: 28, margin: [16, 16] }}
+          gridConfig={{ cols: COLUMNS, rowHeight: ROW_HEIGHT, margin: [MARGIN, MARGIN] }}
           dragConfig={{ enabled: true, handle: ".widget-handle" }}
-          resizeConfig={{ enabled: true, handles: ["se"] }}
+          resizeConfig={{ enabled: true, handles: ["e"] }}
           onLayoutChange={handleLayout}
         >
           {widgets.map((widget) => {
@@ -340,7 +399,9 @@ function Grid({
                   </span>
                 </div>
                 <div className="editor-widget-preview" inert>
-                  {state ? <Service connection={state} /> : <p>{t("connections.notInPanel")}</p>}
+                  <div className="editor-widget-content" data-id={widget.id} ref={measure}>
+                    {state ? <Service connection={state} /> : <p>{t("connections.notInPanel")}</p>}
+                  </div>
                 </div>
               </div>
             );

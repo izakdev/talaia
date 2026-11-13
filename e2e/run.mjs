@@ -468,6 +468,30 @@ const scenarios = [
     await toEditor();
     await page.getByRole("status").getByText("Sin cambios").waitFor();
     assert.equal(await page.locator(".editor-widget").count(), 3);
+    // Medir las alturas reales y recibir datos nuevos no son cambios del usuario.
+    await sleep(6000);
+    await page.getByRole("status").getByText("Sin cambios").waitFor({ timeout: 1000 });
+    // La esquina solo cambia el ancho, no la altura.
+    await widget("AdGuard principal").locator(".react-resizable-handle").scrollIntoViewIfNeeded();
+    const tall = await widget("AdGuard principal").boundingBox();
+    const corner = await widget("AdGuard principal").locator(".react-resizable-handle").boundingBox();
+    await page.mouse.move(corner.x + corner.width / 2, corner.y + corner.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(corner.x + corner.width / 2, corner.y + 120, { steps: 8 });
+    await page.mouse.up();
+    await sleep(400);
+    assert.ok(Math.abs((await widget("AdGuard principal").boundingBox()).height - tall.height) <= 4, "la altura no debe cambiar");
+    // «Más estrecho» desde un tercio lleva a un cuarto (3 columnas), no a 2.
+    await widget("AdGuard principal").getByRole("button", { name: "Más estrecho" }).click();
+    await page.waitForFunction(
+      (width) => document.querySelector('[data-testid="widget-AdGuard principal"]').getBoundingClientRect().width < width - 40,
+      tall.width,
+    );
+    await sleep(400); // la rejilla anima el cambio de tamaño
+    const quarter = (await widget("AdGuard principal").boundingBox()).width;
+    assert.ok(quarter > tall.width * 0.6, `un cuarto mide ${quarter}, un tercio ${tall.width}`);
+    await page.getByRole("button", { name: "Descartar" }).click();
+    await page.getByRole("status").getByText("Sin cambios").waitFor();
     await shot(page, "15-editor-panel");
     await widget("Domótica").locator(".widget-handle").scrollIntoViewIfNeeded();
     const before = await widget("Domótica").boundingBox();
