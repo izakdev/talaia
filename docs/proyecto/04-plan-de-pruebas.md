@@ -178,7 +178,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-10 | Conexión guardada con un servicio inaccesible | RF-10, RF-21 |
 | E2E-11 | Editar y eliminar conexiones | RF-10, RF-14 |
 | E2E-12 | Cambio de idioma recordado y aplicado a las demás pestañas | RF-05 |
-| E2E-24 | Editor: arrastrar, controles de teclado, descartar y guardar | RF-22, RNF-08 |
+| E2E-24 | Editor: arrastrar, controles de teclado, alturas automáticas, descartar y guardar | RF-22, RNF-08 |
 | E2E-25 | Varias páginas, servicios fuera del panel y aviso desde otra página | RF-22, RF-23, RF-26 |
 | E2E-26 | Tema y color de acento | RF-24 |
 | E2E-27 | Inicio de sesión opcional para ver el panel | RF-07 |
@@ -203,7 +203,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-35 | WGDashboard en el panel: túneles, peers y estados | RF-20, RF-90 |
 | E2E-36 | WireGuard en el bloque de OPNsense, opcional y sin nombres de peers | RF-20, RF-73, RF-74 |
 | E2E-37 | La atalaya resume el peor estado y la antigüedad, lleva al bloque, y el pie da la versión | RF-26 |
-| E2E-38 | Bloques apilados por su altura real y panel a todo el ancho | RF-22 |
+| E2E-38 | Bloques apilados por su altura real y panel a todo el ancho | RF-27 |
 
 Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las discrepancias con el servicio real las cubren las verificaciones manuales.
 
@@ -323,9 +323,10 @@ Los requisitos pendientes se probarán en su hito.
 | RF-54 | `TestSummary`, E2E-21 |
 | RF-07 | `TestDashboardCanRequireLogin`, `TestSettingsDefaultsAndSave`, E2E-27 |
 | RF-08 | `TestChangePassword`, `TestPasswordChangeAndReset`, E2E-28, INS-03 |
-| RF-22 | `TestPanelSaveAndValidation`, `TestUnplacedConnectionIsHidden`, `TestNewConnectionsFillThreeColumns`, `TestPanelSaveAndCascade`, E2E-24, E2E-25, E2E-38 |
+| RF-22 | `TestPanelSaveAndValidation`, `TestUnplacedConnectionIsHidden`, `TestNewConnectionsFillThreeColumns`, `TestPanelSaveAndCascade`, E2E-24, E2E-25 |
 | RF-23 | `TestPanelSaveAndValidation`, `TestPanelSaveAndCascade`, E2E-25 |
 | RF-26 | E2E-25, E2E-37 |
+| RF-27 | `TestNewConnectionsFillThreeColumns`, E2E-24, E2E-38 |
 | RF-24 | `TestSettingsValidation`, `TestSettingsDefaultsAndSave`, E2E-26 |
 | RF-60 | INS-01, INS-07, INS-08, INS-09, INS-10 |
 | RF-70 | `TestCollect`, `TestParseSize`, E2E-31 |

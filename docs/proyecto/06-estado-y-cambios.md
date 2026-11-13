@@ -16,8 +16,16 @@
 | 10 | OPNsense: estado de WireGuard | Terminado y verificado con el OPNsense del cliente y un peer conectado, publicado en `v0.2.1` |
 | 11 | Panel de un vistazo: estado global en la atalaya y bloques con aviso visibles | Terminado y verificado con el panel real del cliente, publicado en `v0.2.2` |
 | 12 | Pulido del panel: antigüedad en la cabecera, secciones coherentes y bloques sin huecos | Terminado y verificado con el panel real del cliente, publicado en `v0.2.3` |
+| 13 | Bloques que se apilan solos y panel a todo el ancho | Programado; pendiente de revisión del cliente |
 
 ## Historial
+
+### Hito 13 (2026-11-13)
+
+**Cambiado:**
+- Cada bloque del panel queda justo debajo del anterior de sus columnas, según la altura real de su contenido, así que dos bloques cortos caben al lado de uno largo sin huecos.
+- El panel y su editor usan todo el ancho de la ventana.
+- En el editor, la altura se ajusta sola y solo se elige el ancho: los botones van de un cuarto a la fila entera, y un bloque nuevo ocupa un tercio.
 
 ### `v0.2.4` (2026-11-12)
 

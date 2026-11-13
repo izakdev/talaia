@@ -410,8 +410,8 @@ En la administración, abre **Panel**. Cada conexión nueva se añade sola a la 
 
 **Colocar los servicios:**
 - **Mover:** arrastra la barra superior del bloque.
-- **Cambiar el tamaño:** arrastra su esquina inferior derecha.
-- **Sin arrastrar:** usa **Antes**, **Después**, **Más estrecho** y **Más ancho**.
+- **Cambiar el ancho:** arrastra su borde derecho. La altura no se elige: se ajusta sola a lo que muestra el bloque.
+- **Sin arrastrar:** usa **Antes**, **Después**, **Más estrecho** y **Más ancho**. Los botones pasan por un cuarto, un tercio, media fila, dos tercios y la fila entera. Un servicio nuevo ocupa un tercio.
 - **Quitar:** deja de mostrarlo en esa página. La conexión no se elimina, y puedes volver a añadirla con **Añadir a esta página**.
 
 **Páginas:** pulsa **Añadir página**, ponle nombre y añade sus servicios. Si hay más de una, el panel muestra pestañas. Un servicio puede estar en varias páginas.
@@ -420,7 +420,7 @@ En la administración, abre **Panel**. Cada conexión nueva se añade sola a la 
 
 **Pulsa Guardar panel** para aplicar los cambios, o **Descartar** para deshacerlos.
 
-**Cómo se ve después:** en el panel, cada bloque mide lo que su contenido: crece si lo necesita, aunque en el editor aparezca recortado, y no deja huecos en blanco si le diste más alto. En pantallas estrechas, los bloques se apilan en una sola columna.
+**Cómo se ve después:** el panel ocupa todo el ancho de la pantalla. Cada bloque queda justo debajo del anterior de sus columnas, según lo que ocupe su contenido: así, dos bloques cortos uno encima de otro caben al lado de uno largo, sin huecos. Si un bloque crece con los datos, los de debajo se recolocan solos. En pantallas medianas, los bloques de menos de media fila se muestran a media fila, y en las estrechas, en una sola columna.
 
 **Privacidad:** un servicio que no esté en ninguna página no sale por la API pública, aunque Talaia lo siga consultando.
 

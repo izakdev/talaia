@@ -464,7 +464,7 @@ const scenarios = [
     assert.doesNotMatch(await publicDashboard(), /localhost:13002/);
     await toAdmin();
   }],
-  ["E2E-24", "Editor: arrastrar, controles de teclado, descartar y guardar", async () => {
+  ["E2E-24", "Editor: arrastrar, controles de teclado, alturas automáticas, descartar y guardar", async () => {
     await toEditor();
     await page.getByRole("status").getByText("Sin cambios").waitFor();
     assert.equal(await page.locator(".editor-widget").count(), 3);
@@ -873,8 +873,16 @@ const scenarios = [
       return { vpn, adguard, home };
     };
     await page.waitForFunction(() => document.querySelectorAll(".panel-grid.stacked > .panel-cell").length === 6);
-    let { vpn, adguard, home } = await stacked();
-    assert.ok(Math.abs(adguard.y - (vpn.y + vpn.height + 24)) <= 2, `AdGuard empieza en ${adguard.y}, VPN acaba en ${vpn.y + vpn.height}`);
+    // Al pasar a su sitio, cada bloque vuelve a medirse con su ancho: se espera a que se asiente.
+    const settled = await page
+      .waitForFunction(() => {
+        const rect = (n) => [...document.querySelectorAll(".panel-cell")].find((el) => el.textContent.includes(n)).getBoundingClientRect();
+        const [vpn, adguard] = [rect("VPN"), rect("AdGuard principal")];
+        return Math.abs(adguard.top - (vpn.bottom + 24)) <= 2;
+      }, null, { timeout: 5000 })
+      .then(() => true, () => false);
+    const { vpn, adguard, home } = await stacked();
+    assert.ok(settled, `AdGuard empieza en ${adguard.y}, VPN acaba en ${vpn.y + vpn.height}`);
     assert.ok(adguard.y < home.y + home.height, "AdGuard debe quedar al lado de Home Assistant, no debajo");
     assert.ok((await page.locator(".lookout-main").boundingBox()).width > 1472, "el panel debe usar más de 92rem");
     // Si el bloque de arriba cambia de altura, el de debajo se recoloca sin solaparse.
