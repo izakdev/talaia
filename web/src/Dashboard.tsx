@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type ConnectionState, type ConnectionType, type DashboardState } from "./api";
 import { Horizon, LanguageSwitch, Tower } from "./chrome";
@@ -10,6 +10,8 @@ import { homeAssistantWidget } from "./widgets/homeassistant";
 import { proxmoxWidget } from "./widgets/proxmox";
 import { wgdashboardWidget } from "./widgets/wgdashboard";
 import type { Tone, Widget } from "./widgets/types";
+import { responsiveItems, stackLayout, COLUMNS } from "./stack";
+import type { PlacedWidget } from "./api";
 
 const RETRY_MS = 5000;
 
@@ -247,24 +249,77 @@ export default function Dashboard({
         {dashboard.isPending && <p>{t("app.loading")}</p>}
         {dashboard.isError && <p role="alert" className="error">{t("dashboard.unavailable")}</p>}
         {page && page.widgets.length === 0 && <p className="lead">{t("dashboard.page.empty")}</p>}
-        <div className="panel-grid">
-          {page?.widgets.map((widget) => {
-            const state = states.get(widget.connection_id);
-            return state ? (
-              <div
-                key={widget.id}
-                style={{
-                  gridColumn: `${widget.x + 1} / span ${widget.w}`,
-                  gridRow: `${widget.y + 1} / span ${widget.h}`,
-                }}
-              >
-                <Service connection={state} />
-              </div>
-            ) : null;
-          })}
-        </div>
+        <StackedPanel widgets={page?.widgets ?? []} states={states} />
       </main>
       <footer>Talaia {version}</footer>
+    </div>
+  );
+}
+
+// Espacio entre bloques, en px: 1.5rem.
+const GAP = 24;
+
+function useViewportWidth() {
+  const [width, setWidth] = useState(() => window.innerWidth);
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return width;
+}
+
+/**
+ * Coloca cada bloque justo debajo del último bloque de sus columnas, según la
+ * altura real de su contenido. Hasta medirlos todos, los muestra uno debajo de otro.
+ */
+function StackedPanel({ widgets, states }: { widgets: PlacedWidget[]; states: Map<string, ConnectionState> }) {
+  const viewport = useViewportWidth();
+  const [heights, setHeights] = useState<Record<string, number>>({});
+  const observer = useRef<ResizeObserver | null>(null);
+  if (!observer.current && typeof ResizeObserver !== "undefined") {
+    observer.current = new ResizeObserver((entries) => {
+      setHeights((current) => {
+        let next = current;
+        for (const entry of entries) {
+          const id = (entry.target as HTMLElement).dataset.id;
+          const height = Math.round(entry.target.getBoundingClientRect().height);
+          if (id && current[id] !== height) next = { ...next, [id]: height };
+        }
+        return next;
+      });
+    });
+  }
+  useEffect(() => () => observer.current?.disconnect(), []);
+  const measure = useCallback((element: HTMLDivElement | null) => {
+    if (element) observer.current?.observe(element);
+  }, []);
+
+  const visible = widgets.filter((widget) => states.has(widget.connection_id));
+  const items = responsiveItems(visible, viewport);
+  const ready = items.length > 0 && items.every((item) => heights[item.id] !== undefined);
+  const { placed, height } = stackLayout(items, heights, GAP);
+  const byId = new Map(placed.map((p) => [p.id, p]));
+  const column = (n: number) => `calc((100% + ${GAP}px) * ${n} / ${COLUMNS})`;
+  return (
+    <div className={ready ? "panel-grid stacked" : "panel-grid"} style={ready ? { height } : undefined}>
+      {items.map((item) => {
+        const widget = visible.find((w) => w.id === item.id)!;
+        const spot = byId.get(item.id)!;
+        return (
+          <div
+            key={item.id}
+            ref={measure}
+            data-id={item.id}
+            data-x={spot.x}
+            data-w={spot.w}
+            className="panel-cell"
+            style={ready ? { left: column(spot.x), width: `calc(${column(spot.w)} - ${GAP}px)`, top: spot.top } : undefined}
+          >
+            <Service connection={states.get(widget.connection_id)!} />
+          </div>
+        );
+      })}
     </div>
   );
 }

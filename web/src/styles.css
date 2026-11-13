@@ -269,10 +269,13 @@ dialog::backdrop { background: rgb(7 43 53 / 0.6); }
 .lookout-sky a.quiet { display: inline-flex; align-items: center; min-height: 2.75rem; text-decoration: none; }
 .lookout-sky a.quiet:hover { text-decoration: underline; }
 .lookout-sky > :not(.tower) { position: relative; }
-.lookout-main { width: 100%; max-width: 92rem; margin-inline: auto; padding: clamp(1.25rem, 3vw, 2.5rem) clamp(1rem, 4vw, 3rem) 3rem; display: grid; gap: 1.5rem; align-content: start; }
+.lookout-main { width: 100%; margin-inline: auto; padding: clamp(1.25rem, 3vw, 2.5rem) clamp(1rem, 4vw, 3rem) 3rem; display: grid; gap: 1.5rem; align-content: start; }
 .live-lost { color: var(--warn); font-weight: 550; }
-.panel-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-rows: minmax(0.5rem, auto); column-gap: 1.5rem; }
-.panel-grid > div { display: flex; align-items: flex-start; min-width: 0; padding-bottom: 1.5rem; }
+/* Hasta medir los bloques van uno debajo de otro; después, cada uno en su sitio calculado. */
+.panel-grid { position: relative; display: grid; gap: 1.5rem; }
+.panel-grid.stacked { display: block; }
+.panel-cell { display: flex; min-width: 0; }
+.panel-grid.stacked > .panel-cell { position: absolute; }
 .page-tabs { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; border-bottom: 1px solid var(--line); }
 .page-tab { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0.25rem 0.125rem; color: var(--ink-soft); background: none; border: 0; border-bottom: 3px solid transparent; border-radius: 0; font-weight: 500; text-decoration: none; }
 .page-tab:hover { color: var(--ink); }
@@ -350,9 +353,6 @@ details > summary { cursor: pointer; list-style-position: outside; margin-left: 
 .figures dd.no-data { color: var(--warn); font-size: 1rem; font-weight: 550; letter-spacing: 0; line-height: 1.8; }
 .service-foot { color: var(--ink-soft); font-size: 0.8125rem; }
 
-@media (max-width: 900px) {
-  .panel-grid > div { grid-column: 1 / -1 !important; grid-row: auto !important; }
-}
 @media (max-width: 720px) {
   .lookout-sky { flex-wrap: wrap; justify-content: flex-end; }
   .lookout-title { flex-basis: 100%; display: grid; gap: 0; margin-left: 3rem; padding-top: 0.25rem; }

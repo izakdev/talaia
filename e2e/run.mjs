@@ -474,8 +474,9 @@ const scenarios = [
     const handle = await widget("Domótica").locator(".widget-handle").boundingBox();
     await page.mouse.move(handle.x + 20, handle.y + 10);
     await page.mouse.down();
-    await page.mouse.move(handle.x + 200, handle.y + 12, { steps: 8 });
-    await page.mouse.move(handle.x + 620, handle.y + 12, { steps: 12 });
+    // Con tres bloques de un tercio, Domótica está a la derecha: se arrastra a la izquierda.
+    await page.mouse.move(handle.x - 200, handle.y + 12, { steps: 8 });
+    await page.mouse.move(handle.x - 620, handle.y + 12, { steps: 12 });
     await page.mouse.up();
     await page.getByRole("status").getByText("Cambios sin guardar").waitFor();
     await page.waitForFunction(() => document.querySelector(".editor-widget.react-draggable-dragging") === null);
@@ -496,10 +497,8 @@ const scenarios = [
     await saveEditor();
     await toDashboard();
     await page.locator(".panel-grid .service", { hasText: "AdGuard principal" }).waitFor();
-    const columns = await page.evaluate(() =>
-      [...document.querySelectorAll(".panel-grid > div")].map((el) => el.style.gridColumn),
-    );
-    assert.ok(columns.includes("1 / span 8") || columns.some((c) => c.endsWith("span 8")), String(columns));
+    // «Más ancho» lleva a AdGuard de un tercio (4 columnas) a media fila (6).
+    assert.equal(await page.locator(".panel-cell", { hasText: "AdGuard principal" }).getAttribute("data-w"), "6");
     await page.getByRole("link", { name: "Administración" }).click();
   }],
   ["E2E-25", "Varias páginas, servicios fuera del panel y aviso desde otra página", async () => {
@@ -821,6 +820,59 @@ const scenarios = [
     opnsense.state.tunnelDown = false;
     await state.getByText("Gateways en línea").waitFor();
     await toAdmin();
+  }],
+  ["E2E-38", "Bloques apilados por su altura real y panel a todo el ancho", async () => {
+    // Dos bloques cortos a la izquierda, uno encima de otro, y uno largo a la derecha.
+    const layout = await page.evaluate(async () => {
+      const connections = await (await fetch("/api/admin/connections")).json();
+      const id = (name) => connections.find((c) => c.name === name).id;
+      const place = [
+        ["VPN", 0, 0], ["AdGuard principal", 0, 10], ["Domótica", 6, 0],
+        ["Cortafuegos", 0, 20], ["Clúster de casa", 6, 20], ["Contenedores", 0, 30],
+      ];
+      const { pages } = await (await fetch("/api/admin/panel")).json();
+      pages[0].widgets = place.map(([name, x, y], i) => ({ id: `apilado-${i}`, connection_id: id(name), x, y, w: 6, h: 10 }));
+      const response = await fetch("/api/admin/panel", {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pages }),
+      });
+      return response.status;
+    });
+    assert.equal(layout, 200);
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    await page.getByRole("link", { name: "Ver el panel" }).click();
+    const cell = (name) => page.locator(".panel-cell", { hasText: name });
+    const box = async (name) => (await cell(name).boundingBox());
+    const stacked = async () => {
+      const vpn = await box("VPN");
+      const adguard = await box("AdGuard principal");
+      const home = await box("Domótica");
+      return { vpn, adguard, home };
+    };
+    await page.waitForFunction(() => document.querySelectorAll(".panel-grid.stacked > .panel-cell").length === 6);
+    let { vpn, adguard, home } = await stacked();
+    assert.ok(Math.abs(adguard.y - (vpn.y + vpn.height + 24)) <= 2, `AdGuard empieza en ${adguard.y}, VPN acaba en ${vpn.y + vpn.height}`);
+    assert.ok(adguard.y < home.y + home.height, "AdGuard debe quedar al lado de Home Assistant, no debajo");
+    assert.ok((await page.locator(".lookout-main").boundingBox()).width > 1472, "el panel debe usar más de 92rem");
+    // Si el bloque de arriba cambia de altura, el de debajo se recoloca sin solaparse.
+    wgdashboard.state.empty = true;
+    await page.getByText("Sin túneles").first().waitFor();
+    await page.waitForFunction(() => {
+      const [a, b] = ["VPN", "AdGuard principal"].map((n) =>
+        [...document.querySelectorAll(".panel-cell")].find((el) => el.textContent.includes(n)).getBoundingClientRect());
+      return Math.abs(b.top - (a.bottom + 24)) <= 2;
+    });
+    wgdashboard.state.empty = false;
+    await page.getByText("Túneles activos").first().waitFor();
+    // En una pantalla mediana, nada se sale ni se solapa.
+    await page.setViewportSize({ width: 1100, height: 900 });
+    await page.waitForFunction(() => {
+      const boxes = [...document.querySelectorAll(".panel-cell")].map((el) => el.getBoundingClientRect());
+      const inside = boxes.every((b) => b.left >= 0 && b.right <= window.innerWidth);
+      const apart = boxes.every((a, i) => boxes.every((b, j) => i === j || a.right <= b.left + 1 || b.right <= a.left + 1 || a.bottom <= b.top + 1 || b.bottom <= a.top + 1));
+      return inside && apart;
+    });
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.getByRole("link", { name: "Administración" }).click();
   }],
   ["E2E-12", "Cambio de idioma recordado y aplicado a las demás pestañas", async () => {
     await page.getByRole("button", { name: "English" }).click();
