@@ -71,7 +71,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestOptionsArePersisted` | Las opciones se guardan | RF-32 |
 | `TestLinkFallsBackToConnectionURL` | Sin enlace propio se usa la URL de conexión | RF-25 |
 | `TestEntitiesArePersisted` | La selección de entidades se guarda y se puede vaciar | RF-51 |
-| `TestNewConnectionsFillTwoColumns` | Una conexión nueva se coloca sola en la primera página, sin solapes | RF-22 |
+| `TestNewConnectionsFillThreeColumns` | Una conexión nueva se coloca sola en la primera página, sin solapes | RF-22 |
 | `TestPanelSaveAndCascade` | Guarda páginas en orden; eliminar una conexión quita sus bloques | RF-22, RF-23 |
 | `TestSettingsDefaultsAndSave` | Valores por defecto y guardado de los ajustes | RF-07, RF-24 |
 | `TestPasswordChangeAndReset` | El cambio revoca las demás sesiones y la recuperación, todas | RF-08 |
@@ -322,7 +322,7 @@ Los requisitos pendientes se probarán en su hito.
 | RF-54 | `TestSummary`, E2E-21 |
 | RF-07 | `TestDashboardCanRequireLogin`, `TestSettingsDefaultsAndSave`, E2E-27 |
 | RF-08 | `TestChangePassword`, `TestPasswordChangeAndReset`, E2E-28, INS-03 |
-| RF-22 | `TestPanelSaveAndValidation`, `TestUnplacedConnectionIsHidden`, `TestNewConnectionsFillTwoColumns`, `TestPanelSaveAndCascade`, E2E-24, E2E-25 |
+| RF-22 | `TestPanelSaveAndValidation`, `TestUnplacedConnectionIsHidden`, `TestNewConnectionsFillThreeColumns`, `TestPanelSaveAndCascade`, E2E-24, E2E-25 |
 | RF-23 | `TestPanelSaveAndValidation`, `TestPanelSaveAndCascade`, E2E-25 |
 | RF-26 | E2E-25, E2E-37 |
 | RF-24 | `TestSettingsValidation`, `TestSettingsDefaultsAndSave`, E2E-26 |
