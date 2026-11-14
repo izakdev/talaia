@@ -36,15 +36,38 @@ function randomId() {
 
 const byPosition = (a: PlacedWidget, b: PlacedWidget) => a.y - b.y || a.x - b.x;
 
-// Lo que decide el usuario: páginas, orden, columnas y ancho. La altura la mide el
-// editor y la «y» la recoloca la rejilla, así que no cuentan como cambios.
+const overlaps = (a: PlacedWidget, b: PlacedWidget) => a.x < b.x + b.w && b.x < a.x + a.w;
+
+// Lo que decide el usuario: páginas, columnas, ancho y qué bloques van encima de
+// cada uno en sus columnas. La altura la mide el editor y la «y» la recoloca la
+// rejilla, que puede cambiar el orden entre bloques sin columnas en común sin que
+// cambie el panel: nada de eso cuenta como cambio.
 const layoutKey = (pages: Page[]) =>
   JSON.stringify(
-    pages.map((p) => ({
-      ...p,
-      widgets: [...p.widgets].sort(byPosition).map(({ id, connection_id, x, w }) => ({ id, connection_id, x, w })),
-    })),
+    pages.map((p) => {
+      const ordered = [...p.widgets].sort(byPosition);
+      return {
+        ...p,
+        widgets: ordered
+          .map((widget, i) => ({
+            id: widget.id,
+            connection_id: widget.connection_id,
+            x: widget.x,
+            w: widget.w,
+            above: ordered.slice(0, i).filter((other) => overlaps(other, widget)).map((other) => other.id).sort(),
+          }))
+          .sort((a, b) => a.id.localeCompare(b.id)),
+      };
+    }),
   );
+
+function withHeights(pages: Page[], rows: Record<string, number>): Page[] {
+  return pages.map((p) =>
+    p.widgets.some((w) => rows[w.id] !== undefined && rows[w.id] !== w.h)
+      ? { ...p, widgets: p.widgets.map((w) => (rows[w.id] !== undefined ? { ...w, h: rows[w.id] } : w)) }
+      : p,
+  );
+}
 
 // Alto en filas de la rejilla para un contenido de `px` píxeles.
 const rowsFor = (px: number) => Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, Math.ceil((px + MARGIN) / (ROW_HEIGHT + MARGIN))));
@@ -129,17 +152,13 @@ function Editor({
     setPages((all) => all.map((p) => (p.id === page.id ? change(p) : p)));
   const setWidgets = (widgets: PlacedWidget[]) => updatePage((p) => ({ ...p, widgets }));
   // Ajusta la altura de cada bloque a la medida de su vista previa.
-  const setHeights = useCallback(
-    (rows: Record<string, number>) =>
-      setPages((all) =>
-        all.map((p) =>
-          p.widgets.some((w) => rows[w.id] !== undefined && rows[w.id] !== w.h)
-            ? { ...p, widgets: p.widgets.map((w) => (rows[w.id] !== undefined ? { ...w, h: rows[w.id] } : w)) }
-            : p,
-        ),
-      ),
-    [],
-  );
+  // Las alturas medidas se recuerdan para aplicarlas también a lo que vuelve al descartar,
+  // porque descartar no cambia el tamaño del contenido y no se vuelve a medir.
+  const measured = useRef<Record<string, number>>({});
+  const setHeights = useCallback((rows: Record<string, number>) => {
+    measured.current = { ...measured.current, ...rows };
+    setPages((all) => withHeights(all, rows));
+  }, []);
 
   const addPage = () => {
     const id = randomId();
@@ -195,7 +214,7 @@ function Editor({
           <span role="status" className={dirty ? "warn" : undefined}>
             {t(dirty ? "panel.unsaved" : "panel.saved")}
           </span>
-          <button type="button" className="quiet" disabled={!dirty} onClick={() => setPages(saved)}>
+          <button type="button" className="quiet" disabled={!dirty} onClick={() => setPages(withHeights(saved, measured.current))}>
             {t("panel.discard")}
           </button>
           <button

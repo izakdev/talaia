@@ -271,7 +271,7 @@ function useViewportWidth() {
 
 /**
  * Coloca cada bloque justo debajo del último bloque de sus columnas, según la
- * altura real de su contenido. Hasta medirlos todos, los muestra uno debajo de otro.
+ * altura real de su contenido. Cada bloque se mide ya con su ancho definitivo.
  */
 function StackedPanel({ widgets, states }: { widgets: PlacedWidget[]; states: Map<string, ConnectionState> }) {
   const viewport = useViewportWidth();
@@ -282,8 +282,10 @@ function StackedPanel({ widgets, states }: { widgets: PlacedWidget[]; states: Ma
       setHeights((current) => {
         let next = current;
         for (const entry of entries) {
+          // Un bloque que se desmonta avisa con altura 0: no es una medida.
+          if (!entry.target.isConnected) continue;
           const id = (entry.target as HTMLElement).dataset.id;
-          const height = Math.round(entry.target.getBoundingClientRect().height);
+          const height = Math.round(entry.borderBoxSize?.[0]?.blockSize ?? entry.target.getBoundingClientRect().height);
           if (id && current[id] !== height) next = { ...next, [id]: height };
         }
         return next;
@@ -291,8 +293,15 @@ function StackedPanel({ widgets, states }: { widgets: PlacedWidget[]; states: Ma
     });
   }
   useEffect(() => () => observer.current?.disconnect(), []);
+  // Al desmontarse, el bloque deja de observarse y olvida su altura: si vuelve, se mide de nuevo.
   const measure = useCallback((element: HTMLDivElement | null) => {
-    if (element) observer.current?.observe(element);
+    if (!element) return;
+    const id = element.dataset.id;
+    observer.current?.observe(element);
+    return () => {
+      observer.current?.unobserve(element);
+      if (id) setHeights(({ [id]: _, ...rest }) => rest);
+    };
   }, []);
 
   const visible = widgets.filter((widget) => states.has(widget.connection_id));
@@ -302,7 +311,7 @@ function StackedPanel({ widgets, states }: { widgets: PlacedWidget[]; states: Ma
   const byId = new Map(placed.map((p) => [p.id, p]));
   const column = (n: number) => `calc((100% + ${GAP}px) * ${n} / ${COLUMNS})`;
   return (
-    <div className={ready ? "panel-grid stacked" : "panel-grid"} style={ready ? { height } : undefined}>
+    <div className={ready ? "panel-grid stacked measured" : "panel-grid stacked"} style={{ height }}>
       {items.map((item) => {
         const widget = visible.find((w) => w.id === item.id)!;
         const spot = byId.get(item.id)!;
@@ -314,7 +323,13 @@ function StackedPanel({ widgets, states }: { widgets: PlacedWidget[]; states: Ma
             data-x={spot.x}
             data-w={spot.w}
             className="panel-cell"
-            style={ready ? { left: column(spot.x), width: `calc(${column(spot.w)} - ${GAP}px)`, top: spot.top } : undefined}
+            style={{
+              left: column(spot.x),
+              width: `calc(${column(spot.w)} - ${GAP}px)`,
+              top: spot.top,
+              // Un bloque sin medir ya tiene su ancho definitivo, pero no se ve hasta saber su altura.
+              visibility: heights[item.id] === undefined ? "hidden" : undefined,
+            }}
           >
             <Service connection={states.get(widget.connection_id)!} />
           </div>

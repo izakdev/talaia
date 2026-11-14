@@ -271,9 +271,8 @@ dialog::backdrop { background: rgb(7 43 53 / 0.6); }
 .lookout-sky > :not(.tower) { position: relative; }
 .lookout-main { width: 100%; margin-inline: auto; padding: clamp(1.25rem, 3vw, 2.5rem) clamp(1rem, 4vw, 3rem) 3rem; display: grid; gap: 1.5rem; align-content: start; }
 .live-lost { color: var(--warn); font-weight: 550; }
-/* Hasta medir los bloques van uno debajo de otro; después, cada uno en su sitio calculado. */
-.panel-grid { position: relative; display: grid; gap: 1.5rem; }
-.panel-grid.stacked { display: block; }
+/* Cada bloque va en su sitio calculado (stack.ts), con su ancho desde el principio. */
+.panel-grid { position: relative; }
 .panel-cell { display: flex; min-width: 0; }
 .panel-grid.stacked > .panel-cell { position: absolute; }
 .page-tabs { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; border-bottom: 1px solid var(--line); }
