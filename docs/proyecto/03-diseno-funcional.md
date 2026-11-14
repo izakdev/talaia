@@ -57,8 +57,10 @@ Mientras no exista un administrador, todas las rutas muestran el asistente de pr
 - **Secciones del bloque:** cada sección (cifras, listas, tablas o un apartado con título) lleva una línea encima y ninguna debajo. Dentro de un apartado con título, las cifras no llevan línea propia.
 - **Resumen en la cabecera:** junto al nombre, el estado de todos los servicios del panel, de cualquier página. Si todos están bien, «Los N servicios están en orden»; si no, «N servicios necesitan atención:» y sus nombres, con los fallos primero. Cada nombre lleva a su bloque, en su página, y le da el foco. Los servicios en neutro, como «Sin túneles», no cuentan como avisos.
 - **Atalaya:** la luz y el haz de la cabecera toman el color del peor estado: el acento elegido si todo va bien, ámbar con avisos y rojo con fallos, con el haz más intenso y la línea inferior del mismo color. Al cambiar el peor estado, el haz vuelve a barrer una vez, salvo con movimiento reducido.
-- **Altura:** un bloque mide lo que su contenido, aunque en el editor se le haya dado más alto, y crece si lo necesita, sin solaparse. Los bloques de una misma fila pueden acabar a distinta altura.
-- **Pantallas de menos de 900 px:** los bloques se apilan en una columna, de arriba abajo y de izquierda a derecha.
+- **Colocación:** cada bloque conserva las columnas, el ancho y el orden del editor. En vertical queda justo debajo del último bloque de sus columnas, según la altura real de su contenido, con 1,5rem entre bloques. Si un bloque cambia de altura con los datos, los de debajo se recolocan sin animación.
+- **Ancho del dashboard:** toda la ventana, con su margen lateral.
+- **Pantallas de 900 a 1400 px:** los bloques de menos de media fila pasan a media fila y se colocan por orden en dos mitades.
+- **Pantallas de menos de 900 px:** una sola columna, en el orden del editor.
 - **Página vacía:** indica que no tiene servicios.
 - **Sesión obligatoria:** si está activa, sin sesión se muestra el inicio de sesión. Quien tuviera el panel abierto deja de verlo.
 
@@ -196,10 +198,10 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 
 - **Páginas:** añadir, renombrar (hasta 40 caracteres), mover y eliminar con confirmación. Entre 1 y 20. Eliminar una página no elimina sus conexiones.
 - **Añadir a esta página:** botones con las conexiones que aún no están en ella.
-- **Colocar:** arrastrando la barra de cada bloque y su esquina inferior derecha.
-- **Teclado:** botones **Antes**, **Después**, **Más estrecho** y **Más ancho**, que recolocan por filas, y **Quitar**.
-- **Vista previa:** muestra el contenido real, recortado a su tamaño, y sin interacción.
-- **Guardar:** los cambios no se aplican hasta pulsar **Guardar panel**. **Descartar** vuelve a lo guardado, y el navegador avisa si se cierra la página con cambios.
+- **Colocar:** arrastrando la barra de cada bloque para moverlo y su borde derecho para cambiar el ancho, de 3 a 12 columnas. La altura no se elige: se ajusta sola al contenido de la vista previa, y los bloques suben solos como en el dashboard.
+- **Teclado:** botones **Antes**, **Después**, **Más estrecho** y **Más ancho**, que recolocan por filas, y **Quitar**. Los anchos de los botones son un cuarto, un tercio, media fila, dos tercios y la fila entera. Un bloque nuevo ocupa un tercio.
+- **Vista previa:** muestra el contenido real, sin interacción. Su altura es aproximada, porque se mide con el ancho del editor.
+- **Guardar:** los cambios no se aplican hasta pulsar **Guardar panel**. Las alturas medidas no cuentan como cambios. **Descartar** vuelve a lo guardado, y el navegador avisa si se cierra la página con cambios.
 
 Una misma conexión puede estar en varias páginas, una vez en cada una. Una conexión fuera de todas las páginas se sigue consultando y su estado se ve en **Conexiones**, pero no sale por la API pública.
 

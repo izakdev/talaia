@@ -71,7 +71,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestOptionsArePersisted` | Las opciones se guardan | RF-32 |
 | `TestLinkFallsBackToConnectionURL` | Sin enlace propio se usa la URL de conexión | RF-25 |
 | `TestEntitiesArePersisted` | La selección de entidades se guarda y se puede vaciar | RF-51 |
-| `TestNewConnectionsFillTwoColumns` | Una conexión nueva se coloca sola en la primera página, sin solapes | RF-22 |
+| `TestNewConnectionsFillThreeColumns` | Una conexión nueva se coloca sola en la primera página, sin solapes | RF-22 |
 | `TestPanelSaveAndCascade` | Guarda páginas en orden; eliminar una conexión quita sus bloques | RF-22, RF-23 |
 | `TestSettingsDefaultsAndSave` | Valores por defecto y guardado de los ajustes | RF-07, RF-24 |
 | `TestPasswordChangeAndReset` | El cambio revoca las demás sesiones y la recuperación, todas | RF-08 |
@@ -178,7 +178,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-10 | Conexión guardada con un servicio inaccesible | RF-10, RF-21 |
 | E2E-11 | Editar y eliminar conexiones | RF-10, RF-14 |
 | E2E-12 | Cambio de idioma recordado y aplicado a las demás pestañas | RF-05 |
-| E2E-24 | Editor: arrastrar, controles de teclado, descartar y guardar | RF-22, RNF-08 |
+| E2E-24 | Editor: arrastrar, controles de teclado, alturas automáticas, descartar y guardar | RF-22, RNF-08 |
 | E2E-25 | Varias páginas, servicios fuera del panel y aviso desde otra página | RF-22, RF-23, RF-26 |
 | E2E-26 | Tema y color de acento | RF-24 |
 | E2E-27 | Inicio de sesión opcional para ver el panel | RF-07 |
@@ -203,6 +203,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-35 | WGDashboard en el panel: túneles, peers y estados | RF-20, RF-90 |
 | E2E-36 | WireGuard en el bloque de OPNsense, opcional y sin nombres de peers | RF-20, RF-73, RF-74 |
 | E2E-37 | La atalaya resume el peor estado y la antigüedad, lleva al bloque, y el pie da la versión | RF-26 |
+| E2E-38 | Bloques apilados por su altura real, panel a todo el ancho y editor sin cambios falsos | RF-27 |
 
 Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las discrepancias con el servicio real las cubren las verificaciones manuales.
 
@@ -246,6 +247,7 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 | 2026-11-04 | `v0.1.0` | Proxmox VE real del cliente, actualización de `v0.1.0-rc.1` a `v0.1.0` con `--binary` | Correcto según la salida del instalador: cambio de versión con copia de seguridad; repetir el comando no hace nada porque ya está en esa versión. No se han vuelto a comprobar los datos tras este cambio |
 | 2026-11-04 | `v0.1.0` | Proxmox VE real del cliente, instalador sin `--binary` | Correcto según la salida del instalador: descarga desde GitHub, suma comprobada (si no coincide, no instala) y reinstalación con `--force` y copia de seguridad, dos veces. Después, captura del cliente con su panel y datos actuales de Home Assistant y Proxmox; el contenido del bloque de AdGuard no se ve en ella |
 | 2026-11-06 | Hito 8 | Portainer 2.39.1 real del cliente, con Talaia en Proxmox | Correcto según la captura y la confirmación del cliente: dos entornos en línea, 11 de 12 contenedores en marcha, 7 stacks, filas por entorno, antigüedad del recuento y versión |
+| 2026-11-14 | Hito 13 (`v0.2.4-8-g912160a`) | Panel real del cliente con seis servicios, instalado con `talaia-proxmox.sh update --binary`, en una ventana de unos 2000 px | Correcto según su captura: el panel ocupa todo el ancho; a la izquierda, tres bloques de dos tercios (Proxmox, OPNsense y Home Assistant) y, a la derecha, tres de un tercio (AdGuard, WGDashboard y Portainer) apilados uno justo debajo del otro sin esperar a los de la izquierda, y sin huecos ni solapes. No se han probado con el panel real las ventanas de 900 a 1400 px ni el móvil, que cubren E2E-38 y E2E-13 |
 | 2026-11-12 | `v0.2.4` | Proxmox VE real del cliente, actualización con el instalador descargado de GitHub y sin `--binary` | Correcto según la salida del instalador y una captura del panel: paso de `v0.2.3` a `v0.2.4` con copia de seguridad; el pie del panel indica `Talaia v0.2.4` y los bloques visibles (OPNsense con WireGuard, AdGuard, Proxmox, WGDashboard y parte de Home Assistant) muestran datos actuales en verde. No se ha comprobado con el cliente el cambio de idioma entre pestañas, que cubre E2E-12 |
 | 2026-11-12 | `v0.2.4` | Versión publicada por `release.yml` | Correcto: no preliminar y marcada como la última, con ambos binarios, sumas e instalador. Descargados desde `releases/latest/download`: sumas correctas, binarios ELF amd64 y arm64, el amd64 indica `v0.2.4` e incluye la sincronización del idioma entre pestañas, y el instalador es igual al del repositorio. Aún no se ha instalado esta versión en un Proxmox real |
 | 2026-11-11 | `v0.2.3` | Proxmox VE real del cliente, actualización con el instalador descargado de GitHub y sin `--binary` | Correcto según la salida del instalador y dos capturas del cliente: paso de `v0.2.2` a `v0.2.3` con copia de seguridad; la administración indica `v0.2.3` y las direcciones de Conexiones ya no llevan espacios alrededor de la puntuación |
@@ -322,9 +324,10 @@ Los requisitos pendientes se probarán en su hito.
 | RF-54 | `TestSummary`, E2E-21 |
 | RF-07 | `TestDashboardCanRequireLogin`, `TestSettingsDefaultsAndSave`, E2E-27 |
 | RF-08 | `TestChangePassword`, `TestPasswordChangeAndReset`, E2E-28, INS-03 |
-| RF-22 | `TestPanelSaveAndValidation`, `TestUnplacedConnectionIsHidden`, `TestNewConnectionsFillTwoColumns`, `TestPanelSaveAndCascade`, E2E-24, E2E-25 |
+| RF-22 | `TestPanelSaveAndValidation`, `TestUnplacedConnectionIsHidden`, `TestNewConnectionsFillThreeColumns`, `TestPanelSaveAndCascade`, E2E-24, E2E-25 |
 | RF-23 | `TestPanelSaveAndValidation`, `TestPanelSaveAndCascade`, E2E-25 |
 | RF-26 | E2E-25, E2E-37 |
+| RF-27 | `TestNewConnectionsFillThreeColumns`, E2E-24, E2E-38 |
 | RF-24 | `TestSettingsValidation`, `TestSettingsDefaultsAndSave`, E2E-26 |
 | RF-60 | INS-01, INS-07, INS-08, INS-09, INS-10 |
 | RF-70 | `TestCollect`, `TestParseSize`, E2E-31 |

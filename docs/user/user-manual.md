@@ -410,8 +410,8 @@ In the administration, open **Dashboard**. Each new connection is added on its o
 
 **Placing the services:**
 - **Move:** drag the block's top bar.
-- **Resize:** drag its bottom-right corner.
-- **Without dragging:** use **Earlier**, **Later**, **Narrower** and **Wider**.
+- **Change the width:** drag its right edge. You don't choose the height: it fits whatever the block shows.
+- **Without dragging:** use **Earlier**, **Later**, **Narrower** and **Wider**. The buttons go through a quarter, a third, half a row, two thirds and the full row. A new service takes a third.
 - **Remove:** stops showing it on that page. The connection isn't deleted, and you can add it again with **Add to this page**.
 
 **Pages:** click **Add page**, give it a name and add its services. If there is more than one, the dashboard shows tabs. A service can be on several pages.
@@ -420,7 +420,7 @@ In the administration, open **Dashboard**. Each new connection is added on its o
 
 **Click Save dashboard** to apply the changes, or **Discard** to undo them.
 
-**How it looks afterwards:** on the dashboard, each block is as tall as its content: it grows if it needs to, even if it looks cut off in the editor, and leaves no blank space if you made it taller. On narrow screens, blocks stack in a single column.
+**How it looks afterwards:** the dashboard uses the whole width of the screen. Each block sits right below the previous one in its columns, according to how much its content takes up: so two short blocks one above the other fit next to a long one, with no gaps. If a block grows with the data, the ones below move on their own. On medium screens, blocks narrower than half a row are shown at half a row, and on narrow ones, in a single column.
 
 **Privacy:** a service that isn't on any page doesn't go out through the public API, although Talaia keeps querying it.
 

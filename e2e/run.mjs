@@ -464,18 +464,43 @@ const scenarios = [
     assert.doesNotMatch(await publicDashboard(), /localhost:13002/);
     await toAdmin();
   }],
-  ["E2E-24", "Editor: arrastrar, controles de teclado, descartar y guardar", async () => {
+  ["E2E-24", "Editor: arrastrar, controles de teclado, alturas automáticas, descartar y guardar", async () => {
     await toEditor();
     await page.getByRole("status").getByText("Sin cambios").waitFor();
     assert.equal(await page.locator(".editor-widget").count(), 3);
+    // Medir las alturas reales y recibir datos nuevos no son cambios del usuario.
+    await sleep(6000);
+    await page.getByRole("status").getByText("Sin cambios").waitFor({ timeout: 1000 });
+    // La esquina solo cambia el ancho, no la altura.
+    await widget("AdGuard principal").locator(".react-resizable-handle").scrollIntoViewIfNeeded();
+    const tall = await widget("AdGuard principal").boundingBox();
+    const corner = await widget("AdGuard principal").locator(".react-resizable-handle").boundingBox();
+    await page.mouse.move(corner.x + corner.width / 2, corner.y + corner.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(corner.x + corner.width / 2, corner.y + 120, { steps: 8 });
+    await page.mouse.up();
+    await sleep(400);
+    assert.ok(Math.abs((await widget("AdGuard principal").boundingBox()).height - tall.height) <= 4, "la altura no debe cambiar");
+    // «Más estrecho» desde un tercio lleva a un cuarto (3 columnas), no a 2.
+    await widget("AdGuard principal").getByRole("button", { name: "Más estrecho" }).click();
+    await page.waitForFunction(
+      (width) => document.querySelector('[data-testid="widget-AdGuard principal"]').getBoundingClientRect().width < width - 40,
+      tall.width,
+    );
+    await sleep(400); // la rejilla anima el cambio de tamaño
+    const quarter = (await widget("AdGuard principal").boundingBox()).width;
+    assert.ok(quarter > tall.width * 0.6, `un cuarto mide ${quarter}, un tercio ${tall.width}`);
+    await page.getByRole("button", { name: "Descartar" }).click();
+    await page.getByRole("status").getByText("Sin cambios").waitFor();
     await shot(page, "15-editor-panel");
     await widget("Domótica").locator(".widget-handle").scrollIntoViewIfNeeded();
     const before = await widget("Domótica").boundingBox();
     const handle = await widget("Domótica").locator(".widget-handle").boundingBox();
     await page.mouse.move(handle.x + 20, handle.y + 10);
     await page.mouse.down();
-    await page.mouse.move(handle.x + 200, handle.y + 12, { steps: 8 });
-    await page.mouse.move(handle.x + 620, handle.y + 12, { steps: 12 });
+    // Con tres bloques de un tercio, Domótica está a la derecha: se arrastra a la izquierda.
+    await page.mouse.move(handle.x - 200, handle.y + 12, { steps: 8 });
+    await page.mouse.move(handle.x - 620, handle.y + 12, { steps: 12 });
     await page.mouse.up();
     await page.getByRole("status").getByText("Cambios sin guardar").waitFor();
     await page.waitForFunction(() => document.querySelector(".editor-widget.react-draggable-dragging") === null);
@@ -496,10 +521,8 @@ const scenarios = [
     await saveEditor();
     await toDashboard();
     await page.locator(".panel-grid .service", { hasText: "AdGuard principal" }).waitFor();
-    const columns = await page.evaluate(() =>
-      [...document.querySelectorAll(".panel-grid > div")].map((el) => el.style.gridColumn),
-    );
-    assert.ok(columns.includes("1 / span 8") || columns.some((c) => c.endsWith("span 8")), String(columns));
+    // «Más ancho» lleva a AdGuard de un tercio (4 columnas) a media fila (6).
+    assert.equal(await page.locator(".panel-cell", { hasText: "AdGuard principal" }).getAttribute("data-w"), "6");
     await page.getByRole("link", { name: "Administración" }).click();
   }],
   ["E2E-25", "Varias páginas, servicios fuera del panel y aviso desde otra página", async () => {
@@ -821,6 +844,130 @@ const scenarios = [
     opnsense.state.tunnelDown = false;
     await state.getByText("Gateways en línea").waitFor();
     await toAdmin();
+  }],
+  ["E2E-38", "Bloques apilados por su altura real, panel a todo el ancho y editor sin cambios falsos", async () => {
+    // Dos bloques cortos a la izquierda, uno encima de otro, y uno largo a la derecha.
+    const layout = await page.evaluate(async () => {
+      const connections = await (await fetch("/api/admin/connections")).json();
+      const id = (name) => connections.find((c) => c.name === name).id;
+      const place = [
+        ["VPN", 0, 0], ["AdGuard principal", 0, 10], ["Domótica", 6, 0],
+        ["Cortafuegos", 0, 20], ["Clúster de casa", 6, 20], ["Contenedores", 0, 30],
+      ];
+      const { pages } = await (await fetch("/api/admin/panel")).json();
+      pages[0].widgets = place.map(([name, x, y], i) => ({ id: `apilado-${i}`, connection_id: id(name), x, y, w: 6, h: 10 }));
+      pages.splice(1, pages.length, { id: "otra", name: "Otra", widgets: [{ id: "otra-0", connection_id: id("AdGuard principal"), x: 0, y: 0, w: 6, h: 10 }] });
+      const response = await fetch("/api/admin/panel", {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pages }),
+      });
+      return response.status;
+    });
+    assert.equal(layout, 200);
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    await page.getByRole("link", { name: "Ver el panel" }).click();
+    const cell = (name) => page.locator(".panel-cell", { hasText: name });
+    const box = async (name) => (await cell(name).boundingBox());
+    const stacked = async () => {
+      const vpn = await box("VPN");
+      const adguard = await box("AdGuard principal");
+      const home = await box("Domótica");
+      return { vpn, adguard, home };
+    };
+    await page.waitForFunction(() => document.querySelectorAll(".panel-grid.measured > .panel-cell").length === 6);
+    // Al pasar a su sitio, cada bloque vuelve a medirse con su ancho: se espera a que se asiente.
+    const settled = await page
+      .waitForFunction(() => {
+        const rect = (n) => [...document.querySelectorAll(".panel-cell")].find((el) => el.textContent.includes(n)).getBoundingClientRect();
+        const [vpn, adguard] = [rect("VPN"), rect("AdGuard principal")];
+        return Math.abs(adguard.top - (vpn.bottom + 24)) <= 2;
+      }, null, { timeout: 5000 })
+      .then(() => true, () => false);
+    const { vpn, adguard, home } = await stacked();
+    assert.ok(settled, `AdGuard empieza en ${adguard.y}, VPN acaba en ${vpn.y + vpn.height}`);
+    assert.ok(adguard.y < home.y + home.height, "AdGuard debe quedar al lado de Home Assistant, no debajo");
+    assert.ok((await page.locator(".lookout-main").boundingBox()).width > 1472, "el panel debe usar más de 92rem");
+    // Si el bloque de arriba cambia de altura, el de debajo se recoloca sin solaparse.
+    wgdashboard.state.empty = true;
+    await page.getByText("Sin túneles").first().waitFor();
+    await page.waitForFunction(() => {
+      const [a, b] = ["VPN", "AdGuard principal"].map((n) =>
+        [...document.querySelectorAll(".panel-cell")].find((el) => el.textContent.includes(n)).getBoundingClientRect());
+      return Math.abs(b.top - (a.bottom + 24)) <= 2;
+    });
+    wgdashboard.state.empty = false;
+    await page.getByText("Túneles activos").first().waitFor();
+    // En una pantalla mediana, nada se sale ni se solapa.
+    await page.setViewportSize({ width: 1100, height: 900 });
+    await page.waitForFunction(() => {
+      const boxes = [...document.querySelectorAll(".panel-cell")].map((el) => el.getBoundingClientRect());
+      const inside = boxes.every((b) => b.left >= 0 && b.right <= window.innerWidth);
+      const apart = boxes.every((a, i) => boxes.every((b, j) => i === j || a.right <= b.left + 1 || b.right <= a.left + 1 || a.bottom <= b.top + 1 || b.bottom <= a.top + 1));
+      return inside && apart;
+    });
+    // Al volver de otra página, ningún fotograma pinta los bloques uno encima de otro.
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    const tabs = page.locator(".page-tabs");
+    await tabs.getByRole("link", { name: "Otra" }).click();
+    await page.waitForFunction(() => document.querySelectorAll(".panel-grid.measured > .panel-cell").length === 1);
+    await page.evaluate(() => {
+      window.__overlap = false;
+      const check = () => {
+        // Solo cuenta lo que se ve: un bloque aún sin medir está oculto.
+        const boxes = [...document.querySelectorAll(".panel-cell")]
+          .filter((el) => getComputedStyle(el).visibility !== "hidden")
+          .map((el) => el.getBoundingClientRect());
+        if (boxes.some((a, i) => boxes.some((b, j) => i < j && a.right > b.left + 1 && b.right > a.left + 1 && a.bottom > b.top + 1 && b.bottom > a.top + 1))) window.__overlap = true;
+        if (performance.now() < window.__until) requestAnimationFrame(check);
+      };
+      window.__until = performance.now() + 1500;
+      requestAnimationFrame(check);
+    });
+    await tabs.getByRole("link", { name: "Inicio" }).click();
+    await sleep(1600);
+    assert.equal(await page.evaluate(() => window.__overlap), false, "al cambiar de página no deben solaparse los bloques");
+
+    // En el editor, una disposición guardada antes del hito no aparece como cambiada, aunque
+    // al medir las alturas un bloque corto de la derecha adelante a uno de la izquierda.
+    const reordered = await page.evaluate(async () => {
+      const connections = await (await fetch("/api/admin/connections")).json();
+      const id = (name) => connections.find((c) => c.name === name).id;
+      const place = [["Clúster de casa", 0, 0], ["VPN", 6, 0], ["Cortafuegos", 0, 10], ["AdGuard principal", 6, 10], ["Domótica", 0, 20], ["Contenedores", 6, 20]];
+      const { pages } = await (await fetch("/api/admin/panel")).json();
+      pages[0].widgets = place.map(([name, x, y], i) => ({ id: `orden-${i}`, connection_id: id(name), x, y, w: 6, h: 10 }));
+      const response = await fetch("/api/admin/panel", {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pages }),
+      });
+      return response.status;
+    });
+    assert.equal(reordered, 200);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.getByRole("link", { name: "Administración" }).click();
+    await toEditor();
+    await sleep(6000);
+    await page.getByRole("status").getByText("Sin cambios").waitFor({ timeout: 1000 });
+    // Tras descartar un cambio de orden, cada tarjeta sigue midiendo lo que su contenido.
+    await widget("VPN").getByRole("button", { name: "Después" }).click();
+    await page.getByRole("status").getByText("Cambios sin guardar").waitFor();
+    await page.getByRole("button", { name: "Descartar" }).click();
+    await sleep(600);
+    const fits = await page.evaluate(() =>
+      [...document.querySelectorAll(".editor-widget")].map((card) => {
+        const content = card.querySelector(".editor-widget-content").getBoundingClientRect();
+        const box = card.getBoundingClientRect();
+        return box.bottom - content.bottom;
+      }),
+    );
+    assert.ok(fits.every((gap) => gap > -2 && gap < 60), `holgura de cada tarjeta: ${fits.map(Math.round)}`);
+    // Deja una sola página, como esperan los escenarios siguientes.
+    const status = await page.evaluate(async () => {
+      const { pages } = await (await fetch("/api/admin/panel")).json();
+      const response = await fetch("/api/admin/panel", {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pages: pages.slice(0, 1) }),
+      });
+      return response.status;
+    });
+    assert.equal(status, 200);
+    await page.getByRole("link", { name: "Conexiones" }).click();
   }],
   ["E2E-12", "Cambio de idioma recordado y aplicado a las demás pestañas", async () => {
     await page.getByRole("button", { name: "English" }).click();

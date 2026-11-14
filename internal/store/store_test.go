@@ -177,21 +177,24 @@ func TestMigratesExistingDatabase(t *testing.T) {
 	}
 }
 
-func TestNewConnectionsFillTwoColumns(t *testing.T) {
+func TestNewConnectionsFillThreeColumns(t *testing.T) {
 	s, _ := newStore(t)
 	ctx := context.Background()
-	for _, name := range []string{"a", "b", "c"} {
+	for _, name := range []string{"a", "b", "c", "d"} {
 		if _, err := s.CreateConnection(ctx, Connection{Name: name, Type: "adguard", BaseURL: "http://x", IntervalSeconds: 30}, "s"); err != nil {
 			t.Fatal(err)
 		}
 	}
 	pages, err := s.Panel(ctx)
-	if err != nil || len(pages) != 1 || len(pages[0].Widgets) != 3 {
+	if err != nil || len(pages) != 1 || len(pages[0].Widgets) != 4 {
 		t.Fatalf("panel = %+v, err = %v", pages, err)
 	}
 	w := pages[0].Widgets
-	if w[0].X != 0 || w[0].Y != 0 || w[1].X != DefaultWidgetWidth || w[1].Y != 0 || w[2].X != 0 || w[2].Y != DefaultWidgetHeight {
-		t.Fatalf("widgets = %+v", w)
+	want := [][2]int{{0, 0}, {4, 0}, {8, 0}, {0, DefaultWidgetHeight}}
+	for i, xy := range want {
+		if w[i].X != xy[0] || w[i].Y != xy[1] || w[i].W != 4 {
+			t.Fatalf("widget %d = %+v, quiero x=%d y=%d w=4", i, w[i], xy[0], xy[1])
+		}
 	}
 }
 

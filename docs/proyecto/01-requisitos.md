@@ -58,6 +58,7 @@ Talaia es un dashboard autoalojado para ver de un vistazo el estado de los servi
 | RF-22 | El administrador elige qué servicios se muestran, y los coloca y redimensiona arrastrando o con controles de teclado. Lo que no está en el panel no sale por la API pública | 5 | Implementado |
 | RF-23 | El dashboard admite varias páginas | 5 | Implementado |
 | RF-26 | La cabecera del dashboard resume el peor estado de los servicios de todas sus páginas y enlaza con cada bloque que necesita atención; los bloques con aviso o fallo se distinguen a distancia | 11 | Implementado |
+| RF-27 | Cada bloque del dashboard queda justo debajo del anterior de sus columnas, según la altura real de su contenido, y el dashboard usa todo el ancho de la ventana | 13 | Implementado |
 | RF-24 | El dashboard admite tema claro, oscuro o del sistema, y color de acento | 5 | Implementado |
 
 ### AdGuard Home

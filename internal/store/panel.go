@@ -186,7 +186,7 @@ func (s *Store) ResetPassword(ctx context.Context, hash string) (string, error) 
 	return username, tx.Commit()
 }
 
-// placeNewConnection coloca una conexión nueva en la primera página, alternando dos
+// placeNewConnection coloca una conexión nueva en la primera página, alternando tres
 // columnas, debajo de lo que ya ocupe ese espacio.
 func placeNewConnection(ctx context.Context, tx *sql.Tx, widgetID, connectionID string) error {
 	var pageID string
@@ -199,7 +199,7 @@ func placeNewConnection(ctx context.Context, tx *sql.Tx, widgetID, connectionID 
 	if err != nil {
 		return err
 	}
-	x := (count % 2) * DefaultWidgetWidth
+	x := (count % (12 / DefaultWidgetWidth)) * DefaultWidgetWidth
 	var y int
 	err = tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(y + h), 0) FROM widgets WHERE page_id = ? AND x < ? AND x + w > ?`,
 		pageID, x+DefaultWidgetWidth, x).Scan(&y)
@@ -213,6 +213,6 @@ func placeNewConnection(ctx context.Context, tx *sql.Tx, widgetID, connectionID 
 
 // Tamaño inicial de un widget nuevo, en columnas y filas de la rejilla.
 const (
-	DefaultWidgetWidth  = 6
+	DefaultWidgetWidth  = 4
 	DefaultWidgetHeight = 10
 )
