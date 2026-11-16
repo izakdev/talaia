@@ -16,9 +16,13 @@
 | 10 | OPNsense: estado de WireGuard | Terminado y verificado con el OPNsense del cliente y un peer conectado, publicado en `v0.2.1` |
 | 11 | Panel de un vistazo: estado global en la atalaya y bloques con aviso visibles | Terminado y verificado con el panel real del cliente, publicado en `v0.2.2` |
 | 12 | Pulido del panel: antigüedad en la cabecera, secciones coherentes y bloques sin huecos | Terminado y verificado con el panel real del cliente, publicado en `v0.2.3` |
-| 13 | Bloques que se apilan solos y panel a todo el ancho | Terminado y verificado con el panel real del cliente; pendiente de publicar |
+| 13 | Bloques que se apilan solos y panel a todo el ancho | Terminado y verificado con el panel real del cliente, publicado en `v0.2.5` |
 
 ## Historial
+
+### `v0.2.5` (2026-11-16)
+
+Trae el hito 13: los bloques del panel se apilan solos según la altura real de su contenido, de modo que dos bloques cortos caben al lado de uno largo, y el panel usa todo el ancho de la ventana. En el editor solo se elige el ancho, de un cuarto a la fila entera. Incluye los binarios para amd64 y arm64, las sumas de comprobación y el instalador, y se actualiza desde `v0.2.4` con `talaia-proxmox.sh update`.
 
 ### Hito 13 (2026-11-13)
 
