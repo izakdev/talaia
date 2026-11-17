@@ -17,9 +17,13 @@
 | 11 | Panel de un vistazo: estado global en la atalaya y bloques con aviso visibles | Terminado y verificado con el panel real del cliente, publicado en `v0.2.2` |
 | 12 | Pulido del panel: antigüedad en la cabecera, secciones coherentes y bloques sin huecos | Terminado y verificado con el panel real del cliente, publicado en `v0.2.3` |
 | 13 | Bloques que se apilan solos y panel a todo el ancho | Terminado y verificado con el panel real del cliente, publicado en `v0.2.5` |
-| 14 | QNAP por SNMPv3: discos, volúmenes y recursos | Terminado y verificado con el QNAP del cliente |
+| 14 | QNAP por SNMPv3: discos, volúmenes y recursos | Terminado y verificado con el QNAP del cliente, publicado en `v0.3.0` |
 
 ## Historial
+
+### `v0.3.0` (2026-11-18)
+
+Trae el hito 14: la integración con QNAP (QTS y QuTS hero) por SNMPv3, con discos y su salud SMART, volúmenes, recursos, temperaturas y firmware. Incluye también la corrección de los nombres largos en las secciones Gateways y WireGuard de OPNsense. Incluye los binarios para amd64 y arm64, las sumas de comprobación y el instalador, y se actualiza desde `v0.2.5` con `talaia-proxmox.sh update`.
 
 ### Hito 14 (2026-11-17)
 
