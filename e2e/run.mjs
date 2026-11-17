@@ -843,6 +843,21 @@ const scenarios = [
     opnsense.state.gateway = "none";
     opnsense.state.tunnelDown = false;
     await state.getByText("Gateways en línea").waitFor();
+    // Un nombre largo y sin espacios no se parte a mitad de palabra: se reparte el estado.
+    opnsense.state.tunnelName = "Acceso_remoto_principal";
+    await page.setViewportSize({ width: 375, height: 800 });
+    const tunnel = block.locator(".ha-entities li", { hasText: "Acceso_remoto_principal" });
+    await tunnel.waitFor();
+    // Se cuentan las líneas del texto, no la altura: el nombre se estira hasta la del estado.
+    const lines = await tunnel.evaluate((li) => [...li.querySelectorAll("span")].map((span) => {
+      const range = document.createRange();
+      range.selectNodeContents(span);
+      return new Set([...range.getClientRects()].map((rect) => Math.round(rect.top))).size;
+    }));
+    assert.equal(lines[0], 1, `nombre en ${lines[0]} líneas`);
+    assert.ok(lines[1] > 1, "el estado se reparte en varias líneas");
+    opnsense.state.tunnelName = "Acceso remoto";
+    await page.setViewportSize({ width: 1280, height: 800 });
     await toAdmin();
   }],
   ["E2E-38", "Bloques apilados por su altura real, panel a todo el ancho y editor sin cambios falsos", async () => {
