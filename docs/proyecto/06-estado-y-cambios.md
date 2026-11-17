@@ -20,6 +20,11 @@
 
 ## Historial
 
+### Nombres largos en OPNsense (2026-11-16)
+
+**Corregido:**
+- En las secciones Gateways y WireGuard del bloque de OPNsense, un nombre largo sin espacios ya no se parte a mitad de palabra: se reparte en dos líneas el estado.
+
 ### `v0.2.5` (2026-11-16)
 
 Trae el hito 13: los bloques del panel se apilan solos según la altura real de su contenido, de modo que dos bloques cortos caben al lado de uno largo, y el panel usa todo el ancho de la ventana. En el editor solo se elige el ancho, de un cuarto a la fila entera. Incluye los binarios para amd64 y arm64, las sumas de comprobación y el instalador, y se actualiza desde `v0.2.4` con `talaia-proxmox.sh update`.

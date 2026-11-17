@@ -5,7 +5,7 @@ export const OPN_KEY = "clave-de-api-de-prueba";
 export const OPN_SECRET = "secreto-de-api-de-prueba";
 
 export function fakeOPNsense(port) {
-  const state = { gateway: "none", monitored: true, limited: false, received: 88000000000, sent: 21000000000, wireguard: true, tunnelDown: false };
+  const state = { gateway: "none", monitored: true, limited: false, received: 88000000000, sent: 21000000000, wireguard: true, tunnelDown: false, tunnelName: "Acceso remoto" };
   const authorized = (req) =>
     req.headers.authorization === `Basic ${Buffer.from(`${OPN_KEY}:${OPN_SECRET}`).toString("base64")}`;
   const routes = {
@@ -77,7 +77,7 @@ export function fakeOPNsense(port) {
   routes["/api/wireguard/service/show"] = () => {
     const rows = [
       { if: "wg0", type: "interface", "public-key": "clave-publica-servidor", "listen-port": "51777", fwmark: "off", endpoint: "51777",
-        status: state.tunnelDown ? "down" : "up", name: "Acceso remoto", "latest-handshake-age": null, "peer-status": "offline", ifname: "Acceso remoto" },
+        status: state.tunnelDown ? "down" : "up", name: state.tunnelName, "latest-handshake-age": null, "peer-status": "offline", ifname: state.tunnelName },
       peer("peer-simulado-movil", "online", 30, 536870912, 1610612736),
       peer("peer-simulado-portatil", "offline", null, 0, 0),
     ];

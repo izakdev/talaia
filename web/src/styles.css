@@ -348,6 +348,8 @@ details > summary { cursor: pointer; list-style-position: outside; margin-left: 
 .ha-entities li span:last-child { color: var(--ink-soft); text-align: right; }
 .gateways { grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr)); }
 .gateways li span:last-child { font-variant-numeric: normal; }
+/* Un nombre sin espacios solo se parte si no cabe en toda la fila: antes se reparte el estado. */
+.gateways li span:first-child { min-width: auto; overflow-wrap: break-word; }
 .ha-entities li.no-data span:last-child { color: var(--warn); font-weight: 550; }
 .figures dd.no-data { color: var(--warn); font-size: 1rem; font-weight: 550; letter-spacing: 0; line-height: 1.8; }
 .service-foot { color: var(--ink-soft); font-size: 0.8125rem; }

@@ -238,6 +238,8 @@ Se aplican a todos los usuarios del panel. El idioma sigue siendo de cada navega
 | WAN | Velocidad de descarga y subida, y total desde el arranque de la interfaz. La velocidad aparece a partir de la segunda lectura, mientras indica «Midiendo…» |
 | WireGuard | Solo con la opción activa: una fila por instancia con su estado y sus peers conectados sobre el total, y el tráfico recibido y enviado. Sin nombres de peers; ver DEC-35 |
 
+En las filas de gateways y de WireGuard, si no caben en una línea, se reparte primero el estado; un nombre sin espacios solo se parte si no cabe en toda la fila.
+
 **Estados de un bloque de Portainer:**
 
 | Estado | Cuándo | Indicador |
