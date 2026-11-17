@@ -10,7 +10,7 @@
 
 ![Talaia dashboard: one tunnel is stopped, so the header and the VPN block turn amber](docs/img/portada-en.png)
 
-> **Status:** `v0.2.5` released. Installing, updating and starting on boot in Proxmox VE are verified on a real server.
+> **Status:** `v0.3.0` released. Installing, updating and starting on boot in Proxmox VE are verified on a real server.
 
 *Talaia* is Catalan for "watchtower": a tower from which you keep an eye on your surroundings.
 
@@ -33,7 +33,7 @@
 | OPNsense | Gateways, WAN traffic and speed, resources, optional WireGuard status |
 | Portainer | Environments, running and unhealthy containers, stacks |
 | WGDashboard | Tunnels, connected peers and traffic |
-| QNAP (next version) | Disks with SMART health and temperature, volumes, CPU, RAM and temperatures, over SNMPv3 |
+| QNAP | Disks with SMART health and temperature, volumes, CPU, RAM and temperatures, over SNMPv3 |
 
 ## Quick start on Proxmox VE
 

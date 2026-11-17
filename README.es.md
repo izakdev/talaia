@@ -10,7 +10,7 @@
 
 ![Panel de Talaia: un túnel está parado, así que la cabecera y el bloque de la VPN se ponen en ámbar](docs/img/portada-es.png)
 
-> **Estado:** `v0.2.5` publicada. La instalación, la actualización y el arranque automático en Proxmox VE están verificados en un servidor real.
+> **Estado:** `v0.3.0` publicada. La instalación, la actualización y el arranque automático en Proxmox VE están verificados en un servidor real.
 
 *Talaia* significa «atalaya» en catalán: una torre desde la que se vigila el entorno.
 
@@ -33,7 +33,7 @@
 | OPNsense | Gateways, tráfico y velocidad de la WAN, recursos y, si quieres, el estado de WireGuard |
 | Portainer | Entornos, contenedores en marcha y con problemas, y stacks |
 | WGDashboard | Túneles, peers conectados y tráfico |
-| QNAP (próxima versión) | Discos con su salud SMART y su temperatura, volúmenes, CPU, RAM y temperaturas, por SNMPv3 |
+| QNAP | Discos con su salud SMART y su temperatura, volúmenes, CPU, RAM y temperaturas, por SNMPv3 |
 
 ## Instalación rápida en Proxmox VE
 

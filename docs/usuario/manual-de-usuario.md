@@ -4,7 +4,7 @@ Talaia es un panel para ver de un vistazo el estado de los servicios de tu labor
 
 *[English version](../user/user-manual.md).*
 
-> **Versión de este manual:** `v0.2.5`. Muestran datos AdGuard Home, Proxmox VE, Home Assistant, OPNsense, Portainer y WGDashboard; QNAP llegará en la próxima versión. Consulta las [limitaciones actuales](#limitaciones-actuales).
+> **Versión de este manual:** `v0.3.0`. Muestran datos AdGuard Home, Proxmox VE, Home Assistant, OPNsense, Portainer, WGDashboard y QNAP. Consulta las [limitaciones actuales](#limitaciones-actuales).
 
 ## Índice
 
