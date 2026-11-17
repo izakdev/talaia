@@ -33,6 +33,7 @@
 | OPNsense | Gateways, tráfico y velocidad de la WAN, recursos y, si quieres, el estado de WireGuard |
 | Portainer | Entornos, contenedores en marcha y con problemas, y stacks |
 | WGDashboard | Túneles, peers conectados y tráfico |
+| QNAP (próxima versión) | Discos con su salud SMART y su temperatura, volúmenes, CPU, RAM y temperaturas, por SNMPv3 |
 
 ## Instalación rápida en Proxmox VE
 

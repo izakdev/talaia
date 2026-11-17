@@ -14,6 +14,7 @@ import { fakeOPNsense, OPN_KEY, OPN_SECRET } from "./fake-opnsense.mjs";
 import { fakePortainer, PORTAINER_TOKEN } from "./fake-portainer.mjs";
 import { fakeWGDashboard, WGDASHBOARD_KEY } from "./fake-wgdashboard.mjs";
 import { fakeProxmox, TOKEN } from "./fake-proxmox.mjs";
+import { fakeQNAP, QNAP_AUTH, QNAP_PRIV, QNAP_USER } from "./fake-qnap.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const screenshotsDir = process.argv.includes("--screenshots") ? join(root, "docs/usuario/img") : null;
@@ -26,6 +27,7 @@ const homeAssistant = fakeHomeAssistant(13002);
 const opnsense = fakeOPNsense(13003);
 const portainer = fakePortainer(13004);
 const wgdashboard = fakeWGDashboard(13005);
+const qnap = fakeQNAP(13006); // UDP
 const dataDir = mkdtempSync(join(tmpdir(), "talaia-e2e-"));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -162,7 +164,7 @@ const scenarios = [
   ["E2E-04", "Catálogo de servicios: búsqueda y navegación", async () => {
     await page.getByRole("link", { name: "Añadir conexión" }).click();
     await page.getByRole("heading", { name: "Elige un servicio" }).waitFor();
-    assert.equal(await page.locator(".catalog button").count(), 6);
+    assert.equal(await page.locator(".catalog button").count(), 7);
     await shot(page, "04-catalogo");
     const search = page.getByLabel("Buscar servicio");
     await search.fill("maquinas");
@@ -860,6 +862,69 @@ const scenarios = [
     await page.setViewportSize({ width: 1280, height: 800 });
     await toAdmin();
   }],
+  ["E2E-39", "Alta de QNAP por SNMPv3", async () => {
+    await page.goto(`${BASE}/admin/connections/new`);
+    await page.getByRole("button", { name: /QNAP/ }).click();
+    await page.getByLabel("Nombre", { exact: true }).fill("NAS");
+    await page.getByLabel(/^Dirección SNMP/).fill(qnap.url.replace("snmp://", "http://"));
+    await page.getByLabel(/^Usuario SNMPv3/).fill("usuario-desconocido");
+    await page.getByLabel(/^Clave de autenticación/).fill(QNAP_AUTH);
+    await page.getByLabel(/^Clave de cifrado/).fill(QNAP_PRIV);
+    await page.getByLabel(/^Protocolo de cifrado/).selectOption("aes");
+    await page.locator("dialog input[type=number]").fill("5");
+    // SNMP no usa TLS: la casilla del certificado no aparece.
+    assert.equal(await page.getByText("No verificar el certificado TLS").count(), 0);
+    await page.getByRole("button", { name: "Probar conexión" }).click();
+    await page.getByRole("alert").getByText("snmp://host").waitFor();
+    await page.getByLabel(/^Dirección SNMP/).fill(qnap.url);
+    await page.getByRole("button", { name: "Probar conexión" }).click();
+    await page.locator("dialog p[role=status]").getByText("Credenciales rechazadas").waitFor();
+    await page.getByLabel(/^Usuario SNMPv3/).fill(QNAP_USER);
+    await page.getByRole("button", { name: "Probar conexión" }).click();
+    await page.locator("dialog p[role=status]").getByText("Conexión correcta").waitFor();
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await row("NAS").getByText("Funciona").waitFor();
+  }],
+  ["E2E-40", "QNAP en el panel: discos, volúmenes y estados", async () => {
+    await toDashboard();
+    const block = page.locator(".service", { hasText: "QNAP 5.2" });
+    const state = block.locator(".service-state");
+    await state.getByText("Discos en buen estado").waitFor();
+    // Sin enlace propio, el nombre no enlaza a la dirección snmp://.
+    assert.equal(await block.locator(".service-link").count(), 0);
+    const body = await block.innerText();
+    assert.match(body, /CPU\s+7 %/);
+    assert.match(body, /RAM\s+44 %/);
+    assert.match(body, /Almacenamiento\s+50 %/);
+    assert.match(body, /Disco 3\s+Correcto · 31 °C/);
+    assert.match(body, /USB 1\s+Sin datos SMART/);
+    assert.match(body, /Volumen 1\s+Listo · 60 % de 10 TiB/);
+    assert.match(body, /CPU 52 °C · Sistema 33 °C/);
+    assert.match(body, /QNAP 5\.2\.9\.9999/);
+    await shot(block, "23-panel-qnap");
+    const leaks = await publicDashboard();
+    for (const leak of [QNAP_USER, QNAP_AUTH, QNAP_PRIV, "127.0.0.1:13006", "snmp://", "nas-simulado", "Q000SIMULADO", "MODELO-SIMULADO", "Volumen-privado", "Copias-privadas"]) {
+      assert.equal(leaks.includes(leak), false, leak);
+    }
+    qnap.state.smartWarning = true;
+    await state.getByText("Aviso SMART").waitFor();
+    await block.locator(".ha-entities li.no-data", { hasText: "Disco 4" }).getByText("Aviso SMART · 32 °C").waitFor();
+    qnap.state.smartWarning = false;
+    qnap.state.full = true;
+    await state.getByText("Volumen casi lleno").waitFor();
+    qnap.state.full = false;
+    qnap.state.degraded = true;
+    await state.getByText("Almacenamiento degradado").waitFor();
+    assert.ok(await block.evaluate((el) => el.classList.contains("tone-bad")));
+    qnap.state.degraded = false;
+    await state.getByText("Discos en buen estado").waitFor();
+    await qnap.stop();
+    // Con el puerto cerrado, el sistema rechaza el datagrama o no llega respuesta.
+    await block.getByText(/No se puede conectar con el servicio|El servicio no ha respondido a tiempo/).waitFor({ timeout: 30000 });
+    await qnap.start();
+    await state.getByText("Discos en buen estado").waitFor({ timeout: 30000 });
+    await toAdmin();
+  }],
   ["E2E-38", "Bloques apilados por su altura real, panel a todo el ancho y editor sin cambios falsos", async () => {
     // Dos bloques cortos a la izquierda, uno encima de otro, y uno largo a la derecha.
     const layout = await page.evaluate(async () => {
@@ -1019,7 +1084,7 @@ const scenarios = [
   }],
   ["E2E-14", "La API pública no expone configuración ni credenciales", async () => {
     const body = await publicDashboard();
-    for (const leak of [USER, PASSWORD, TOKEN, HA_TOKEN, OPN_KEY, OPN_SECRET, "localhost:13002", "192.0.2.11", "192.0.2.50", "cortafuegos.simulado", "proceso-simulado", "pppoe1", PORTAINER_TOKEN, "192.0.2.60", "docker.simulado", "instancia-simulada", WGDASHBOARD_KEY, "clave-privada-simulada", "clave-publica-simulada", "10.66.0", "51666", "wg-simulado", "vpn.simulado", "192.0.2.53", "base_url", "link_url", "secret"]) {
+    for (const leak of [USER, PASSWORD, TOKEN, HA_TOKEN, OPN_KEY, OPN_SECRET, "localhost:13002", "192.0.2.11", "192.0.2.50", "cortafuegos.simulado", "proceso-simulado", "pppoe1", PORTAINER_TOKEN, "192.0.2.60", "docker.simulado", "instancia-simulada", WGDASHBOARD_KEY, "clave-privada-simulada", "clave-publica-simulada", "10.66.0", "51666", "wg-simulado", "vpn.simulado", "192.0.2.53", QNAP_USER, QNAP_AUTH, QNAP_PRIV, "snmp://", "base_url", "link_url", "secret", "privacy_secret"]) {
       assert.equal(body.includes(leak), false, leak);
     }
     const headers = (await fetch(BASE)).headers;
@@ -1039,6 +1104,7 @@ try {
   await opnsense.start();
   await portainer.start();
   await wgdashboard.start();
+  await qnap.start();
   await waitForServer();
   for (const [id, title, run] of scenarios) {
     try {
@@ -1059,6 +1125,7 @@ try {
   await opnsense.stop().catch(() => {});
   await portainer.stop().catch(() => {});
   await wgdashboard.stop().catch(() => {});
+  await qnap.stop().catch(() => {});
   rmSync(dataDir, { recursive: true, force: true });
 }
 if (failed) process.exit(1);

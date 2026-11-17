@@ -8,6 +8,7 @@
     "social-preview": "node social-preview.mjs"
   },
   "devDependencies": {
+    "net-snmp": "3.29.2",
     "playwright": "1.63.0",
     "ws": "^8.22.1"
   }

@@ -46,6 +46,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestEmptySetupTokenNeverMatches` | Un archivo vacío no deja crear el administrador | RF-62 |
 | `TestPastedTokenIsTrimmed` | Un token pegado con espacios o saltos de línea se limpia; con saltos en medio se rechaza | RF-14 |
 | `TestConnectionTest` | Exige sesión, no guarda nada, reutiliza la credencial solo con la misma URL y rechaza tipos sin integración | RF-13, RF-14 |
+| `TestQNAPConnectionRules` | QNAP exige `snmp://`, las dos claves a la vez y de al menos 8 caracteres; las guarda juntas y sin devolverlas, las conserva si llegan vacías, desactiva TLS y no publica la dirección como enlace | RF-102, RF-14, RF-25 |
 
 ### `internal/auth`
 
@@ -162,6 +163,18 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestWGDashboardErrors` | Clasifica la clave rechazada, las respuestas ajenas y las que WGDashboard marca sin éxito | RF-21, RF-91 |
 | `TestNoTunnels` | Sin túneles devuelve una lista vacía | RF-90 |
 
+### `internal/integrations/qnap`
+
+| Prueba | Verifica | Requisitos |
+|---|---|---|
+| `TestCollectQNAP` | Lee CPU, memoria (total menos disponible), temperaturas, firmware, discos por bahía y USB, y volúmenes en KiB, con la forma de un QuTS hero 5.2 real; una temperatura sin sensor no se publica, y un USB sin sensor que QNAP da como «Abnormal» queda sin datos SMART, mientras que uno con temperatura conserva su SMART | RF-100, RF-101 |
+| `TestQNAPWithoutQTSMIB` | Sin QTS-MIB, usa la memoria libre y deja el firmware vacío | RF-100 |
+| `TestQNAPStorageStates` | Traduce los estados de RAID, pool y volumen: reconstrucción, degradado, aviso, error, comprobación y texto desconocido | RF-101 |
+| `TestQNAPFanFailure` | Detecta un ventilador averiado | RF-101 |
+| `TestQNAPDataHidesInfrastructure` | No publica claves, usuario, dirección, nombre del equipo, modelos, números de serie ni nombres de volúmenes, ni recorre esas columnas | RF-102, RNF-02 |
+| `TestQNAPErrors` | Clasifica la firma, el usuario y el cifrado rechazados, la falta de respuesta, la red inalcanzable y un agente que no es un QNAP | RF-21, RF-102 |
+| `TestTarget` | Acepta `snmp://host[:puerto]` y rechaza otros esquemas, rutas, credenciales y puertos no válidos | RF-102 |
+
 ## Pruebas E2E
 
 | ID | Escenario | Requisitos |
@@ -204,8 +217,10 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-36 | WireGuard en el bloque de OPNsense, opcional y sin nombres de peers; un nombre largo sin espacios no se parte en el móvil | RF-20, RF-73, RF-74 |
 | E2E-37 | La atalaya resume el peor estado y la antigüedad, lleva al bloque, y el pie da la versión | RF-26 |
 | E2E-38 | Bloques apilados por su altura real, panel a todo el ancho y editor sin cambios falsos | RF-27 |
+| E2E-39 | Alta de QNAP por SNMPv3: dirección no válida, usuario rechazado, cifrado AES y sin casilla de TLS | RF-10, RF-102 |
+| E2E-40 | QNAP en el panel: cifras, discos, volúmenes y temperaturas; aviso SMART, volumen casi lleno, almacenamiento degradado, caída y recuperación; sin claves, dirección, nombres ni modelos en la API pública | RF-20, RF-21, RF-100, RF-101, RF-102 |
 
-Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las discrepancias con el servicio real las cubren las verificaciones manuales.
+Los servicios simulados reproducen las rutas y la forma de respuesta usadas. El QNAP simulado es un agente SNMPv3 (`net-snmp`) con AES, porque el OpenSSL de Node no trae DES; ver DEC-43. Las discrepancias con el servicio real las cubren las verificaciones manuales.
 
 ## Pruebas del instalador
 
@@ -265,6 +280,10 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 | 2026-11-06 | `v0.2.0` | Versión publicada por `release.yml` | Correcto: no preliminar y marcada como la última, con ambos binarios, sumas e instalador. Descargados desde `releases/latest/download`: sumas correctas, binarios ELF amd64 y arm64, el amd64 indica `v0.2.0` e incluye OPNsense, Portainer y WGDashboard, y el instalador es igual al del repositorio. No se ha instalado esta versión en un Proxmox real |
 | 2026-11-06 | `v0.2.0` | Proxmox VE real del cliente, actualización con el instalador descargado de GitHub y sin `--binary` | Correcto según la salida del instalador y una captura del cliente: descarga de la última versión para amd64, paso de `v0.1.0-16-g3611893` a `v0.2.0` con copia de seguridad, pie con `v0.2.0` y las seis conexiones (AdGuard, Home Assistant, Portainer, Proxmox, OPNsense y WGDashboard) en «Funciona» |
 | 2026-11-06 | Hito 9 (`3611893`) | WGDashboard 4.3.3 real del cliente, con un túnel y un peer, y Talaia en su Proxmox VE | Correcto según dos capturas del cliente. Con el túnel activo: «Túneles activos», 1 de 1 túneles, 0 de 1 peers conectados, 1,5 GiB de tráfico (215 MiB recibidos y 1,3 GiB enviados, igual que en la exploración) y versión. Con el túnel parado: «Túnel parado» en ámbar, 0 de 1 túneles y la fila «Parado». No se ha visto un peer conectado ni se ha revisado la API pública con este servicio |
+| 2026-11-18 | Hito 14 (binario de la rama, tras DEC-45) | QuTS hero 5.2.11 del cliente por SNMPv3 con SHA y DES, con Talaia en Proxmox | Correcto según la captura del cliente: estado verde «Discos en buen estado» y atalaya con los 7 servicios en orden; los dos discos USB como «Sin datos SMART»; cinco discos internos «Correcto» con su temperatura; tres volúmenes «Listo» con su uso; CPU, RAM, almacenamiento, temperaturas y firmware. No se han provocado avisos ni fallos en el NAS ni revisado a mano la API pública, que cubren `TestQNAPDataHidesInfrastructure`, E2E-14 y E2E-40 |
+| 2026-11-18 | Hito 14 (binario de la rama, primera prueba) | QuTS hero 5.2.11 del cliente por SNMPv3 con SHA y DES, con Talaia en Proxmox | Correcto según la captura del cliente: alta con DES, CPU, RAM y almacenamiento, cinco discos internos «Correcto» con su temperatura, tres volúmenes «Listo» con su uso, temperaturas de CPU y sistema, y firmware. **Fallo:** los dos discos USB salían «Fallo SMART» y el bloque en rojo, porque QNAP los da como «Abnormal» (`-1` y `2`, temperatura `-1`) mientras QTS los muestra «Ready» sin datos de salud; corregido con DEC-45 y verificado en la fila anterior |
+| 2026-11-17 | Hito 14, antes de programar | API web de un QuTS hero 5.2 real del cliente, con nombres, modelos, series y direcciones ocultos | El inicio de sesión (`POST authLogin.cgi`) funciona con una cuenta del grupo «everyone», pero todas las consultas de gestión responden `authPassed: 0`: hace falta el grupo «administrators». QTS responde siempre HTTP 200 y da el rechazo en el XML (`authPassed: 0`, `errorValue: -1`). Por eso se eligió SNMPv3; ver DEC-42 |
+| 2026-11-17 | Hito 14, antes de programar | SNMPv3 del mismo NAS, con `snmpwalk` y `snmpget` (SHA y DES) y textos ocultos salvo cifras, unidades y estados | QTS solo ofrece CBC-DES como cifrado. Una clave mala da «Authentication failure». Responden NAS-MIB y QTS-MIB; los valores sueltos (CPU, memoria, temperaturas, firmware) solo con GET, no al recorrer. Discos con SMART «Good» y caja 0 o la de USB; volúmenes «Ready» con tamaños en KiB aunque el MIB diga bytes (comprobado con la API web); pools con estado `0`; RAID «Ready» de nivel «5» y «Single»; un ventilador con estado `0` |
 | 2026-11-06 | Hito 9, antes de programar | Respuestas de un WGDashboard 4.3.3 real, con claves, direcciones y nombres ocultos | Sobre `{status, message, data}`. Sin clave da `401` «Unauthorized access.» y con una clave inexistente, `401` «API Key does not exist». La versión responde sin clave. Un túnel `wg` activo con un peer sin contacto (`stopped`, «No Handshake») y tráfico en GiB. La respuesta de túneles incluye la clave privada del servidor |
 | 2026-11-05 | Hito 8, antes de programar | Respuestas de un Portainer 2.39.1 real con un usuario no administrador | `/api/endpoints` devuelve los recuentos por entorno; la lista de contenedores de Docker llega vacía, así que no se usa |
 | 2026-11-04 | Hito 7, antes de programar | Respuestas de un OPNsense 26.7.1 real, con IP y MAC ocultas | Formatos confirmados: actividad, recursos, disco, información, tráfico y gateways. `core/firmware/running` da `403`. Los gateways del cliente devuelven `~` en las medidas |
@@ -276,9 +295,11 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. Las
 - Proxmox VE: fuente de la API en `PVE/API2/Cluster.pm`, de `pve-manager`, y documentación de API tokens.
 - OPNsense: referencia de la API para rutas y métodos. El formato de las respuestas no está documentado: se ha tomado del servicio real.
 - OPNsense WireGuard: código de `opnsense/core` 26.7, en `Wireguard/Api/ServiceController.php`, `scripts/wireguard/wg_show.py` y `Wireguard/ACL/ACL.xml`, para la forma de los registros, el estado de los peers y los privilegios.
+- QNAP: MIB que descarga el propio NAS (QTS-MIB y NAS-MIB 2.0), para OID, tipos y estados de pools, discos y ventiladores. Para la API web descartada, `python-qnapstats` y la documentación de los plugins de QNAP de Linuxfabrik, que exigen el grupo «administrators».
 - WGDashboard: código de la v4.3.4, en `src/dashboard.py` y `src/modules/WireguardConfiguration.py`, para rutas, autenticación, registro de accesos y cálculo de los peers conectados.
 
 **Aún sin verificar:**
+- **QNAP real, casos no probados:** aviso o fallo SMART, RAID degradado o reconstruyéndose, pool en aviso, ventilador averiado, volumen lleno y QTS clásico (no hero). Los textos de estado de RAID y volumen distintos de «Ready» no están documentados; solo se han probado con el simulador.
 - **WireGuard de OPNsense real, casos no probados:** instancia caída, peers sin contacto reciente y varias instancias. Solo se han probado con el simulador. Tampoco se ha revisado la API pública con este servicio, aunque la cubren `TestCollectWireGuard` y E2E-36.
 - **WGDashboard real, casos no probados:** peers conectados, varios túneles y túneles AmneziaWG. Solo se han probado con el simulador. Tampoco se ha revisado la API pública con este servicio, aunque la cubren `TestWGDashboardDataHidesInfrastructure` y E2E-14.
 - **Agentes Edge y contenedores con problemas en un Portainer real.** Solo se han probado con el simulador.
@@ -341,10 +362,13 @@ Los requisitos pendientes se probarán en su hito.
 | RF-81 | `TestCollectEnvironments`, `TestPortainerDataHidesInfrastructure`, `TestPortainerErrors`, E2E-32 |
 | RF-90 | `TestCollectTunnels`, `TestNoTunnels`, E2E-35 |
 | RF-91 | `TestCollectTunnels`, `TestWGDashboardDataHidesInfrastructure`, `TestWGDashboardErrors`, E2E-34 |
+| RF-100 | `TestCollectQNAP`, `TestQNAPWithoutQTSMIB`, E2E-40 |
+| RF-101 | `TestQNAPStorageStates`, `TestQNAPFanFailure`, E2E-40 |
+| RF-102 | `TestQNAPDataHidesInfrastructure`, `TestQNAPErrors`, `TestTarget`, `TestQNAPConnectionRules`, E2E-39, E2E-40 |
 | RF-61 | INS-04, INS-05, INS-06, INS-11, INS-12 |
 | RF-62 | `TestSetupRequiresTokenWhenConfigured`, `TestSetupTokenAttemptsAreLimited`, `TestEmptySetupTokenNeverMatches`, E2E-29, INS-02 |
 | RNF-01 | Por diseño: el modelo de datos no tiene tablas de métricas |
-| RNF-02 | `TestCollect` y `TestClusterAggregates` usan solo lecturas; por diseño, el cliente solo ofrece `GetJSON` |
+| RNF-02 | `TestCollect` y `TestClusterAggregates` usan solo lecturas; por diseño, el cliente HTTP solo ofrece `GetJSON` y el de QNAP solo GET y walk de SNMP |
 | RNF-03 | `TestDashboardIsPublicAndHidesConfiguration`, `TestCollectsAndPassesDecryptedSecret`, `TestRedirectIsNotFollowed`, E2E-14 |
 | RNF-04 | `TestSealOpen`, `TestKeyIsStableAndProtected`, `TestConnectionSecretIsEncryptedAndKept` |
 | RNF-05 | `TestReopenKeepsData`, `TestMigratesExistingDatabase`; el binario se compila con `CGO_ENABLED=0` |

@@ -2,7 +2,7 @@
 
 Talaia is a dashboard that shows the status of your homelab services at a glance. It is meant to be your browser's start page.
 
-> **Manual version:** `v0.2.5`. It shows data from AdGuard Home, Proxmox VE, Home Assistant, OPNsense, Portainer and WGDashboard. See the [current limitations](#current-limitations).
+> **Manual version:** `v0.2.5`. It shows data from AdGuard Home, Proxmox VE, Home Assistant, OPNsense, Portainer and WGDashboard; QNAP will come in the next version. See the [current limitations](#current-limitations).
 >
 > This manual is a translation of the [Spanish user manual](../usuario/manual-de-usuario.md), which is the reference. The project documentation is only in Spanish.
 
@@ -396,6 +396,54 @@ If testing the connection shows **The service rejected the credentials**, the ke
 
 A peer counts as connected if it has made contact in the last 3 minutes, according to WGDashboard. A disconnected peer doesn't change the status: a phone, for example, only connects while you use it. The block doesn't show peer names, so as not to publish who connects. To see them, open WGDashboard with the block's link. Traffic is the total since WGDashboard started recording it.
 
+### QNAP
+
+Talaia reads the NAS over **SNMPv3**, with authentication and encryption. It doesn't use any QTS account and can't change anything on the NAS. It works with QTS and QuTS hero.
+
+**On the NAS:**
+
+1. Open **Control Panel > Network Services > SNMP** and tick **Enable SNMP service**, with port 161.
+2. Don't tick any **SNMP trap level**: Talaia asks the NAS, it doesn't receive alerts.
+3. In **SNMP version**, choose **SNMP V3** and enter a user name for Talaia.
+4. Tick **Use Authentication**, with **HMAC-SHA**, and enter a password.
+5. Tick **Use Privacy**, with **CBC-DES**, and enter a different password. QTS only offers DES, a weak cipher: use long, random passwords of at least 8 characters, so nobody can guess them from network traffic.
+6. Apply the changes.
+
+Talaia's machine must reach the NAS on **UDP port 161**. If they are on different networks, open that port in the firewall.
+
+| Field | What to enter |
+|---|---|
+| SNMP address | `snmp://` and the NAS address, for example `snmp://qnap.local`. Add `:port` if it isn't 161 |
+| SNMPv3 user | The one in the SNMP settings |
+| Authentication password | The one under **Use Authentication** |
+| Privacy password | The one under **Use Privacy**. If you change either password, type both |
+| Privacy protocol | CBC-DES, unless your NAS lets you choose AES |
+| Link to open the service | The address of the NAS web interface, for example `https://qnap.local`. Without it, the block's name doesn't link anywhere |
+
+If testing the connection shows **The service rejected the credentials**, check the user and the passwords. If it shows **The service did not respond in time**, check that SNMP is enabled, the privacy protocol and the firewall.
+
+![QNAP block](img/23-panel-qnap.png)
+
+The block shows CPU, memory and storage usage; each disk with its SMART health and temperature, as **Disk** and its bay or **USB** and its order; each volume with its status and how full it is; the CPU and system temperatures; and the firmware version. It doesn't show the NAS name, models, serial numbers or volume names. Many USB enclosures don't pass SMART on to the NAS: those disks show as **No SMART data**, in grey, and don't change the status.
+
+**QNAP status:**
+
+| Indicator | Meaning |
+|---|---|
+| Green circle: **Disks healthy** | There is no problem |
+| Red square: **Disk failing** | Some disk's SMART is abnormal or failing. Back up and replace it |
+| Red square: **Storage degraded** | A RAID has lost a disk and no longer has redundancy |
+| Red square: **Storage error** | A pool or a volume isn't available |
+| Red square: **Critical temperature** | The CPU, the system or a disk has reached its error threshold |
+| Amber triangle: **SMART warning** | Some disk is starting to report warnings. Keep an eye on it |
+| Amber triangle: **Synchronizing** | A RAID is rebuilding or synchronizing |
+| Amber triangle: **Storage warning** | QTS marks a pool with a warning, or reports a status Talaia doesn't know |
+| Amber triangle: **Volume almost full** | Some volume is at 90 % or more |
+| Amber triangle: **High temperature** | The CPU, the system or a disk has reached its warning threshold |
+| Amber triangle: **Fan failure** | QTS marks a fan as failed |
+
+If there are several problems, the block shows the most serious one. The thresholds are QTS's defaults, because SNMP doesn't give yours: CPU, warning at 75 °C and error at 80 °C; system, at 60 °C and 70 °C; disks, at 60 °C and 70 °C.
+
 ## Editing and deleting connections
 
 **Edit:** click **Edit** on the connection. Leave the credential empty to keep the current one. If you change the URL, you'll have to enter it again: this prevents sending it to another server by mistake.
@@ -501,6 +549,7 @@ In the administration, open **Settings**.
 | A service's link doesn't open | Talaia uses the connection URL, which may not be reachable from your browser. Set a custom link in the connection |
 | An entity shows as **Not found** | It no longer exists in Home Assistant or its identifier changed. Edit the connection and update the selection |
 | Home Assistant is slow or times out | In very large installations, increase the refresh, for example to 60 seconds |
+| QNAP doesn't respond in time | Check that SNMP is enabled with version SNMP V3, that the privacy protocol matches and that the firewall lets UDP 161 through |
 
 ## Current limitations
 
@@ -509,5 +558,6 @@ In the administration, open **Settings**.
 - It doesn't update itself: you have to run the update command.
 - The OPNsense block doesn't show its pending updates.
 - The Portainer and WGDashboard blocks, and OPNsense's WireGuard, don't detail each container or peer: they only give counts.
+- The QNAP block uses QTS's default temperature thresholds, not yours, and doesn't tell which volume is on a USB disk.
 
 The status of each item is in [Status and changes](../proyecto/06-estado-y-cambios.md), in Spanish.

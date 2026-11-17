@@ -8,6 +8,7 @@ import { opnsenseWidget } from "./widgets/opnsense";
 import { portainerWidget } from "./widgets/portainer";
 import { homeAssistantWidget } from "./widgets/homeassistant";
 import { proxmoxWidget } from "./widgets/proxmox";
+import { qnapWidget } from "./widgets/qnap";
 import { wgdashboardWidget } from "./widgets/wgdashboard";
 import type { Tone, Widget } from "./widgets/types";
 import { responsiveItems, stackLayout, COLUMNS } from "./stack";
@@ -21,6 +22,7 @@ const WIDGETS: Partial<Record<ConnectionType, unknown>> = {
   opnsense: opnsenseWidget,
   portainer: portainerWidget,
   proxmox: proxmoxWidget,
+  qnap: qnapWidget,
   wgdashboard: wgdashboardWidget,
 };
 
@@ -375,19 +377,24 @@ export function Service({ connection }: { connection: ConnectionState }) {
     >
       <div className="service-head">
         <h2>
-          <a
-            className="service-link"
-            href={connection.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={t("service.open", { name: connection.name })}
-            title={connection.link}
-          >
-            {connection.name}
-            <svg viewBox="0 0 16 16" aria-hidden="true">
-              <path d="M6 3H3v10h10v-3M9 3h4v4M13 3 7.5 8.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
-            </svg>
-          </a>
+          {/* Sin enlace propio, una conexión snmp:// no tiene página que abrir. */}
+          {connection.link ? (
+            <a
+              className="service-link"
+              href={connection.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={t("service.open", { name: connection.name })}
+              title={connection.link}
+            >
+              {connection.name}
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M6 3H3v10h10v-3M9 3h4v4M13 3 7.5 8.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+            </a>
+          ) : (
+            connection.name
+          )}
         </h2>
         <StateLabel tone={state.tone}>{state.label}</StateLabel>
       </div>

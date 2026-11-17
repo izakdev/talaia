@@ -351,6 +351,8 @@ details > summary { cursor: pointer; list-style-position: outside; margin-left: 
 /* Un nombre sin espacios solo se parte si no cabe en toda la fila: antes se reparte el estado. */
 .gateways li span:first-child { min-width: auto; overflow-wrap: break-word; }
 .ha-entities li.no-data span:last-child { color: var(--warn); font-weight: 550; }
+.ha-entities li.alarm span:last-child { color: var(--alert-bad); font-weight: 650; }
+.ha-entities li.unknown span:last-child { color: var(--ink-soft); }
 .figures dd.no-data { color: var(--warn); font-size: 1rem; font-weight: 550; letter-spacing: 0; line-height: 1.8; }
 .service-foot { color: var(--ink-soft); font-size: 0.8125rem; }
 

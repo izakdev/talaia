@@ -15,6 +15,7 @@ Talaia es un dashboard autoalojado para ver de un vistazo el estado de los servi
 
 - **Incluido:** integraciones de solo lectura con OPNsense, Portainer y WGDashboard, en este orden.
 - **Aparcado:** Grafana, a petición del cliente, porque no lo usa de momento.
+- **Ampliación:** NAS QNAP (QTS y QuTS hero) por SNMPv3, a petición del cliente, en el hito 14.
 
 ## Estados
 
@@ -114,6 +115,14 @@ Verificado con un Home Assistant real en local y con la instalación del cliente
 |---|---|---|---|
 | RF-90 | Muestra cada túnel con su estado y, según WGDashboard, sus peers conectados sobre el total y su tráfico acumulado | 9 | Implementado |
 | RF-91 | Solo hace lecturas y no publica claves, direcciones, puertos ni nombres de peers | 9 | Implementado |
+
+### QNAP
+
+| ID | Requisito | Hito | Estado |
+|---|---|---|---|
+| RF-100 | Muestra la CPU, la memoria y el uso del almacenamiento; cada disco con su salud SMART y su temperatura; cada volumen con su estado y su uso; la temperatura de la CPU y del sistema, y la versión del firmware | 14 | Implementado |
+| RF-101 | Marca en rojo un disco con fallo SMART, un almacenamiento degradado o con errores y una temperatura crítica; y en ámbar un aviso SMART, una sincronización, un volumen por encima del 90 %, una temperatura alta y un ventilador averiado | 14 | Implementado |
+| RF-102 | Consulta por SNMPv3 con autenticación y cifrado, solo lee, no necesita una cuenta de QTS y no publica el nombre del equipo, el modelo, los números de serie, los nombres de los volúmenes ni la dirección | 14 | Implementado |
 
 ### Instalación
 

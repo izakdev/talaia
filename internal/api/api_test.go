@@ -771,3 +771,66 @@ func TestPastedTokenIsTrimmed(t *testing.T) {
 	}
 	c.want(400, "POST", "/api/admin/connections", homeAssistantConn("dos\nlineas"))
 }
+
+func TestQNAPConnectionRules(t *testing.T) {
+	c, st := newServer(t)
+	c.want(200, "POST", "/api/setup", creds())
+	conn := func() map[string]any {
+		return map[string]any{
+			"name": "NAS", "type": "qnap", "base_url": "snmp://192.0.2.20", "username": "talaia",
+			"secret": "clave-autenticacion", "privacy_secret": "clave-cifrado", "interval_seconds": 60,
+			"tls_skip_verify": true, "options": map[string]bool{"privacy_aes": false},
+		}
+	}
+	cases := map[string]struct {
+		mutate func(map[string]any)
+		code   string
+	}{
+		"http":            {func(m map[string]any) { m["base_url"] = "https://192.0.2.20" }, "invalid_snmp_url"},
+		"ruta":            {func(m map[string]any) { m["base_url"] = "snmp://192.0.2.20/x" }, "invalid_snmp_url"},
+		"sin cifrado":     {func(m map[string]any) { delete(m, "privacy_secret") }, "snmp_secrets_together"},
+		"clave corta":     {func(m map[string]any) { m["privacy_secret"] = "corta" }, "invalid_snmp_secret"},
+		"autentica corta": {func(m map[string]any) { m["secret"] = "corta" }, "invalid_snmp_secret"},
+		"sin usuario":     {func(m map[string]any) { m["username"] = "" }, "invalid_username"},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			m := conn()
+			tc.mutate(m)
+			if got := c.want(400, "POST", "/api/admin/connections", m); !strings.Contains(got, tc.code) {
+				t.Fatalf("%s: %s", name, got)
+			}
+		})
+	}
+
+	body := c.want(201, "POST", "/api/admin/connections", conn())
+	var out connectionOut
+	if err := json.Unmarshal([]byte(body), &out); err != nil {
+		t.Fatal(err)
+	}
+	if out.TLSSkipVerify || strings.Contains(body, "clave-") {
+		t.Fatalf("SNMP no usa TLS y las claves no salen: %s", body)
+	}
+	if got, err := st.ConnectionSecret(t.Context(), out.ID); err != nil || got != "clave-autenticacion\nclave-cifrado" {
+		t.Fatalf("secreto guardado = %q, %v", got, err)
+	}
+	// Las claves se cambian a la vez: una sola no basta.
+	path := "/api/admin/connections/" + out.ID
+	partial := conn()
+	delete(partial, "privacy_secret")
+	c.want(400, "PUT", path, partial)
+	keep := conn()
+	keep["secret"], keep["privacy_secret"] = "", ""
+	c.want(200, "PUT", path, keep)
+	if got, _ := st.ConnectionSecret(t.Context(), out.ID); got != "clave-autenticacion\nclave-cifrado" {
+		t.Fatalf("sin claves nuevas se conservan: %q", got)
+	}
+	// El panel no enlaza a una dirección snmp://.
+	if link := (store.Connection{BaseURL: "snmp://192.0.2.20"}).Link(); link != "" {
+		t.Fatalf("enlace = %q", link)
+	}
+	dashboard := c.want(200, "GET", "/api/dashboard", nil)
+	if strings.Contains(dashboard, "snmp://") || strings.Contains(dashboard, "192.0.2.20") {
+		t.Fatalf("el panel muestra la dirección SNMP: %s", dashboard)
+	}
+}

@@ -1,4 +1,4 @@
-export type ConnectionType = "proxmox" | "homeassistant" | "adguard" | "opnsense" | "portainer" | "wgdashboard";
+export type ConnectionType = "proxmox" | "homeassistant" | "adguard" | "opnsense" | "portainer" | "qnap" | "wgdashboard";
 
 export interface AppState {
   setup_required: boolean;
@@ -51,6 +51,7 @@ export interface ConnectionInput {
   base_url: string;
   username: string;
   secret?: string;
+  privacy_secret?: string;
   interval_seconds: number;
   tls_skip_verify: boolean;
   options: Record<string, boolean>;
@@ -162,6 +163,43 @@ export interface PortainerEnvironment {
 export interface PortainerData {
   version: string;
   environments: PortainerEnvironment[];
+}
+
+export interface QNAPTemperature {
+  c: number;
+  warn_c: number;
+  err_c: number;
+}
+
+export interface QNAPDisk {
+  number: number;
+  external: boolean;
+  health: "ok" | "warning" | "error" | "unknown";
+  temp_c: number | null;
+}
+
+export type QNAPStatus = "ready" | "syncing" | "warning" | "degraded" | "error";
+
+export interface QNAPVolume {
+  number: number;
+  status: QNAPStatus;
+  total_bytes: number;
+  free_bytes: number;
+}
+
+export interface QNAPData {
+  version: string;
+  cpu_percent: number;
+  memory_total_bytes: number;
+  memory_used_bytes: number;
+  cpu_temperature?: QNAPTemperature;
+  system_temperature?: QNAPTemperature;
+  fan_failed: boolean;
+  storage: QNAPStatus;
+  disk_temp_warn_c: number;
+  disk_temp_err_c: number;
+  disks: QNAPDisk[];
+  volumes: QNAPVolume[];
 }
 
 export interface WGDashboardTunnel {
