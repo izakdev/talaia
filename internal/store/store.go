@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/izakdev/talaia/internal/secrets"
@@ -367,6 +368,10 @@ func encodeSelection(c Connection) (options, entities string, err error) {
 func (c Connection) Link() string {
 	if c.LinkURL != "" {
 		return c.LinkURL
+	}
+	// Una dirección snmp:// no se abre en el navegador.
+	if !strings.HasPrefix(c.BaseURL, "http://") && !strings.HasPrefix(c.BaseURL, "https://") {
+		return ""
 	}
 	return c.BaseURL
 }

@@ -425,6 +425,9 @@ function ConnectionDialog({
   const [url, setUrl] = useState(connection?.base_url ?? "");
   const [username, setUsername] = useState(connection?.username ?? "");
   const [secret, setSecret] = useState("");
+  // Solo QNAP: SNMPv3 necesita además la clave de cifrado.
+  const [privacySecret, setPrivacySecret] = useState("");
+  const snmp = type === "qnap";
   const [interval, setIntervalValue] = useState(String(connection?.interval_seconds ?? 30));
   const [skipTls, setSkipTls] = useState(connection?.tls_skip_verify ?? false);
   const [options, setOptions] = useState<Record<string, boolean>>(connection?.options ?? entry.defaultOptions);
@@ -454,11 +457,13 @@ function ConnectionDialog({
     entities,
     link_url: link,
     ...(secret ? { secret } : {}),
+    ...(snmp && privacySecret ? { privacy_secret: privacySecret } : {}),
   });
   const save = useMutation({
     mutationFn: () => (connection ? api.updateConnection(connection.id, input()) : api.createConnection(input())),
     onSuccess: async () => {
       setSecret("");
+      setPrivacySecret("");
       client.removeQueries({ queryKey: ["dashboard"] });
       client.invalidateQueries({ queryKey: ["status"] });
       await client.invalidateQueries({ queryKey: ["connections"] });
@@ -469,7 +474,7 @@ function ConnectionDialog({
   const test = useMutation({ mutationFn: () => api.testConnection(withId()) });
   const { reset: resetTest } = test;
   // Un resultado solo vale para los datos con los que se probó.
-  useEffect(() => resetTest(), [type, url, username, secret, skipTls, resetTest]);
+  useEffect(() => resetTest(), [type, url, username, secret, privacySecret, options, skipTls, resetTest]);
 
   return (
     <dialog ref={dialog} onClose={onClose}>
@@ -494,7 +499,7 @@ function ConnectionDialog({
           <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required autoFocus />
         </label>
         <label>
-          {t("form.url")}
+          {t(snmp ? "form.url.qnap" : "form.url")}
           <input
             type="url"
             value={url}
@@ -502,12 +507,13 @@ function ConnectionDialog({
             placeholder={entry.urlPlaceholder}
             required
           />
+          {snmp && <small>{t("form.urlHint.qnap")}</small>}
         </label>
-        {(type === "adguard" || type === "opnsense") && (
+        {(type === "adguard" || type === "opnsense" || type === "qnap") && (
           <label>
             {t(`form.username.${type}`)}
             <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="off" required />
-            {type === "opnsense" && <small>{t("form.usernameHint.opnsense")}</small>}
+            {(type === "opnsense" || type === "qnap") && <small>{t(`form.usernameHint.${type}`)}</small>}
           </label>
         )}
         <label>
@@ -517,10 +523,36 @@ function ConnectionDialog({
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
             autoComplete="new-password"
-            required={secretRequired}
+            required={secretRequired || (snmp && !!privacySecret)}
           />
           {hint && <small>{hint}</small>}
         </label>
+        {snmp && (
+          <>
+            <label>
+              {t("form.privacySecret.qnap")}
+              <input
+                type="password"
+                value={privacySecret}
+                onChange={(e) => setPrivacySecret(e.target.value)}
+                autoComplete="new-password"
+                required={secretRequired || !!secret}
+              />
+              <small>{secretRequired ? t("form.privacySecretHint.qnap") : t("form.privacySecretKeep.qnap")}</small>
+            </label>
+            <label>
+              {t("form.privacy.qnap")}
+              <select
+                value={options.privacy_aes ? "aes" : "des"}
+                onChange={(e) => setOptions({ ...options, privacy_aes: e.target.value === "aes" })}
+              >
+                <option value="des">CBC-DES</option>
+                <option value="aes">AES</option>
+              </select>
+              <small>{t("form.privacyHint.qnap")}</small>
+            </label>
+          </>
+        )}
         <label>
           {t("form.link")}
           <input type="url" value={link} onChange={(e) => setLink(e.target.value)} />
@@ -565,13 +597,15 @@ function ConnectionDialog({
             }}
           />
         )}
-        <label className="check">
-          <input type="checkbox" checked={skipTls} onChange={(e) => setSkipTls(e.target.checked)} />
-          <span>
-            {t("form.tls")}
-            <small>{t("form.tlsHint")}</small>
-          </span>
-        </label>
+        {!snmp && (
+          <label className="check">
+            <input type="checkbox" checked={skipTls} onChange={(e) => setSkipTls(e.target.checked)} />
+            <span>
+              {t("form.tls")}
+              <small>{t("form.tlsHint")}</small>
+            </span>
+          </label>
+        )}
         {save.isError && <p role="alert" className="error">{errorText(code(save.error))}</p>}
         {test.isError && <p role="alert" className="error">{errorText(code(test.error))}</p>}
         {test.data && (

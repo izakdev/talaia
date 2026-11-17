@@ -17,8 +17,15 @@
 | 11 | Panel de un vistazo: estado global en la atalaya y bloques con aviso visibles | Terminado y verificado con el panel real del cliente, publicado en `v0.2.2` |
 | 12 | Pulido del panel: antigüedad en la cabecera, secciones coherentes y bloques sin huecos | Terminado y verificado con el panel real del cliente, publicado en `v0.2.3` |
 | 13 | Bloques que se apilan solos y panel a todo el ancho | Terminado y verificado con el panel real del cliente, publicado en `v0.2.5` |
+| 14 | QNAP por SNMPv3: discos, volúmenes y recursos | Terminado y verificado con el QNAP del cliente |
 
 ## Historial
+
+### Hito 14 (2026-11-17)
+
+**Añadido:**
+- Integración con QNAP (QTS y QuTS hero) por SNMPv3: CPU, memoria, almacenamiento, discos con su salud SMART y su temperatura, volúmenes con su estado y su uso, temperaturas y firmware.
+- Direcciones `snmp://host[:puerto]` y clave de cifrado en el formulario de conexión, solo para QNAP.
 
 ### Nombres largos en OPNsense (2026-11-16)
 
@@ -244,6 +251,11 @@ Primera versión estable, con los binarios para amd64 y arm64, las sumas de comp
 | Portainer sin detalle por contenedor | Los recuentos son de la última instantánea; ver DEC-32 | Por diseño |
 | WGDashboard sin detalle por peer | Solo recuentos, para no publicar sus nombres; ver DEC-33 | Por diseño |
 | Clave de WGDashboard con acceso completo | WGDashboard no tiene claves de solo lectura; ver DEC-34 | Depende de WGDashboard |
+| QNAP sin los umbrales de temperatura de QTS | Se usan sus valores por defecto; ver DEC-44 | Por diseño de SNMP |
+| QNAP sin distinguir volúmenes USB | Los volúmenes se numeran todos igual; ver DEC-44 | Depende del MIB de QNAP |
+| Discos USB de QNAP sin SMART | Si la caja no lo pasa al NAS, no se ve su salud; ver DEC-45 | Depende de la caja USB |
+| SNMPv3 de QNAP con cifrado DES | QTS no ofrece otro; ver DEC-43 | Depende de QNAP |
+| Estados de RAID y volumen de QNAP no documentados | Se interpretan por palabras («Ready», «Degraded», «Rebuilding»…); un texto desconocido da ámbar | Al darse la ocasión |
 | Sistema del contenedor sin actualizaciones automáticas | Hay que actualizarlo con `apt` | Bajo demanda |
 
 ## Consumo medido

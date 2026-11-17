@@ -4,7 +4,7 @@ Talaia es un panel para ver de un vistazo el estado de los servicios de tu labor
 
 *[English version](../user/user-manual.md).*
 
-> **Versión de este manual:** `v0.2.5`. Muestran datos AdGuard Home, Proxmox VE, Home Assistant, OPNsense, Portainer y WGDashboard. Consulta las [limitaciones actuales](#limitaciones-actuales).
+> **Versión de este manual:** `v0.2.5`. Muestran datos AdGuard Home, Proxmox VE, Home Assistant, OPNsense, Portainer y WGDashboard; QNAP llegará en la próxima versión. Consulta las [limitaciones actuales](#limitaciones-actuales).
 
 ## Índice
 
@@ -396,6 +396,54 @@ Si al probar la conexión ves **Credenciales rechazadas**, la clave no existe o 
 
 Un peer cuenta como conectado si ha contactado en los últimos 3 minutos, según WGDashboard. Un peer desconectado no cambia el estado: un móvil, por ejemplo, solo se conecta cuando lo usas. El bloque no muestra los nombres de los peers, para no publicar quién se conecta. Para verlos, abre WGDashboard con el enlace del bloque. El tráfico es el acumulado desde que WGDashboard lo registra.
 
+### QNAP
+
+Talaia lee el NAS por **SNMPv3**, con autenticación y cifrado. No usa ninguna cuenta de QTS ni puede cambiar nada en el NAS. Sirve para QTS y QuTS hero.
+
+**En el NAS:**
+
+1. Abre **Panel de control > Servicios de red > SNMP** (*Control Panel > Network Services > SNMP*) y marca **Habilitar servicio SNMP** (*Enable SNMP service*), con el puerto 161.
+2. No marques ningún **Nivel de trap SNMP** (*SNMP trap level*): Talaia pregunta al NAS, no recibe avisos.
+3. En **Versión SNMP** (*SNMP version*), elige **SNMP V3** y escribe un nombre de usuario para Talaia.
+4. Marca **Usar autenticación** (*Use Authentication*), con **HMAC-SHA**, y escribe una clave.
+5. Marca **Usar privacidad** (*Use Privacy*), con **CBC-DES**, y escribe otra clave distinta. QTS solo ofrece DES, un cifrado débil: usa claves largas y aleatorias, de al menos 8 caracteres, para que nadie pueda adivinarlas con el tráfico de la red.
+6. Aplica los cambios.
+
+El equipo de Talaia debe llegar al puerto **UDP 161** del NAS. Si están en redes distintas, abre ese puerto en el firewall.
+
+| Campo | Qué poner |
+|---|---|
+| Dirección SNMP | `snmp://` y la dirección del NAS, por ejemplo `snmp://qnap.local`. Añade `:puerto` si no es el 161 |
+| Usuario SNMPv3 | El de la configuración de SNMP |
+| Clave de autenticación | La de **Usar autenticación** |
+| Clave de cifrado | La de **Usar privacidad**. Si cambias una de las dos claves, escribe las dos |
+| Protocolo de cifrado | CBC-DES, salvo que tu NAS te deje elegir AES |
+| Enlace para abrir el servicio | La dirección de la web del NAS, por ejemplo `https://qnap.local`. Sin ella, el nombre del bloque no enlaza a ningún sitio |
+
+Si al probar la conexión ves **Credenciales rechazadas**, revisa el usuario y las claves. Si ves **El servicio no ha respondido a tiempo**, revisa que SNMP esté activado, el protocolo de cifrado y el firewall.
+
+![Bloque de QNAP](img/23-panel-qnap.png)
+
+El bloque muestra el uso de CPU, memoria y almacenamiento; cada disco con su salud SMART y su temperatura, como **Disco** y su bahía o **USB** y su orden; cada volumen con su estado y lo que ocupa; las temperaturas de la CPU y del sistema; y la versión del firmware. No muestra el nombre del NAS, los modelos, los números de serie ni los nombres de los volúmenes. Muchas cajas USB no pasan el SMART al NAS: esos discos aparecen como **Sin datos SMART**, en gris, y no cambian el estado.
+
+**Estado de QNAP:**
+
+| Indicador | Significado |
+|---|---|
+| Círculo verde: **Discos en buen estado** | No hay ningún problema |
+| Cuadrado rojo: **Disco con fallos** | Algún disco tiene el SMART anómalo o en error. Haz copia y cámbialo |
+| Cuadrado rojo: **Almacenamiento degradado** | Un RAID ha perdido un disco y ya no tiene redundancia |
+| Cuadrado rojo: **Almacenamiento con errores** | Un pool o un volumen no está disponible |
+| Cuadrado rojo: **Temperatura crítica** | La CPU, el sistema o un disco ha llegado a su umbral de error |
+| Triángulo ámbar: **Aviso SMART** | Algún disco empieza a dar avisos. Vigílalo |
+| Triángulo ámbar: **Sincronizando** | Un RAID se reconstruye o sincroniza |
+| Triángulo ámbar: **Almacenamiento con avisos** | QTS marca un pool en aviso, o da un estado que Talaia no conoce |
+| Triángulo ámbar: **Volumen casi lleno** | Algún volumen está al 90 % o más |
+| Triángulo ámbar: **Temperatura alta** | La CPU, el sistema o un disco ha llegado a su umbral de aviso |
+| Triángulo ámbar: **Ventilador averiado** | QTS marca un ventilador con fallo |
+
+Si hay varios problemas, el bloque muestra el más grave. Los umbrales son los de QTS por defecto, porque SNMP no da los tuyos: CPU, aviso a 75 °C y error a 80 °C; sistema, a 60 °C y 70 °C; discos, a 60 °C y 70 °C.
+
 ## Editar y eliminar conexiones
 
 **Editar:** pulsa **Editar** en la conexión. Deja la credencial vacía para conservar la actual. Si cambias la URL, tendrás que volver a escribirla: así evitas enviarla por error a otro servidor.
@@ -501,6 +549,7 @@ En la administración, abre **Ajustes**.
 | El enlace de un servicio no abre | Talaia usa la URL de conexión, que puede no ser accesible desde tu navegador. Configura un enlace propio en la conexión |
 | Una entidad aparece como **No encontrada** | Ya no existe en Home Assistant o ha cambiado de identificador. Edita la conexión y actualiza la selección |
 | Home Assistant tarda mucho o da error de tiempo de espera | En instalaciones muy grandes, sube el refresco, por ejemplo a 60 segundos |
+| QNAP no responde a tiempo | Comprueba que SNMP esté activado con la versión SNMP V3, que el protocolo de cifrado coincida y que el firewall deje pasar UDP 161 |
 
 ## Limitaciones actuales
 
@@ -509,5 +558,6 @@ En la administración, abre **Ajustes**.
 - No se actualiza solo: hay que ejecutar el comando de actualización.
 - El bloque de OPNsense no muestra sus actualizaciones pendientes.
 - Los bloques de Portainer y WGDashboard, y el WireGuard de OPNsense, no detallan cada contenedor ni cada peer: solo dan recuentos.
+- El bloque de QNAP usa los umbrales de temperatura de QTS por defecto, no los tuyos, y no distingue qué volumen es de un disco USB.
 
 El estado de cada punto está en [Estado y cambios](../proyecto/06-estado-y-cambios.md).

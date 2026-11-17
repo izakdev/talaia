@@ -20,6 +20,7 @@ flowchart LR
     OP[OPNsense]
     PT[Portainer]
     WG[WGDashboard]
+    QN[QNAP]
 
     B -->|HTTP y SSE| A
     B --> W
@@ -33,6 +34,7 @@ flowchart LR
     C -->|solo lectura| OP
     C -->|solo lectura| PT
     C -->|solo lectura| WG
+    C -->|SNMPv3, solo lectura| QN
 ```
 
 ## Tecnologías
@@ -45,6 +47,7 @@ flowchart LR
 | Frontend | React, TypeScript, Vite, TanStack Query | Ecosistema actual, con tipado |
 | Editor | `react-grid-layout`, cargado solo al abrir el editor | Arrastrar y redimensionar sin cargar el panel |
 | WebSocket | `coder/websocket` | Sin dependencias; necesario para consultar Supervisor |
+| SNMP | `gosnmp/gosnmp` | Go puro, con SNMPv3; necesario para consultar QNAP (DEC-42) |
 | Iconos | `simple-icons` | Incluidos en la aplicación, sin depender de Internet |
 | Tipografía | Schibsted Grotesk, servida por Talaia | Sin peticiones a terceros |
 | CI | GitHub Actions | Pruebas en cada cambio y publicación por etiqueta |
@@ -68,6 +71,7 @@ Los motivos detallados están en [Decisiones](05-decisiones.md).
 | `internal/integrations/opnsense` | Integración con OPNsense |
 | `internal/integrations/portainer` | Integración con Portainer |
 | `internal/integrations/wgdashboard` | Integración con WGDashboard |
+| `internal/integrations/qnap` | Integración con QNAP por SNMPv3 |
 | `web` | Frontend; `web/embed.go` lo incluye en el binario |
 | `web/src/widgets` | Estado, contenido y pie del bloque de cada integración |
 | `web/src/PanelEditor.tsx` | Editor de páginas y bloques |
@@ -205,6 +209,22 @@ Proxmox filtra `/cluster/resources` según los permisos. Una lista sin nodos se 
 | Tráfico | Acumulado y visto desde el servidor. WGDashboard lo da en GiB y se publica en bytes |
 | Datos públicos | Solo nombre, protocolo y estado del túnel, recuentos de peers y tráfico. La respuesta trae la clave privada del servidor, que nunca se decodifica; tampoco se publican direcciones, puerto, reglas ni nombres de peers |
 
+### QNAP
+
+| Aspecto | Detalle |
+|---|---|
+| Protocolo | SNMPv3 por UDP, puerto 161 salvo que la dirección `snmp://host:puerto` diga otro. Solo authPriv: HMAC-SHA y DES, o AES con la opción `privacy_aes`; ver DEC-42 y DEC-43 |
+| Credenciales | Usuario SNMPv3 en `username`; clave de autenticación y de cifrado juntas en el secreto cifrado, separadas por un salto de línea. La API recibe la segunda en `privacy_secret`, exige las dos a la vez y de al menos 8 caracteres, y nunca las devuelve |
+| Consultas | Un GET de valores sueltos, que QNAP no da al recorrer el árbol: de NAS-MIB `systemInfoEx` (`1.3.6.1.4.1.24681.1.3`) CPU, memoria total y libre y temperaturas de CPU y sistema; de QTS-MIB (`1.3.6.1.4.1.55062.1.12`) firmware y memoria disponible, opcionales. Después, walk de columnas concretas de NAS-MIB `storageSystemEx` (`1.3.6.1.4.1.24681.1.4.1.1.1`): discos (bahía, caja, SMART y temperatura), ventiladores, grupos RAID, pools y volúmenes. Nunca se recorren las columnas de modelo, serie ni nombre |
+| Errores | Firma, usuario o cifrado rechazados (`wrong digest`, `unknown username`, `decryption error`) dan `unauthorized`; sin respuesta, `timeout`; sin CPU ni memoria, `bad_response` |
+| Memoria usada | Total menos la disponible de QTS-MIB, que descuenta la caché; sin QTS-MIB, total menos la libre |
+| Volúmenes | Capacidad y libre en KiB, aunque el MIB diga bytes: comprobado con la API web del NAS del cliente. Se numeran por orden, sin nombre |
+| Discos | Los de la caja 0 se nombran por su bahía y los de otras cajas, que son USB, por orden. SMART: `0` bien, `1` aviso, `2` anómalo o `-1` error. Una temperatura de 0 o negativa es que no hay sensor. Un disco USB sin temperatura no pasa el SMART al NAS: se publica sin datos de salud (`unknown`); ver DEC-45 |
+| Almacenamiento | El peor estado de los grupos RAID (texto: «Ready», «Degraded», «Rebuilding»…) y de los pools (`0` listo, `-1` aviso, `-2` no listo, `-3` error) |
+| Umbrales | Fijos, los de QTS por defecto; ver DEC-44 |
+| Enlace | Una dirección `snmp://` no se publica como enlace: sin enlace propio, el nombre del bloque no enlaza |
+| Datos públicos | Cifras, estados, números de bahía y de volumen, temperaturas y versión. No incluyen nombre del equipo, modelo, números de serie, nombres de volúmenes ni la dirección |
+
 ## API HTTP
 
 Las respuestas son JSON. Las escrituras exigen `Content-Type: application/json` y rechazan otro origen en la cabecera `Origin`.
@@ -302,10 +322,10 @@ erDiagram
 | Credenciales | AES-256-GCM, vinculadas al ID de la conexión para que no se puedan intercambiar entre filas |
 | Clave de cifrado | `secret.key` con permisos `600`; Talaia no arranca si son más abiertos |
 | Archivos | Al crearlos, directorio de datos `700` y base de datos `600` |
-| Salida a servicios | Sin proxy, sin seguir redirecciones, 10 s de espera por petición y respuestas de 32 MiB como máximo |
+| Salida a servicios | Sin proxy, sin seguir redirecciones, 10 s de espera por petición y respuestas de 32 MiB como máximo. Por SNMP, 3 s por petición y un reintento |
 | TLS | Verificación activa por defecto, con excepción explícita por conexión |
 | API pública | Sin usuarios ni credenciales. Incluye el enlace al servicio: la URL de conexión o la dirección propia configurada |
-| Enlaces | Solo `http` y `https`, sin credenciales; se abren con `noopener` y `noreferrer` |
+| Enlaces | Solo `http` y `https`, sin credenciales; se abren con `noopener` y `noreferrer`. Una dirección `snmp://` nunca se publica como enlace |
 | Navegador | Sin `unsafe-inline`: el editor evita el `<style>` que `react-draggable` insertaría. CSP `default-src 'self'`, `frame-ancestors 'none'`, `nosniff` y `Referrer-Policy: same-origin` |
 | CSRF | Cookie `SameSite=Lax`, comprobación de `Origin` y JSON obligatorio |
 | Tamaño de petición | 64 KiB como máximo |
@@ -320,6 +340,7 @@ erDiagram
 - **Bloqueo por IP detrás de un proxy inverso:** Talaia ve la IP del proxy, de modo que los fallos cuentan para todos los clientes. No se confía en `X-Forwarded-For` porque se podría falsificar.
 - **Sin TLS propio:** Talaia sirve HTTP y delega el cifrado en un proxy inverso.
 - **Acceso de administrador:** una sesión de administrador puede hacer que Talaia envíe peticiones a cualquier URL, necesario para probar conexiones.
+- **DES en SNMPv3 de QNAP:** QTS solo ofrece este cifrado, débil. Lo compensan claves largas y aleatorias; ver DEC-43.
 
 ## Despliegue
 

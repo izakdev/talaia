@@ -211,3 +211,22 @@ Cada decisión recoge su motivo y sus consecuencias. Si una decisión cambia, se
 - **Decisión:** el dashboard coloca cada bloque justo debajo del último de sus columnas, con su altura real medida en el navegador, y usa todo el ancho de la ventana. Las columnas, el ancho y el orden siguen siendo del editor, que mide las alturas, solo deja cambiar el ancho y no cuenta las alturas medidas como cambios. Se descartaron las alturas fijas (recortes o scroll al crecer el contenido) y las columnas fijas (sin anchos libres).
 - **Consecuencias:** sin cambios en la base de datos ni en la API, que mantiene el ancho mínimo de 2 para los paneles guardados; el editor usa 3 como mínimo y 4 por defecto. Si un bloque crece, los de debajo bajan. En pantallas de 900 a 1400 px los bloques estrechos pasan a media fila. Sustituye a DEC-38 en lo que se refiere a la altura de los bloques.
 
+## DEC-42: QNAP por SNMPv3 y no por su API web
+- **Contexto:** la API web de QTS (`authLogin.cgi` y los CGI de gestión) no está documentada, exige una sesión, y con una cuenta del grupo «everyone» no da ningún dato: hace falta una cuenta del grupo «administrators». Se comprobó con el NAS del cliente antes de programar.
+- **Decisión:** consultar el NAS por SNMPv3 con autenticación y cifrado (authPriv), con la librería `gosnmp` (Go puro, sin cambiar el binario único), solo con GET y walk. No se ofrecen SNMP v1 ni v2c, que envían la comunidad en claro.
+- **Consecuencias:** lectura real sin cuenta de administración ni sesión, con el MIB que publica el propio NAS. A cambio, el LXC necesita llegar al puerto UDP 161 del NAS, SNMP no da los umbrales de temperatura de QTS (DEC-44) ni qué volumen es USB, y la E2E necesita un agente SNMP simulado.
+
+## DEC-43: cifrado DES en SNMPv3 si el NAS no ofrece otro
+- **Contexto:** QTS solo ofrece CBC-DES como protocolo de privacidad de SNMPv3. DES es débil, pero sin cifrado las respuestas, que incluyen el modelo y el nombre del equipo, viajan legibles por la red.
+- **Decisión:** autenticación HMAC-SHA fija y cifrado DES por defecto, con un selector para AES por si el NAS lo ofrece. Las dos claves se guardan cifradas juntas en el secreto de la conexión, separadas por un salto de línea, que ninguna clave puede contener; se cambian siempre a la vez.
+- **Consecuencias:** el manual pide claves largas, aleatorias y distintas, para que el tráfico capturado no permita adivinarlas. El simulador de la E2E usa AES, porque el OpenSSL de Node no trae DES; DES se verifica con el NAS real.
+
+## DEC-44: estado del QNAP calculado por Talaia, con umbrales de QTS por defecto
+- **Contexto:** SNMP da la salud SMART de cada disco, el estado de los grupos RAID, de los pools y de los volúmenes, y las temperaturas, pero no los umbrales que el usuario tenga en QTS ni si un disco es SSD.
+- **Decisión:** rojo para un fallo SMART, un RAID degradado, un pool o volumen con error y una temperatura crítica; ámbar para un aviso SMART, una sincronización, un pool en aviso, un volumen por encima del 90 %, una temperatura alta y un ventilador averiado, como pidió el cliente. Umbrales fijos, los de QTS por defecto: CPU 75/80 °C, sistema 60/70 °C y discos 60/70 °C (el error de un HDD como aviso, para no marcar en rojo un SSD normal). Un disco que falta se ve por el estado del RAID y del pool, no por las bahías vacías.
+- **Consecuencias:** si el usuario cambia los umbrales en QTS, Talaia no lo sabe. Los volúmenes se numeran sin distinguir los USB, porque el MIB no lo dice; los discos de cajas USB sí se distinguen por su caja.
+
+## DEC-45: discos USB sin SMART, sin datos de salud
+- **Contexto:** en el NAS del cliente, los dos discos de una caja USB salen por SNMP como «Abnormal», uno con `diskSmartInfo` `-1` y otro con `2`, y con temperatura `-1`. QTS los muestra como dispositivos externos «Ready», sin ningún dato de salud: la caja no le pasa el SMART.
+- **Decisión:** un disco de una caja distinta del NAS y sin temperatura se publica como «sin datos SMART» y no cambia el estado del bloque. Si una caja USB da temperatura, se considera que pasa el SMART y se respeta lo que diga. Los discos del NAS no cambian: un «Abnormal» en una bahía sigue en rojo.
+- **Consecuencias:** un fallo real de un disco USB sin SMART no se ve en Talaia, igual que tampoco lo ve QTS.

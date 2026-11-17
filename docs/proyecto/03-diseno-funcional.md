@@ -164,17 +164,20 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 | Campo | Servicios | Reglas |
 |---|---|---|
 | Nombre | Todos | Obligatorio, hasta 80 caracteres |
-| URL | Todos | `http` o `https`, sin credenciales, parámetros ni fragmento |
-| Usuario | AdGuard | Obligatorio |
+| URL | Todos salvo QNAP | `http` o `https`, sin credenciales, parámetros ni fragmento |
+| Dirección SNMP | QNAP | `snmp://host` o `snmp://host:puerto`, sin ruta ni credenciales; puerto 161 por defecto |
+| Usuario | AdGuard; QNAP (usuario SNMPv3) | Obligatorio |
 | Clave de API | OPNsense | Obligatoria, sin espacios. Admite pegar la línea `key=…` del archivo |
 | Credencial | Todos | Obligatoria al crear y al cambiar la URL; en otro caso, vacía conserva la actual. Hasta 4096 bytes |
+| Clave de cifrado | QNAP | Se escribe a la vez que la de autenticación, con las mismas reglas; las dos con al menos 8 caracteres |
+| Protocolo de cifrado | QNAP | CBC-DES por defecto, o AES |
 | Refresco | Todos | De 5 a 3600 segundos, 30 por defecto |
 | Mostrar dominios | AdGuard | Desactivado por defecto |
 | Mostrar detalle de VM y LXC | Proxmox | Activado por defecto |
 | Entidades en el panel | Home Assistant | Ninguna por defecto, hasta 200 |
 | Mostrar resumen | Home Assistant | Activado por defecto |
 | Enlace para abrir el servicio | Todos | Opcional, `http` o `https`, sin credenciales. Vacío, usa la URL de conexión |
-| No verificar TLS | Todos | Desactivado por defecto |
+| No verificar TLS | Todos salvo QNAP | Desactivado por defecto |
 
 | Credencial | Formato |
 |---|---|
@@ -184,6 +187,7 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 | OPNsense | Secreto de API. Admite pegar la línea `secret=…` del archivo |
 | Portainer | Token de acceso |
 | WGDashboard | Clave de API |
+| QNAP | Clave de autenticación de SNMPv3 (HMAC-SHA), más la clave de cifrado en su propio campo |
 
 **Probar conexión:** consulta el servicio una vez con los datos del formulario, sin guardar nada. En Home Assistant, avisa si no hay CPU, memoria ni disco disponibles. En OPNsense, avisa si faltan datos por los privilegios del usuario. Si se cambia algún dato de conexión, el resultado anterior desaparece. Al editar, puede usar la credencial guardada si la URL no ha cambiado.
 
@@ -262,6 +266,28 @@ En las filas de gateways y de WireGuard, si no caben en una línea, se reparte p
 | Con fallos | La última consulta ha fallado | Cuadrado rojo, mensaje de error y último dato atenuado |
 
 **Datos de un bloque de WGDashboard:** túneles activos, peers conectados en los túneles activos sobre el total, y tráfico acumulado; una fila por túnel con su estado y sus peers conectados; y el tráfico recibido y enviado. Un túnel parado es un aviso y no un fallo, porque puede estarlo a propósito. Un peer sin contacto reciente no cambia el estado. Los nombres de los peers no se muestran; ver DEC-33.
+
+**Estados de un bloque de QNAP:**
+
+| Estado | Cuándo | Indicador |
+|---|---|---|
+| Discos en buen estado | Ningún problema | Círculo verde |
+| Disco con fallos | Algún disco con SMART anómalo o en error | Cuadrado rojo |
+| Almacenamiento degradado | Algún grupo RAID o volumen degradado | Cuadrado rojo |
+| Almacenamiento con errores | Algún pool no listo o en error, o un volumen con error | Cuadrado rojo |
+| Temperatura crítica | CPU, sistema o algún disco en su umbral de error | Cuadrado rojo |
+| Aviso SMART | Algún disco con aviso SMART | Triángulo ámbar |
+| Sincronizando | Algún RAID o volumen reconstruyéndose o sincronizando | Triángulo ámbar |
+| Almacenamiento con avisos | Algún pool en aviso o un estado desconocido | Triángulo ámbar |
+| Volumen casi lleno | Algún volumen al 90 % o más | Triángulo ámbar |
+| Temperatura alta | CPU, sistema o algún disco en su umbral de aviso | Triángulo ámbar |
+| Ventilador averiado | QNAP marca un ventilador con fallo | Triángulo ámbar |
+| Sin discos | El NAS no da ningún disco | Neutro |
+| Con fallos | La última consulta ha fallado | Cuadrado rojo, mensaje de error y último dato atenuado |
+
+Si hay varios problemas, la etiqueta es la del primero de la tabla. Umbrales: CPU 75 y 80 °C, sistema 60 y 70 °C, discos 60 y 70 °C; ver DEC-44.
+
+**Datos de un bloque de QNAP:** uso de CPU, memoria y almacenamiento (la suma de los volúmenes); una fila por disco, «Disco» y su bahía o «USB» y su orden, con su salud SMART y su temperatura; una fila por volumen con su estado y su uso; la temperatura de la CPU y del sistema; y la versión del firmware en el pie. Las filas con aviso se ven en ámbar y las de fallo, en rojo. Un disco USB sin datos SMART se ve en gris como «Sin datos SMART» y no cambia el estado; ver DEC-45. No se muestran nombres de volúmenes, modelos ni números de serie. Sin enlace propio, el nombre del bloque no enlaza, porque la dirección es `snmp://`.
 
 ## Mensajes de error de los servicios
 

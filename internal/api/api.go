@@ -31,6 +31,7 @@ import (
 	"github.com/izakdev/talaia/internal/integrations/homeassistant"
 	"github.com/izakdev/talaia/internal/integrations/opnsense"
 	"github.com/izakdev/talaia/internal/integrations/proxmox"
+	"github.com/izakdev/talaia/internal/integrations/qnap"
 	"github.com/izakdev/talaia/internal/store"
 )
 
@@ -402,6 +403,7 @@ var connectionTypes = map[string]struct {
 	"adguard":       {needsUsername: true, options: []string{adguard.OptionShowTopDomains}},
 	"opnsense":      {needsUsername: true, options: []string{opnsense.OptionShowWireGuard}},
 	"portainer":     {},
+	"qnap":          {needsUsername: true, options: []string{qnap.OptionPrivacyAES}},
 	"wgdashboard":   {},
 }
 
@@ -417,6 +419,7 @@ type connectionIn struct {
 	BaseURL         string          `json:"base_url"`
 	Username        string          `json:"username"`
 	Secret          *string         `json:"secret"`
+	PrivacySecret   *string         `json:"privacy_secret"`
 	IntervalSeconds int             `json:"interval_seconds"`
 	TLSSkipVerify   bool            `json:"tls_skip_verify"`
 	Options         map[string]bool `json:"options"`
@@ -452,11 +455,20 @@ func validateConnection(in *connectionIn) string {
 	if !ok {
 		return "invalid_type"
 	}
-	u, err := url.Parse(strings.TrimSpace(in.BaseURL))
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
-		return "invalid_url"
+	if in.Type == "qnap" {
+		// QNAP se consulta por SNMP: snmp://host[:puerto], sin TLS.
+		in.BaseURL = strings.TrimRight(strings.TrimSpace(in.BaseURL), "/")
+		if _, _, err := qnap.Target(in.BaseURL); err != nil {
+			return "invalid_snmp_url"
+		}
+		in.TLSSkipVerify = false
+	} else {
+		u, err := url.Parse(strings.TrimSpace(in.BaseURL))
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
+			return "invalid_url"
+		}
+		in.BaseURL = strings.TrimRight(u.String(), "/")
 	}
-	in.BaseURL = strings.TrimRight(u.String(), "/")
 	in.LinkURL = strings.TrimSpace(in.LinkURL)
 	if in.LinkURL != "" {
 		// El enlace se muestra en el panel: solo http o https, nunca javascript: ni similares.
@@ -514,6 +526,23 @@ func validateConnection(in *connectionIn) string {
 		if in.Type == "proxmox" && !proxmoxToken.MatchString(*in.Secret) {
 			return "invalid_proxmox_token"
 		}
+	}
+	if in.Type != "qnap" {
+		in.PrivacySecret = nil
+		return ""
+	}
+	// SNMPv3 necesita las dos claves a la vez; se guardan juntas en el secreto cifrado.
+	if (in.Secret == nil) != (in.PrivacySecret == nil) {
+		return "snmp_secrets_together"
+	}
+	if in.Secret != nil {
+		privacy := strings.TrimSpace(*in.PrivacySecret)
+		// USM exige al menos 8 caracteres en cada clave.
+		if len(*in.Secret) < 8 || len(privacy) < 8 || len(privacy) > 4096 || strings.ContainsAny(privacy, "\r\n") {
+			return "invalid_snmp_secret"
+		}
+		combined := *in.Secret + qnap.SecretSeparator + privacy
+		in.Secret, in.PrivacySecret = &combined, nil
 	}
 	return ""
 }
@@ -579,6 +608,9 @@ func (s *Server) updateConnection(w http.ResponseWriter, r *http.Request) {
 	if in.Secret != nil && *in.Secret == "" {
 		in.Secret = nil
 	}
+	if in.PrivacySecret != nil && *in.PrivacySecret == "" {
+		in.PrivacySecret = nil
+	}
 	if code := validateConnection(&in); code != "" {
 		writeError(w, http.StatusBadRequest, code)
 		return
@@ -617,6 +649,9 @@ func (s *Server) connectionFromRequest(w http.ResponseWriter, r *http.Request) (
 	}
 	if in.Secret != nil && *in.Secret == "" {
 		in.Secret = nil
+	}
+	if in.PrivacySecret != nil && *in.PrivacySecret == "" {
+		in.PrivacySecret = nil
 	}
 	var current store.Connection
 	if in.ID != "" {
