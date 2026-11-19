@@ -2,7 +2,7 @@
 
 Talaia is a dashboard that shows the status of your homelab services at a glance. It is meant to be your browser's start page.
 
-> **Manual version:** `v0.3.0`. It shows data from AdGuard Home, Proxmox VE, Home Assistant, OPNsense, Portainer, WGDashboard, QNAP and a UPS through NUT. See the [current limitations](#current-limitations).
+> **Manual version:** `v0.3.1`. It shows data from AdGuard Home, Proxmox VE, Home Assistant, OPNsense, Portainer, WGDashboard, QNAP and a UPS through NUT. See the [current limitations](#current-limitations).
 >
 > This manual is a translation of the [Spanish user manual](../usuario/manual-de-usuario.md), which is the reference. The project documentation is only in Spanish.
 
