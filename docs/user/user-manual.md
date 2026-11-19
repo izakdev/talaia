@@ -2,7 +2,7 @@
 
 Talaia is a dashboard that shows the status of your homelab services at a glance. It is meant to be your browser's start page.
 
-> **Manual version:** `v0.3.0`. It shows data from AdGuard Home, Proxmox VE, Home Assistant, OPNsense, Portainer, WGDashboard and QNAP. See the [current limitations](#current-limitations).
+> **Manual version:** `v0.3.0`. It shows data from AdGuard Home, Proxmox VE, Home Assistant, OPNsense, Portainer, WGDashboard, QNAP and a UPS through NUT. See the [current limitations](#current-limitations).
 >
 > This manual is a translation of the [Spanish user manual](../usuario/manual-de-usuario.md), which is the reference. The project documentation is only in Spanish.
 
@@ -444,6 +444,42 @@ The block shows CPU, memory and storage usage; each disk with its SMART health a
 
 If there are several problems, the block shows the most serious one. The thresholds are QTS's defaults, because SNMP doesn't give yours: CPU, warning at 75 °C and error at 80 °C; system, at 60 °C and 70 °C; disks, at 60 °C and 70 °C.
 
+### UPS (NUT)
+
+Talaia reads the UPS status from the **NUT** (*Network UPS Tools*) server, `upsd`, which runs on the machine the UPS is plugged into over USB: a Proxmox node, a NAS, a Raspberry Pi… If you use PeaNUT or another web page to see the UPS, they read from that server too. Talaia only queries: it can't shut down the UPS or change anything, and it **needs no user or password**, because NUT only asks for them to send commands.
+
+**On the machine with the UPS:**
+
+1. Check that `upsd` listens on the network and not only on the machine itself. `/etc/nut/upsd.conf` must have a `LISTEN` line with its address or `LISTEN 0.0.0.0 3493`; after changing it, restart the service with `systemctl restart nut-server`. If other machines already watch the UPS with `upsmon`, or PeaNUT runs on another machine, it already listens on the network.
+2. Talaia's machine must reach port **TCP 3493**. If there is a firewall between them, open it for Talaia's address.
+3. To find the UPS name, look at the brackets in `/etc/nut/ups.conf`, for example `[ups]`, or run `upsc -l`. You only need it if the server has more than one.
+
+If you don't know which machine has the UPS, look at the `MONITOR` line of `/etc/nut/upsmon.conf` on any machine that watches it: what comes after `@` is the server.
+
+| Field | What to enter |
+|---|---|
+| NUT server address | `nut://` and the address of the machine with the UPS, for example `nut://ups.local`. Add `:port` if it isn't 3493, and `/name` if the server has several UPSs: `nut://ups.local/ups` |
+| Link to open the service | Optional, for example PeaNUT's address. Without it, the block name doesn't link anywhere |
+
+The form has no password field and no TLS certificate checkbox. If testing the connection shows **Can't connect to the service**, check the `LISTEN` line and the firewall. If it shows **The UPS can't be found**, the server has several UPSs or none with that name: put the right one in the address.
+
+![UPS block](img/24-panel-nut.png)
+
+The block shows the battery charge, with **Charging** while it charges, and the **runtime**: how long it would last on battery at the current load, as the UPS calculates it. The footer has the model and the NUT version. It doesn't show the UPS name in NUT, its serial number or the server address.
+
+**UPS status:**
+
+| Indicator | Meaning |
+|---|---|
+| Green circle: **On mains** | The UPS has mains power |
+| Amber triangle: **On battery** | There's a power cut and your equipment runs on battery |
+| Red square: **Low battery** | The battery is about to run out: the machines watching the UPS will start shutting down |
+| Amber triangle: **Replace battery** | The UPS says its battery is worn out, even with mains power |
+| Amber triangle: **Overload** | The connected equipment draws more than the UPS can supply |
+| Neutral: **Unknown status** | The UPS reports a status Talaia doesn't know |
+
+If the server answers but gets no data from the UPS, the block turns red with the message **The NUT server gets no data from the UPS**: check the USB cable and the driver on the machine it is plugged into.
+
 ## Editing and deleting connections
 
 **Edit:** click **Edit** on the connection. Leave the credential empty to keep the current one. If you change the URL, you'll have to enter it again: this prevents sending it to another server by mistake.
@@ -531,6 +567,8 @@ In the administration, open **Settings**.
 | Unexpected response | Check that the URL belongs to the right service. Some proxies redirect: use the final URL |
 | The credential can't be decrypted | `secret.key` has changed or been lost. Restore it or enter the credential again |
 | Unexpected error reading the service | Check Talaia's logs, on its standard error output |
+| The UPS can't be found | The NUT server has several UPSs, or none with that name. Name it in the address: `nut://machine/ups` |
+| The NUT server gets no data from the UPS | Check the USB cable and the NUT driver on the machine the UPS is plugged into |
 
 **Other problems:**
 
@@ -550,6 +588,7 @@ In the administration, open **Settings**.
 | An entity shows as **Not found** | It no longer exists in Home Assistant or its identifier changed. Edit the connection and update the selection |
 | Home Assistant is slow or times out | In very large installations, increase the refresh, for example to 60 seconds |
 | QNAP doesn't respond in time | Check that SNMP is enabled with version SNMP V3, that the privacy protocol matches and that the firewall lets UDP 161 through |
+| The UPS doesn't connect | Check the `LISTEN` line of `upsd.conf` on the machine with the UPS and that the firewall lets TCP 3493 through |
 
 ## Current limitations
 
@@ -559,5 +598,6 @@ In the administration, open **Settings**.
 - The OPNsense block doesn't show its pending updates.
 - The Portainer and WGDashboard blocks, and OPNsense's WireGuard, don't detail each container or peer: they only give counts.
 - The QNAP block uses QTS's default temperature thresholds, not yours, and doesn't tell which volume is on a USB disk.
+- The UPS block shows a single UPS, without voltages or load, and the connection to NUT isn't encrypted; no password travels over it.
 
 The status of each item is in [Status and changes](../proyecto/06-estado-y-cambios.md), in Spanish.

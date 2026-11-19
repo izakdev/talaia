@@ -15,6 +15,7 @@ import { fakePortainer, PORTAINER_TOKEN } from "./fake-portainer.mjs";
 import { fakeWGDashboard, WGDASHBOARD_KEY } from "./fake-wgdashboard.mjs";
 import { fakeProxmox, TOKEN } from "./fake-proxmox.mjs";
 import { fakeQNAP, QNAP_AUTH, QNAP_PRIV, QNAP_USER } from "./fake-qnap.mjs";
+import { fakeNUT, NUT_SERIAL, NUT_UPS } from "./fake-nut.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const screenshotsDir = process.argv.includes("--screenshots") ? join(root, "docs/usuario/img") : null;
@@ -28,6 +29,7 @@ const opnsense = fakeOPNsense(13003);
 const portainer = fakePortainer(13004);
 const wgdashboard = fakeWGDashboard(13005);
 const qnap = fakeQNAP(13006); // UDP
+const nut = fakeNUT(13007); // TCP, protocolo de NUT
 const dataDir = mkdtempSync(join(tmpdir(), "talaia-e2e-"));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -164,7 +166,7 @@ const scenarios = [
   ["E2E-04", "Catálogo de servicios: búsqueda y navegación", async () => {
     await page.getByRole("link", { name: "Añadir conexión" }).click();
     await page.getByRole("heading", { name: "Elige un servicio" }).waitFor();
-    assert.equal(await page.locator(".catalog button").count(), 7);
+    assert.equal(await page.locator(".catalog button").count(), 8);
     await shot(page, "04-catalogo");
     const search = page.getByLabel("Buscar servicio");
     await search.fill("maquinas");
@@ -925,6 +927,71 @@ const scenarios = [
     await state.getByText("Discos en buen estado").waitFor({ timeout: 30000 });
     await toAdmin();
   }],
+  ["E2E-41", "Alta de un SAI por NUT, sin credenciales", async () => {
+    await page.goto(`${BASE}/admin/connections/new`);
+    await page.getByRole("button", { name: /SAI \(NUT\)/ }).click();
+    await page.getByLabel("Nombre", { exact: true }).fill("SAI");
+    const address = page.getByLabel(/^Dirección del servidor NUT/);
+    await address.fill(nut.url.replace("nut://", "http://"));
+    await page.locator("dialog input[type=number]").fill("5");
+    // NUT no pide clave ni usa TLS.
+    await page.getByText("NUT no pide usuario ni contraseña").waitFor();
+    assert.equal(await page.locator("dialog input[type=password]").count(), 0);
+    assert.equal(await page.getByText("No verificar el certificado TLS").count(), 0);
+    await page.getByRole("button", { name: "Probar conexión" }).click();
+    await page.getByRole("alert").getByText("nut://host").waitFor();
+    // Con varios SAI en el servidor, hay que indicar cuál.
+    nut.state.several = true;
+    await address.fill(nut.url);
+    await page.getByRole("button", { name: "Probar conexión" }).click();
+    await page.locator("dialog p[role=status]").getByText("No se encuentra el SAI").waitFor();
+    await address.fill(`${nut.url}/${NUT_UPS}`);
+    await page.getByRole("button", { name: "Probar conexión" }).click();
+    await page.locator("dialog p[role=status]").getByText("Conexión correcta").waitFor();
+    nut.state.several = false;
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await row("SAI").getByText("Funciona").waitFor();
+  }],
+  ["E2E-42", "SAI en el panel: batería, autonomía y estados", async () => {
+    await toDashboard();
+    const block = page.locator(".service", { hasText: "Simulado 1500" });
+    const state = block.locator(".service-state");
+    const tone = (name) => block.evaluate((el, n) => el.classList.contains(`tone-${n}`), name);
+    await state.getByText("Con red").waitFor();
+    // Sin enlace propio, el nombre no enlaza a la dirección nut://.
+    assert.equal(await block.locator(".service-link").count(), 0);
+    const body = await block.innerText();
+    assert.match(body, /Batería\s+100 %\s+Cargando/);
+    assert.match(body, /Autonomía\s+40 min/);
+    assert.match(body, /Simulado 1500 · NUT 2\.8\.1/);
+    await shot(block, "24-panel-nut");
+    const leaks = await publicDashboard();
+    for (const leak of [NUT_UPS, NUT_SERIAL, "SAI del rack", "usbhid", "nut://", "127.0.0.1:13007"]) {
+      assert.equal(leaks.includes(leak), false, leak);
+    }
+    Object.assign(nut.state, { status: "OB DISCHRG", charge: 80, runtime: 3900 });
+    await state.getByText("Con batería").waitFor();
+    await block.getByText("1 h 5 min").waitFor();
+    assert.ok(await tone("warn"));
+    assert.equal(await block.getByText("Cargando").count(), 0);
+    Object.assign(nut.state, { status: "OB DISCHRG LB", charge: 9, runtime: 240 });
+    await state.getByText("Batería baja").waitFor();
+    await block.getByText("4 min").waitFor();
+    assert.ok(await tone("bad"));
+    Object.assign(nut.state, { status: "OL RB", charge: 100, runtime: 2400 });
+    await state.getByText("Cambiar batería").waitFor();
+    assert.ok(await tone("warn"));
+    nut.state.status = "OL CHRG";
+    nut.state.stale = true;
+    await block.getByText("El servidor NUT no recibe datos del SAI").waitFor();
+    nut.state.stale = false;
+    await state.getByText("Con red").waitFor();
+    await nut.stop();
+    await block.getByText("No se puede conectar con el servicio").waitFor({ timeout: 30000 });
+    await nut.start();
+    await state.getByText("Con red").waitFor({ timeout: 30000 });
+    await toAdmin();
+  }],
   ["E2E-38", "Bloques apilados por su altura real, panel a todo el ancho y editor sin cambios falsos", async () => {
     // Dos bloques cortos a la izquierda, uno encima de otro, y uno largo a la derecha.
     const layout = await page.evaluate(async () => {
@@ -1084,7 +1151,7 @@ const scenarios = [
   }],
   ["E2E-14", "La API pública no expone configuración ni credenciales", async () => {
     const body = await publicDashboard();
-    for (const leak of [USER, PASSWORD, TOKEN, HA_TOKEN, OPN_KEY, OPN_SECRET, "localhost:13002", "192.0.2.11", "192.0.2.50", "cortafuegos.simulado", "proceso-simulado", "pppoe1", PORTAINER_TOKEN, "192.0.2.60", "docker.simulado", "instancia-simulada", WGDASHBOARD_KEY, "clave-privada-simulada", "clave-publica-simulada", "10.66.0", "51666", "wg-simulado", "vpn.simulado", "192.0.2.53", QNAP_USER, QNAP_AUTH, QNAP_PRIV, "snmp://", "base_url", "link_url", "secret", "privacy_secret"]) {
+    for (const leak of [USER, PASSWORD, TOKEN, HA_TOKEN, OPN_KEY, OPN_SECRET, "localhost:13002", "192.0.2.11", "192.0.2.50", "cortafuegos.simulado", "proceso-simulado", "pppoe1", PORTAINER_TOKEN, "192.0.2.60", "docker.simulado", "instancia-simulada", WGDASHBOARD_KEY, "clave-privada-simulada", "clave-publica-simulada", "10.66.0", "51666", "wg-simulado", "vpn.simulado", "192.0.2.53", QNAP_USER, QNAP_AUTH, QNAP_PRIV, "snmp://", NUT_UPS, NUT_SERIAL, "nut://", "127.0.0.1:13007", "base_url", "link_url", "secret", "privacy_secret"]) {
       assert.equal(body.includes(leak), false, leak);
     }
     const headers = (await fetch(BASE)).headers;
@@ -1105,6 +1172,7 @@ try {
   await portainer.start();
   await wgdashboard.start();
   await qnap.start();
+  await nut.start();
   await waitForServer();
   for (const [id, title, run] of scenarios) {
     try {
@@ -1126,6 +1194,7 @@ try {
   await portainer.stop().catch(() => {});
   await wgdashboard.stop().catch(() => {});
   await qnap.stop().catch(() => {});
+  await nut.stop().catch(() => {});
   rmSync(dataDir, { recursive: true, force: true });
 }
 if (failed) process.exit(1);

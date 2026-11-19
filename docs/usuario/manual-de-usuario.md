@@ -4,7 +4,7 @@ Talaia es un panel para ver de un vistazo el estado de los servicios de tu labor
 
 *[English version](../user/user-manual.md).*
 
-> **Versión de este manual:** `v0.3.0`. Muestran datos AdGuard Home, Proxmox VE, Home Assistant, OPNsense, Portainer, WGDashboard y QNAP. Consulta las [limitaciones actuales](#limitaciones-actuales).
+> **Versión de este manual:** `v0.3.0`. Muestran datos AdGuard Home, Proxmox VE, Home Assistant, OPNsense, Portainer, WGDashboard, QNAP y un SAI a través de NUT. Consulta las [limitaciones actuales](#limitaciones-actuales).
 
 ## Índice
 
@@ -444,6 +444,42 @@ El bloque muestra el uso de CPU, memoria y almacenamiento; cada disco con su sal
 
 Si hay varios problemas, el bloque muestra el más grave. Los umbrales son los de QTS por defecto, porque SNMP no da los tuyos: CPU, aviso a 75 °C y error a 80 °C; sistema, a 60 °C y 70 °C; discos, a 60 °C y 70 °C.
 
+### SAI (NUT)
+
+Talaia lee el estado del SAI del servidor **NUT** (*Network UPS Tools*), `upsd`, que corre en el equipo al que está conectado el SAI por USB: un nodo de Proxmox, un NAS, una Raspberry Pi… Si usas PeaNUT u otra web para ver el SAI, también leen de ese servidor. Talaia solo hace consultas: no puede apagar el SAI ni cambiar nada, y **no necesita usuario ni contraseña**, porque NUT solo los pide para dar órdenes.
+
+**En el equipo que tiene el SAI:**
+
+1. Comprueba que `upsd` escucha en la red y no solo en el propio equipo. En `/etc/nut/upsd.conf` debe haber una línea `LISTEN` con su dirección o `LISTEN 0.0.0.0 3493`; tras cambiarla, reinicia el servicio con `systemctl restart nut-server`. Si ya tienes otros equipos que vigilan el SAI con `upsmon`, o PeaNUT en otro equipo, ya escucha en la red.
+2. El equipo de Talaia debe llegar al puerto **TCP 3493**. Si hay un firewall entre los dos, ábrelo para la dirección de Talaia.
+3. Para saber el nombre del SAI, mira los corchetes de `/etc/nut/ups.conf`, por ejemplo `[sai]`, o ejecuta `upsc -l`. Solo hace falta si el servidor tiene más de uno.
+
+Si no sabes qué equipo tiene el SAI, mira en cualquier equipo que lo vigile la línea `MONITOR` de `/etc/nut/upsmon.conf`: lo que va detrás de `@` es el servidor.
+
+| Campo | Qué poner |
+|---|---|
+| Dirección del servidor NUT | `nut://` y la dirección del equipo que tiene el SAI, por ejemplo `nut://sai.local`. Añade `:puerto` si no es el 3493, y `/nombre` si el servidor tiene varios SAI: `nut://sai.local/sai` |
+| Enlace para abrir el servicio | Opcional, por ejemplo la dirección de PeaNUT. Sin ella, el nombre del bloque no enlaza a ningún sitio |
+
+El formulario no tiene campo de contraseña ni la casilla del certificado TLS. Si al probar la conexión ves **No se puede conectar con el servicio**, revisa la línea `LISTEN` y el firewall. Si ves **No se encuentra el SAI**, el servidor tiene varios o ninguno con ese nombre: indica el correcto en la dirección.
+
+![Bloque de SAI](img/24-panel-nut.png)
+
+El bloque muestra la carga de la batería, con **Cargando** si se está cargando, y la **autonomía**: cuánto aguantaría con la batería según el consumo de ese momento, como la calcula el SAI. En el pie, el modelo y la versión de NUT. No muestra el nombre del SAI en NUT, su número de serie ni la dirección del servidor.
+
+**Estado del SAI:**
+
+| Indicador | Significado |
+|---|---|
+| Círculo verde: **Con red** | El SAI tiene corriente de la red |
+| Triángulo ámbar: **Con batería** | Se ha ido la luz y los equipos tiran de la batería |
+| Cuadrado rojo: **Batería baja** | La batería está a punto de agotarse: los equipos que vigilan el SAI empezarán a apagarse |
+| Triángulo ámbar: **Cambiar batería** | El SAI avisa de que su batería está gastada, aunque haya red |
+| Triángulo ámbar: **Sobrecarga** | Los equipos conectados consumen más de lo que el SAI puede dar |
+| Neutro: **Estado desconocido** | El SAI no da un estado que Talaia conozca |
+
+Si el servidor responde pero no recibe datos del SAI, el bloque se pone en rojo con el mensaje **El servidor NUT no recibe datos del SAI**: revisa el cable USB y el driver en el equipo que lo tiene conectado.
+
 ## Editar y eliminar conexiones
 
 **Editar:** pulsa **Editar** en la conexión. Deja la credencial vacía para conservar la actual. Si cambias la URL, tendrás que volver a escribirla: así evitas enviarla por error a otro servidor.
@@ -531,6 +567,8 @@ En la administración, abre **Ajustes**.
 | La respuesta no es la esperada | Revisa que la URL sea la del servicio correcto. Algunos proxies redirigen: usa la URL final |
 | No se puede descifrar la credencial | `secret.key` ha cambiado o se ha perdido. Restáurala o vuelve a escribir la credencial |
 | Error inesperado al consultar el servicio | Revisa los registros de Talaia, en su salida estándar de error |
+| No se encuentra el SAI | El servidor NUT tiene varios SAI, o ninguno con ese nombre. Indica cuál en la dirección: `nut://equipo/sai` |
+| El servidor NUT no recibe datos del SAI | Revisa el cable USB y el driver de NUT en el equipo que tiene el SAI conectado |
 
 **Otros problemas:**
 
@@ -550,6 +588,7 @@ En la administración, abre **Ajustes**.
 | Una entidad aparece como **No encontrada** | Ya no existe en Home Assistant o ha cambiado de identificador. Edita la conexión y actualiza la selección |
 | Home Assistant tarda mucho o da error de tiempo de espera | En instalaciones muy grandes, sube el refresco, por ejemplo a 60 segundos |
 | QNAP no responde a tiempo | Comprueba que SNMP esté activado con la versión SNMP V3, que el protocolo de cifrado coincida y que el firewall deje pasar UDP 161 |
+| El SAI no conecta | Comprueba la línea `LISTEN` de `upsd.conf` en el equipo que tiene el SAI y que el firewall deje pasar TCP 3493 |
 
 ## Limitaciones actuales
 
@@ -559,5 +598,6 @@ En la administración, abre **Ajustes**.
 - El bloque de OPNsense no muestra sus actualizaciones pendientes.
 - Los bloques de Portainer y WGDashboard, y el WireGuard de OPNsense, no detallan cada contenedor ni cada peer: solo dan recuentos.
 - El bloque de QNAP usa los umbrales de temperatura de QTS por defecto, no los tuyos, y no distingue qué volumen es de un disco USB.
+- El bloque del SAI muestra un solo SAI, sin tensiones ni consumo, y la conexión con NUT no va cifrada; no viaja ninguna contraseña.
 
 El estado de cada punto está en [Estado y cambios](../proyecto/06-estado-y-cambios.md).

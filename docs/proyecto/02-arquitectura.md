@@ -21,6 +21,7 @@ flowchart LR
     PT[Portainer]
     WG[WGDashboard]
     QN[QNAP]
+    NU[Servidor NUT del SAI]
 
     B -->|HTTP y SSE| A
     B --> W
@@ -35,6 +36,7 @@ flowchart LR
     C -->|solo lectura| PT
     C -->|solo lectura| WG
     C -->|SNMPv3, solo lectura| QN
+    C -->|protocolo de NUT, solo lectura| NU
 ```
 
 ## Tecnologías
@@ -72,6 +74,7 @@ Los motivos detallados están en [Decisiones](05-decisiones.md).
 | `internal/integrations/portainer` | Integración con Portainer |
 | `internal/integrations/wgdashboard` | Integración con WGDashboard |
 | `internal/integrations/qnap` | Integración con QNAP por SNMPv3 |
+| `internal/integrations/nut` | Integración con un SAI a través de su servidor NUT (`upsd`), con un cliente propio del protocolo de red de NUT |
 | `web` | Frontend; `web/embed.go` lo incluye en el binario |
 | `web/src/widgets` | Estado, contenido y pie del bloque de cada integración |
 | `web/src/PanelEditor.tsx` | Editor de páginas y bloques |
@@ -225,6 +228,20 @@ Proxmox filtra `/cluster/resources` según los permisos. Una lista sin nodos se 
 | Enlace | Una dirección `snmp://` no se publica como enlace: sin enlace propio, el nombre del bloque no enlaza |
 | Datos públicos | Cifras, estados, números de bahía y de volumen, temperaturas y versión. No incluyen nombre del equipo, modelo, números de serie, nombres de volúmenes ni la dirección |
 
+### SAI (NUT)
+
+| Aspecto | Detalle |
+|---|---|
+| Protocolo | Protocolo de red de NUT, texto por TCP, puerto 3493 salvo que la dirección `nut://host:puerto` diga otro; sin TLS. Cliente propio, sin dependencias; ver DEC-46 |
+| Credenciales | Ninguna: NUT no tiene control de acceso para leer y `upsd.users` solo hace falta para enviar órdenes. El tipo de conexión no pide usuario ni secreto y guarda un secreto vacío; ver DEC-47 |
+| SAI | El nombre que da `ups.conf`, opcional en la ruta: `nut://host/sai`. Solo se admiten letras, cifras, `.`, `_` y `-`, lo que impide colar otra orden. Sin nombre, `LIST UPS`: si hay uno, se usa; si hay ninguno o varios, `ups_not_found` |
+| Consultas | `VER` (versión de `upsd`, opcional), `LIST UPS` si hace falta, `LIST VAR <sai>` y `LOGOUT`. Nunca `USERNAME`, `PASSWORD`, `LOGIN`, `SET` ni `INSTCMD` |
+| Datos | `ups.status`, partido en banderas, solo las conocidas (`OL`, `OB`, `LB`, `RB`, `CHRG`, `OVER`…); `battery.charge` en %; `battery.runtime` en segundos; `ups.model` o, si falta, `device.model`. Los que faltan se publican como nulos |
+| Errores | `ERR ACCESS-DENIED` da `unauthorized`; `ERR UNKNOWN-UPS`, `ups_not_found`; `ERR DATA-STALE` y `ERR DRIVER-NOT-CONNECTED`, `ups_stale`; otra respuesta, `bad_response`. Sin conexión, `unreachable`, y sin respuesta, `timeout` |
+| Límites | 5 s para conectar y 10 s para toda la consulta; líneas de 4096 bytes y listas de 2000 líneas como máximo; el modelo y la versión se recortan a 128 caracteres |
+| Enlace | Una dirección `nut://` no se publica como enlace: se puede poner como enlace propio la de PeaNUT u otra interfaz |
+| Datos públicos | Banderas de estado, carga, autonomía, modelo y versión de NUT. No incluyen el nombre del SAI en NUT, su descripción, el número de serie, el driver ni la dirección |
+
 ## API HTTP
 
 Las respuestas son JSON. Las escrituras exigen `Content-Type: application/json` y rechazan otro origen en la cabecera `Origin`.
@@ -322,10 +339,10 @@ erDiagram
 | Credenciales | AES-256-GCM, vinculadas al ID de la conexión para que no se puedan intercambiar entre filas |
 | Clave de cifrado | `secret.key` con permisos `600`; Talaia no arranca si son más abiertos |
 | Archivos | Al crearlos, directorio de datos `700` y base de datos `600` |
-| Salida a servicios | Sin proxy, sin seguir redirecciones, 10 s de espera por petición y respuestas de 32 MiB como máximo. Por SNMP, 3 s por petición y un reintento |
+| Salida a servicios | Sin proxy, sin seguir redirecciones, 10 s de espera por petición y respuestas de 32 MiB como máximo. Por SNMP, 3 s por petición y un reintento. Por NUT, 5 s para conectar y 10 s por consulta |
 | TLS | Verificación activa por defecto, con excepción explícita por conexión |
 | API pública | Sin usuarios ni credenciales. Incluye el enlace al servicio: la URL de conexión o la dirección propia configurada |
-| Enlaces | Solo `http` y `https`, sin credenciales; se abren con `noopener` y `noreferrer`. Una dirección `snmp://` nunca se publica como enlace |
+| Enlaces | Solo `http` y `https`, sin credenciales; se abren con `noopener` y `noreferrer`. Una dirección `snmp://` o `nut://` nunca se publica como enlace |
 | Navegador | Sin `unsafe-inline`: el editor evita el `<style>` que `react-draggable` insertaría. CSP `default-src 'self'`, `frame-ancestors 'none'`, `nosniff` y `Referrer-Policy: same-origin` |
 | CSRF | Cookie `SameSite=Lax`, comprobación de `Origin` y JSON obligatorio |
 | Tamaño de petición | 64 KiB como máximo |
@@ -341,6 +358,7 @@ erDiagram
 - **Sin TLS propio:** Talaia sirve HTTP y delega el cifrado en un proxy inverso.
 - **Acceso de administrador:** una sesión de administrador puede hacer que Talaia envíe peticiones a cualquier URL, necesario para probar conexiones.
 - **DES en SNMPv3 de QNAP:** QTS solo ofrece este cifrado, débil. Lo compensan claves largas y aleatorias; ver DEC-43.
+- **NUT sin cifrar:** Talaia no usa STARTTLS con `upsd`, de modo que el estado del SAI viaja en claro por la red. No viaja ninguna credencial; ver DEC-47.
 
 ## Despliegue
 

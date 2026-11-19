@@ -16,6 +16,7 @@ Talaia es un dashboard autoalojado para ver de un vistazo el estado de los servi
 - **Incluido:** integraciones de solo lectura con OPNsense, Portainer y WGDashboard, en este orden.
 - **Aparcado:** Grafana, a petición del cliente, porque no lo usa de momento.
 - **Ampliación:** NAS QNAP (QTS y QuTS hero) por SNMPv3, a petición del cliente, en el hito 14.
+- **Ampliación:** SAI a través de un servidor NUT (`upsd`), a petición del cliente, en el hito 15.
 
 ## Estados
 
@@ -123,6 +124,14 @@ Verificado con un Home Assistant real en local y con la instalación del cliente
 | RF-100 | Muestra la CPU, la memoria y el uso del almacenamiento; cada disco con su salud SMART y su temperatura; cada volumen con su estado y su uso; la temperatura de la CPU y del sistema, y la versión del firmware | 14 | Implementado |
 | RF-101 | Marca en rojo un disco con fallo SMART, un almacenamiento degradado o con errores y una temperatura crítica; y en ámbar un aviso SMART, una sincronización, un volumen por encima del 90 %, una temperatura alta y un ventilador averiado | 14 | Implementado |
 | RF-102 | Consulta por SNMPv3 con autenticación y cifrado, solo lee, no necesita una cuenta de QTS y no publica el nombre del equipo, el modelo, los números de serie, los nombres de los volúmenes ni la dirección | 14 | Implementado |
+
+### SAI (NUT)
+
+| ID | Requisito | Hito | Estado |
+|---|---|---|---|
+| RF-103 | Muestra si el SAI tiene red, la carga de la batería (y si se está cargando), la autonomía estimada, el modelo y la versión de NUT | 15 | Implementado |
+| RF-104 | Marca en verde «Con red»; en ámbar «Con batería», «Cambiar batería» y «Sobrecarga»; y en rojo «Batería baja» y el servidor sin respuesta o sin datos del SAI | 15 | Implementado |
+| RF-105 | Lee del servidor NUT por su protocolo de red sin usuario ni contraseña, solo con órdenes de consulta, elige el único SAI del servidor si no se indica otro, y no publica el nombre del SAI en NUT, su número de serie, el driver ni la dirección | 15 | Implementado |
 
 ### Instalación
 
