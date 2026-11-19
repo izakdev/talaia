@@ -834,3 +834,47 @@ func TestQNAPConnectionRules(t *testing.T) {
 		t.Fatalf("el panel muestra la dirección SNMP: %s", dashboard)
 	}
 }
+
+func TestNUTConnectionRules(t *testing.T) {
+	c, st := newServer(t)
+	c.want(200, "POST", "/api/setup", creds())
+	conn := func() map[string]any {
+		return map[string]any{
+			"name": "SAI", "type": "nut", "base_url": "nut://192.0.2.30/sai-simulado", "interval_seconds": 30,
+			"tls_skip_verify": true, "username": "nadie",
+		}
+	}
+	for name, base := range map[string]string{
+		"http": "http://192.0.2.30", "sin host": "nut://", "sai raro": "nut://192.0.2.30/sai%0ALOGOUT", "ruta": "nut://192.0.2.30/a/b",
+	} {
+		m := conn()
+		m["base_url"] = base
+		if got := c.want(400, "POST", "/api/admin/connections", m); !strings.Contains(got, "invalid_nut_url") {
+			t.Fatalf("%s: %s", name, got)
+		}
+	}
+	// Sin credenciales: el alta no pide secreto y no guarda usuario ni TLS.
+	body := c.want(201, "POST", "/api/admin/connections", conn())
+	var out connectionOut
+	if err := json.Unmarshal([]byte(body), &out); err != nil {
+		t.Fatal(err)
+	}
+	if out.TLSSkipVerify || out.Username != "" {
+		t.Fatalf("NUT no usa TLS ni usuario: %s", body)
+	}
+	// Aunque llegue un secreto, no se guarda: NUT no lo usa.
+	withSecret := conn()
+	withSecret["secret"] = "no-debe-guardarse"
+	path := "/api/admin/connections/" + out.ID
+	moved := conn()
+	moved["base_url"] = "nut://192.0.2.31:3494"
+	c.want(200, "PUT", path, moved)
+	c.want(200, "PUT", path, withSecret)
+	if got, err := st.ConnectionSecret(t.Context(), out.ID); err != nil || got != "" {
+		t.Fatalf("secreto guardado = %q, %v", got, err)
+	}
+	dashboard := c.want(200, "GET", "/api/dashboard", nil)
+	if strings.Contains(dashboard, "nut://") || strings.Contains(dashboard, "192.0.2.3") || strings.Contains(dashboard, "sai-simulado") {
+		t.Fatalf("el panel muestra la dirección NUT: %s", dashboard)
+	}
+}

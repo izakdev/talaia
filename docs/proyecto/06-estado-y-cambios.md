@@ -18,8 +18,15 @@
 | 12 | Pulido del panel: antigüedad en la cabecera, secciones coherentes y bloques sin huecos | Terminado y verificado con el panel real del cliente, publicado en `v0.2.3` |
 | 13 | Bloques que se apilan solos y panel a todo el ancho | Terminado y verificado con el panel real del cliente, publicado en `v0.2.5` |
 | 14 | QNAP por SNMPv3: discos, volúmenes y recursos | Terminado y verificado con el QNAP del cliente, publicado en `v0.3.0` |
+| 15 | SAI a través de un servidor NUT: estado, batería y autonomía | Terminado y verificado con el SAI del cliente |
 
 ## Historial
+
+### Hito 15 (2026-11-19)
+
+**Añadido:**
+- Integración con un SAI a través de su servidor NUT (`upsd`): si tiene red o tira de batería, carga de la batería, autonomía estimada, modelo y versión de NUT, con los avisos de batería baja, cambiar batería y sobrecarga.
+- Direcciones `nut://host[:puerto][/sai]` en el formulario de conexión, sin usuario ni contraseña, porque NUT no los pide para leer.
 
 ### `v0.3.0` (2026-11-18)
 
@@ -260,6 +267,9 @@ Primera versión estable, con los binarios para amd64 y arm64, las sumas de comp
 | Discos USB de QNAP sin SMART | Si la caja no lo pasa al NAS, no se ve su salud; ver DEC-45 | Depende de la caja USB |
 | SNMPv3 de QNAP con cifrado DES | QTS no ofrece otro; ver DEC-43 | Depende de QNAP |
 | Estados de RAID y volumen de QNAP no documentados | Se interpretan por palabras («Ready», «Degraded», «Rebuilding»…); un texto desconocido da ámbar | Al darse la ocasión |
+| Un SAI por conexión | Si el servidor NUT tiene varios, cada uno necesita su conexión con `nut://host/sai`; ver DEC-46 | Bajo demanda |
+| NUT sin STARTTLS | El estado del SAI viaja en claro por la red, sin credenciales; ver DEC-47 | Bajo demanda |
+| SAI sin tensiones ni consumo | Solo estado, batería y autonomía, como pidió el cliente | Bajo demanda |
 | Sistema del contenedor sin actualizaciones automáticas | Hay que actualizarlo con `apt` | Bajo demanda |
 
 ## Consumo medido

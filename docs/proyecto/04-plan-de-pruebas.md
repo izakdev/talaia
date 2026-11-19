@@ -47,6 +47,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestPastedTokenIsTrimmed` | Un token pegado con espacios o saltos de línea se limpia; con saltos en medio se rechaza | RF-14 |
 | `TestConnectionTest` | Exige sesión, no guarda nada, reutiliza la credencial solo con la misma URL y rechaza tipos sin integración | RF-13, RF-14 |
 | `TestQNAPConnectionRules` | QNAP exige `snmp://`, las dos claves a la vez y de al menos 8 caracteres; las guarda juntas y sin devolverlas, las conserva si llegan vacías, desactiva TLS y no publica la dirección como enlace | RF-102, RF-14, RF-25 |
+| `TestNUTConnectionRules` | SAI (NUT) exige `nut://` y un nombre de SAI válido; se crea sin credencial ni usuario, no guarda un secreto aunque llegue, cambia de dirección sin pedirlo, desactiva TLS y no publica la dirección ni el SAI | RF-105, RF-14 |
 
 ### `internal/auth`
 
@@ -175,6 +176,18 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestQNAPErrors` | Clasifica la firma, el usuario y el cifrado rechazados, la falta de respuesta, la red inalcanzable y un agente que no es un QNAP | RF-21, RF-102 |
 | `TestTarget` | Acepta `snmp://host[:puerto]` y rechaza otros esquemas, rutas, credenciales y puertos no válidos | RF-102 |
 
+### `internal/integrations/nut`
+
+| Prueba | Verifica | Requisitos |
+|---|---|---|
+| `TestCollect` | Lee versión, modelo, banderas de estado, carga y autonomía con la forma de un upsd 2.8.1 real | RF-103 |
+| `TestCollectPicksOnlyUPS` | Sin SAI en la dirección, usa el único del servidor | RF-105 |
+| `TestCollectMinimal` | Sin `VER`, sin carga, sin autonomía y con `device.model`: deja esos datos vacíos, recorta un modelo largo a 128 caracteres y descarta banderas desconocidas | RF-103 |
+| `TestNUTDataHidesPrivate` | No publica el nombre del SAI, su descripción, el número de serie, el driver ni la dirección | RF-105, RNF-02 |
+| `TestNUTSendsOnlyReadCommands` | Solo envía `VER`, `LIST` y `LOGOUT` | RF-105, RNF-02 |
+| `TestNUTErrors` | Clasifica SAI desconocido, ninguno o varios sin indicar, acceso denegado, driver desconectado, datos caducados, respuesta ajena, lista sin fin, falta de respuesta y servidor apagado | RF-21, RF-104, RF-105 |
+| `TestTarget` (nut) | Acepta `nut://host[:puerto][/sai]` y rechaza otros esquemas, credenciales, puertos, rutas y nombres de SAI con espacios o saltos de línea | RF-105 |
+| `TestParseLine` | Separa las palabras de una línea de NUT y desescapa `\"` y `\\` | RF-103 |
 ## Pruebas E2E
 
 | ID | Escenario | Requisitos |
@@ -219,7 +232,8 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-38 | Bloques apilados por su altura real, panel a todo el ancho y editor sin cambios falsos | RF-27 |
 | E2E-39 | Alta de QNAP por SNMPv3: dirección no válida, usuario rechazado, cifrado AES y sin casilla de TLS | RF-10, RF-102 |
 | E2E-40 | QNAP en el panel: cifras, discos, volúmenes y temperaturas; aviso SMART, volumen casi lleno, almacenamiento degradado, caída y recuperación; sin claves, dirección, nombres ni modelos en la API pública | RF-20, RF-21, RF-100, RF-101, RF-102 |
-
+| E2E-41 | Alta de un SAI por NUT: sin campo de clave ni de TLS, dirección no válida, varios SAI sin indicar cuál y conexión correcta con el nombre | RF-10, RF-105 |
+| E2E-42 | SAI en el panel: carga, «Cargando», autonomía, modelo y versión; con batería, batería baja, cambiar batería, driver sin datos, caída y recuperación; sin nombre del SAI, serie ni dirección en la API pública | RF-20, RF-21, RF-103, RF-104, RF-105 |
 Los servicios simulados reproducen las rutas y la forma de respuesta usadas. El QNAP simulado es un agente SNMPv3 (`net-snmp`) con AES, porque el OpenSSL de Node no trae DES; ver DEC-43. Las discrepancias con el servicio real las cubren las verificaciones manuales.
 
 ## Pruebas del instalador
@@ -245,6 +259,8 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. El 
 
 | Fecha | Versión de Talaia | Servicio | Resultado |
 |---|---|---|---|
+| 2026-11-19 | Hito 15 (`7d5a8d6`) | upsd 2.8.1 real del cliente, en otro nodo de su Proxmox, dado de alta como `nut://` sin indicar el SAI, con Talaia actualizado en su Proxmox VE con el instalador y `--binary` | Correcto según la captura del cliente: estado verde «Con red», batería 100 %, autonomía en minutos, modelo y «NUT 2.8.1» en el pie, y atalaya con los 7 servicios en orden. Toma el único SAI del servidor sin indicarlo. No se ha visto «Cargando» porque el SAI estaba cargado (`OL`), ni se han provocado un corte de luz u otros avisos, ni revisado a mano la API pública, que cubren `TestNUTDataHidesPrivate`, E2E-14 y E2E-42. La primera actualización falló sin cambiar nada porque `ssh` sin `-t` no deja confirmar; con `ssh -t` fue bien |
+| 2026-11-19 | Hito 15, antes de programar | upsd 2.8.1 (NETVER 1.3) real del cliente, en otro nodo de su Proxmox, consultado por TCP desde el LXC de Talaia, con nombres, serie, puertos y direcciones ocultos | El host de Proxmox donde corre Talaia no tiene `upsd`: solo `upsmon`, cliente de otro nodo que tiene el SAI por USB. Desde el LXC, `VER`, `LIST UPS`, `LIST VAR` y `LIST CMD` responden sin `LOGIN`. Un SAI con `ups.status` «OL», `battery.charge` 100, `battery.runtime` en segundos, `battery.charge.low`, `ups.model` y `device.model`, `ups.load` y `ups.realpower.nominal`. Un SAI inexistente da `ERR UNKNOWN-UPS` y una variable inexistente, `ERR VAR-NOT-SUPPORTED`. Por eso no se piden credenciales; ver DEC-47 |
 | 2026-11-02 | Hito 2 | AdGuard Home v0.107.79 real en local, con DNS y reglas de bloqueo reales | Correcto: credenciales erróneas, datos, protección desactivada, caída y recuperación, y actualización en vivo durante más de 35 s |
 | 2026-11-02 | Hito 2 | Validación del cliente | Correcto: catálogo de servicios y opción de ocultar el top de dominios |
 | 2026-11-02 | Hito 3 (`a33fbed`) | Proxmox VE 9.2.20 y AdGuard Home v0.107.77 del cliente, con el clúster en marcha | Correcto: validado por el cliente. Revisión adicional del panel y de la API pública: datos coherentes (totales de CPU, RAM, VM y LXC iguales a la suma por nodo), actualización en vivo, sin errores en la consola y sin URL, usuarios ni credenciales en la respuesta |
@@ -298,9 +314,11 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. El 
 - OPNsense: referencia de la API para rutas y métodos. El formato de las respuestas no está documentado: se ha tomado del servicio real.
 - OPNsense WireGuard: código de `opnsense/core` 26.7, en `Wireguard/Api/ServiceController.php`, `scripts/wireguard/wg_show.py` y `Wireguard/ACL/ACL.xml`, para la forma de los registros, el estado de los peers y los privilegios.
 - QNAP: MIB que descarga el propio NAS (QTS-MIB y NAS-MIB 2.0), para OID, tipos y estados de pools, discos y ventiladores. Para la API web descartada, `python-qnapstats` y la documentación de los plugins de QNAP de Linuxfabrik, que exigen el grupo «administrators».
+- NUT: guía de desarrollo de Network UPS Tools, «Network protocol information», para las órdenes, las respuestas y los errores; y las páginas de `upsd.conf` y `upsd.users`, que confirman que leer no exige usuario y que `LISTEN` decide en qué direcciones escucha.
 - WGDashboard: código de la v4.3.4, en `src/dashboard.py` y `src/modules/WireguardConfiguration.py`, para rutas, autenticación, registro de accesos y cálculo de los peers conectados.
 
 **Aún sin verificar:**
+- **SAI real por NUT, casos no probados:** corte de luz (con batería y batería baja), batería cargándose («Cargando»), aviso de cambiar batería, sobrecarga, driver desconectado, varios SAI en un servidor y SAI de otros fabricantes. Solo se han probado con el simulador.
 - **QNAP real, casos no probados:** aviso o fallo SMART, RAID degradado o reconstruyéndose, pool en aviso, ventilador averiado, volumen lleno y QTS clásico (no hero). Los textos de estado de RAID y volumen distintos de «Ready» no están documentados; solo se han probado con el simulador.
 - **WireGuard de OPNsense real, casos no probados:** instancia caída, peers sin contacto reciente y varias instancias. Solo se han probado con el simulador. Tampoco se ha revisado la API pública con este servicio, aunque la cubren `TestCollectWireGuard` y E2E-36.
 - **WGDashboard real, casos no probados:** peers conectados, varios túneles y túneles AmneziaWG. Solo se han probado con el simulador. Tampoco se ha revisado la API pública con este servicio, aunque la cubren `TestWGDashboardDataHidesInfrastructure` y E2E-14.
@@ -367,6 +385,9 @@ Los requisitos pendientes se probarán en su hito.
 | RF-100 | `TestCollectQNAP`, `TestQNAPWithoutQTSMIB`, E2E-40 |
 | RF-101 | `TestQNAPStorageStates`, `TestQNAPFanFailure`, E2E-40 |
 | RF-102 | `TestQNAPDataHidesInfrastructure`, `TestQNAPErrors`, `TestTarget`, `TestQNAPConnectionRules`, E2E-39, E2E-40 |
+| RF-103 | `TestCollect`, `TestCollectMinimal`, `TestParseLine`, E2E-42 |
+| RF-104 | `TestNUTErrors`, E2E-42 |
+| RF-105 | `TestNUTDataHidesPrivate`, `TestNUTSendsOnlyReadCommands`, `TestCollectPicksOnlyUPS`, `TestNUTErrors`, `TestTarget` (nut), `TestNUTConnectionRules`, E2E-41, E2E-42 |
 | RF-61 | INS-04, INS-05, INS-06, INS-11, INS-12 |
 | RF-62 | `TestSetupRequiresTokenWhenConfigured`, `TestSetupTokenAttemptsAreLimited`, `TestEmptySetupTokenNeverMatches`, E2E-29, INS-02 |
 | RNF-01 | Por diseño: el modelo de datos no tiene tablas de métricas |

@@ -34,6 +34,7 @@
 | Portainer | Environments, running and unhealthy containers, stacks |
 | WGDashboard | Tunnels, connected peers and traffic |
 | QNAP | Disks with SMART health and temperature, volumes, CPU, RAM and temperatures, over SNMPv3 |
+| UPS (NUT) | Mains or battery, battery charge and estimated runtime, read from a NUT server (`upsd`) with no credentials |
 
 ## Quick start on Proxmox VE
 

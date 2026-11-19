@@ -34,6 +34,7 @@
 | Portainer | Entornos, contenedores en marcha y con problemas, y stacks |
 | WGDashboard | Túneles, peers conectados y tráfico |
 | QNAP | Discos con su salud SMART y su temperatura, volúmenes, CPU, RAM y temperaturas, por SNMPv3 |
+| SAI (NUT) | Si tiene red o tira de batería, carga de la batería y autonomía estimada, leídos de un servidor NUT (`upsd`) sin credenciales |
 
 ## Instalación rápida en Proxmox VE
 

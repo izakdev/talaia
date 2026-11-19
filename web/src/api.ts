@@ -1,4 +1,4 @@
-export type ConnectionType = "proxmox" | "homeassistant" | "adguard" | "opnsense" | "portainer" | "qnap" | "wgdashboard";
+export type ConnectionType = "proxmox" | "homeassistant" | "adguard" | "opnsense" | "portainer" | "qnap" | "nut" | "wgdashboard";
 
 export interface AppState {
   setup_required: boolean;
@@ -200,6 +200,18 @@ export interface QNAPData {
   disk_temp_err_c: number;
   disks: QNAPDisk[];
   volumes: QNAPVolume[];
+}
+
+// Banderas de ups.status que publica Talaia.
+export type NUTFlag =
+  | "OL" | "OB" | "LB" | "HB" | "RB" | "CHRG" | "DISCHRG" | "BYPASS" | "CAL" | "OFF" | "OVER" | "TRIM" | "BOOST" | "FSD";
+
+export interface NUTData {
+  version: string;
+  model: string;
+  status: NUTFlag[];
+  charge_percent: number | null;
+  runtime_seconds: number | null;
 }
 
 export interface WGDashboardTunnel {

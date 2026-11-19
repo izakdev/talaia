@@ -164,11 +164,12 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 | Campo | Servicios | Reglas |
 |---|---|---|
 | Nombre | Todos | Obligatorio, hasta 80 caracteres |
-| URL | Todos salvo QNAP | `http` o `https`, sin credenciales, parámetros ni fragmento |
+| URL | Todos salvo QNAP y SAI (NUT) | `http` o `https`, sin credenciales, parámetros ni fragmento |
 | Dirección SNMP | QNAP | `snmp://host` o `snmp://host:puerto`, sin ruta ni credenciales; puerto 161 por defecto |
+| Dirección del servidor NUT | SAI (NUT) | `nut://host`, `nut://host:puerto` o `nut://host/sai`, sin credenciales; puerto 3493 por defecto. El nombre del SAI solo admite letras, cifras, `.`, `_` y `-` |
 | Usuario | AdGuard; QNAP (usuario SNMPv3) | Obligatorio |
 | Clave de API | OPNsense | Obligatoria, sin espacios. Admite pegar la línea `key=…` del archivo |
-| Credencial | Todos | Obligatoria al crear y al cambiar la URL; en otro caso, vacía conserva la actual. Hasta 4096 bytes |
+| Credencial | Todos salvo SAI (NUT) | Obligatoria al crear y al cambiar la URL; en otro caso, vacía conserva la actual. Hasta 4096 bytes |
 | Clave de cifrado | QNAP | Se escribe a la vez que la de autenticación, con las mismas reglas; las dos con al menos 8 caracteres |
 | Protocolo de cifrado | QNAP | CBC-DES por defecto, o AES |
 | Refresco | Todos | De 5 a 3600 segundos, 30 por defecto |
@@ -177,7 +178,7 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 | Entidades en el panel | Home Assistant | Ninguna por defecto, hasta 200 |
 | Mostrar resumen | Home Assistant | Activado por defecto |
 | Enlace para abrir el servicio | Todos | Opcional, `http` o `https`, sin credenciales. Vacío, usa la URL de conexión |
-| No verificar TLS | Todos salvo QNAP | Desactivado por defecto |
+| No verificar TLS | Todos salvo QNAP y SAI (NUT) | Desactivado por defecto |
 
 | Credencial | Formato |
 |---|---|
@@ -188,6 +189,7 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 | Portainer | Token de acceso |
 | WGDashboard | Clave de API |
 | QNAP | Clave de autenticación de SNMPv3 (HMAC-SHA), más la clave de cifrado en su propio campo |
+| SAI (NUT) | Ninguna: el formulario no muestra el campo y avisa de que NUT no pide usuario ni contraseña para leer; ver DEC-47 |
 
 **Probar conexión:** consulta el servicio una vez con los datos del formulario, sin guardar nada. En Home Assistant, avisa si no hay CPU, memoria ni disco disponibles. En OPNsense, avisa si faltan datos por los privilegios del usuario. Si se cambia algún dato de conexión, el resultado anterior desaparece. Al editar, puede usar la credencial guardada si la URL no ha cambiado.
 
@@ -289,6 +291,22 @@ Si hay varios problemas, la etiqueta es la del primero de la tabla. Umbrales: CP
 
 **Datos de un bloque de QNAP:** uso de CPU, memoria y almacenamiento (la suma de los volúmenes); una fila por disco, «Disco» y su bahía o «USB» y su orden, con su salud SMART y su temperatura; una fila por volumen con su estado y su uso; la temperatura de la CPU y del sistema; y la versión del firmware en el pie. Las filas con aviso se ven en ámbar y las de fallo, en rojo. Un disco USB sin datos SMART se ve en gris como «Sin datos SMART» y no cambia el estado; ver DEC-45. No se muestran nombres de volúmenes, modelos ni números de serie. Sin enlace propio, el nombre del bloque no enlaza, porque la dirección es `snmp://`.
 
+**Estados de un bloque de SAI (NUT):**
+
+| Estado | Cuándo | Indicador |
+|---|---|---|
+| Batería baja | `ups.status` lleva `LB` | Cuadrado rojo |
+| Con batería | Lleva `OB`: el SAI no tiene red | Triángulo ámbar |
+| Cambiar batería | Lleva `RB` | Triángulo ámbar |
+| Sobrecarga | Lleva `OVER` | Triángulo ámbar |
+| Con red | Lleva `OL` | Círculo verde |
+| Estado desconocido | No lleva ninguna de las anteriores | Neutro |
+| Con fallos | El servidor no responde, no encuentra el SAI o no recibe sus datos | Cuadrado rojo, mensaje de error y último dato atenuado |
+
+Si hay varios, la etiqueta es la del primero de la tabla: un SAI con red y la batería gastada da «Cambiar batería».
+
+**Datos de un bloque de SAI (NUT):** carga de la batería en %, con «Cargando» si NUT lo indica; autonomía estimada, en minutos o en horas y minutos; y el modelo y la versión de NUT en el pie. Si el SAI no da la carga o la autonomía, no se muestran. No se muestran el nombre del SAI en NUT, su número de serie ni la dirección del servidor. Sin enlace propio, el nombre del bloque no enlaza, porque la dirección es `nut://`.
+
 ## Mensajes de error de los servicios
 
 | Código | Mensaje |
@@ -300,6 +318,8 @@ Si hay varios problemas, la etiqueta es la del primero de la tabla. Umbrales: CP
 | `bad_response` | La respuesta no es la esperada. Revisa que la URL sea la de este servicio. |
 | `secret_unreadable` | No se puede descifrar la credencial. Vuelve a escribirla en la conexión. |
 | `internal` | Error inesperado al consultar el servicio. Revisa los registros de Talaia. |
+| `ups_not_found` | No se encuentra el SAI. Si el servidor NUT tiene varios, indica cuál en la dirección: nut://equipo/sai. |
+| `ups_stale` | El servidor NUT no recibe datos del SAI. Revisa el cable USB y el driver en el equipo que lo tiene conectado. |
 
 ## Idioma y apariencia
 

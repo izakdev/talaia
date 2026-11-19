@@ -29,6 +29,7 @@ import (
 	"github.com/izakdev/talaia/internal/integrations"
 	"github.com/izakdev/talaia/internal/integrations/adguard"
 	"github.com/izakdev/talaia/internal/integrations/homeassistant"
+	"github.com/izakdev/talaia/internal/integrations/nut"
 	"github.com/izakdev/talaia/internal/integrations/opnsense"
 	"github.com/izakdev/talaia/internal/integrations/proxmox"
 	"github.com/izakdev/talaia/internal/integrations/qnap"
@@ -397,10 +398,13 @@ var connectionTypes = map[string]struct {
 	needsUsername bool
 	options       []string
 	hasEntities   bool
+	// noSecret: el servicio se lee sin credenciales (NUT).
+	noSecret bool
 }{
 	"proxmox":       {options: []string{proxmox.OptionShowGuests}},
 	"homeassistant": {hasEntities: true, options: []string{homeassistant.OptionShowSummary}},
 	"adguard":       {needsUsername: true, options: []string{adguard.OptionShowTopDomains}},
+	"nut":           {noSecret: true},
 	"opnsense":      {needsUsername: true, options: []string{opnsense.OptionShowWireGuard}},
 	"portainer":     {},
 	"qnap":          {needsUsername: true, options: []string{qnap.OptionPrivacyAES}},
@@ -462,6 +466,13 @@ func validateConnection(in *connectionIn) string {
 			return "invalid_snmp_url"
 		}
 		in.TLSSkipVerify = false
+	} else if in.Type == "nut" {
+		// NUT se consulta por su protocolo: nut://host[:puerto][/sai], sin TLS.
+		in.BaseURL = strings.TrimRight(strings.TrimSpace(in.BaseURL), "/")
+		if _, _, _, err := nut.Target(in.BaseURL); err != nil {
+			return "invalid_nut_url"
+		}
+		in.TLSSkipVerify = false
 	} else {
 		u, err := url.Parse(strings.TrimSpace(in.BaseURL))
 		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
@@ -510,6 +521,12 @@ func validateConnection(in *connectionIn) string {
 	}
 	if in.IntervalSeconds < 5 || in.IntervalSeconds > 3600 {
 		return "invalid_interval"
+	}
+	if spec.noSecret {
+		// Sin credenciales: se guarda un secreto vacío y nada viaja al servicio.
+		empty := ""
+		in.Secret, in.PrivacySecret = &empty, nil
+		return ""
 	}
 	if in.Secret != nil {
 		// Los tokens se suelen pegar con un salto de línea, que no sería válido en una cabecera.
@@ -573,7 +590,7 @@ func (s *Server) createConnection(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	if in.Secret == nil {
+	if in.Secret == nil && !connectionTypes[in.Type].noSecret {
 		writeError(w, http.StatusBadRequest, "invalid_secret")
 		return
 	}

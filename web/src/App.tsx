@@ -428,6 +428,10 @@ function ConnectionDialog({
   // Solo QNAP: SNMPv3 necesita además la clave de cifrado.
   const [privacySecret, setPrivacySecret] = useState("");
   const snmp = type === "qnap";
+  // NUT se lee sin credenciales ni TLS.
+  const nut = type === "nut";
+  // Los textos de la clave solo existen para los servicios que la piden.
+  const secretType = type as Exclude<ConnectionType, "nut">;
   const [interval, setIntervalValue] = useState(String(connection?.interval_seconds ?? 30));
   const [skipTls, setSkipTls] = useState(connection?.tls_skip_verify ?? false);
   const [options, setOptions] = useState<Record<string, boolean>>(connection?.options ?? entry.defaultOptions);
@@ -443,7 +447,7 @@ function ConnectionDialog({
   const hint = secretRequired
     ? urlChanged
       ? t("form.secretUrlChanged")
-      : t(`form.secretHint.${type}`)
+      : t(`form.secretHint.${secretType}`)
     : t("form.secretKeep");
 
   const input = (): ConnectionInput => ({
@@ -499,7 +503,7 @@ function ConnectionDialog({
           <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required autoFocus />
         </label>
         <label>
-          {t(snmp ? "form.url.qnap" : "form.url")}
+          {t(snmp ? "form.url.qnap" : nut ? "form.url.nut" : "form.url")}
           <input
             type="url"
             value={url}
@@ -508,6 +512,7 @@ function ConnectionDialog({
             required
           />
           {snmp && <small>{t("form.urlHint.qnap")}</small>}
+          {nut && <small>{t("form.urlHint.nut")}</small>}
         </label>
         {(type === "adguard" || type === "opnsense" || type === "qnap") && (
           <label>
@@ -516,17 +521,20 @@ function ConnectionDialog({
             {(type === "opnsense" || type === "qnap") && <small>{t(`form.usernameHint.${type}`)}</small>}
           </label>
         )}
-        <label>
-          {t(`form.secret.${type}`)}
-          <input
-            type="password"
-            value={secret}
-            onChange={(e) => setSecret(e.target.value)}
-            autoComplete="new-password"
-            required={secretRequired || (snmp && !!privacySecret)}
-          />
-          {hint && <small>{hint}</small>}
-        </label>
+        {nut && <small>{t("form.noSecret.nut")}</small>}
+        {!nut && (
+          <label>
+            {t(`form.secret.${secretType}`)}
+            <input
+              type="password"
+              value={secret}
+              onChange={(e) => setSecret(e.target.value)}
+              autoComplete="new-password"
+              required={secretRequired || (snmp && !!privacySecret)}
+            />
+            {hint && <small>{hint}</small>}
+          </label>
+        )}
         {snmp && (
           <>
             <label>
@@ -597,7 +605,7 @@ function ConnectionDialog({
             }}
           />
         )}
-        {!snmp && (
+        {!snmp && !nut && (
           <label className="check">
             <input type="checkbox" checked={skipTls} onChange={(e) => setSkipTls(e.target.checked)} />
             <span>
