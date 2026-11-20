@@ -57,7 +57,7 @@ flowchart LR
 | SNMP | `gosnmp/gosnmp` | Go puro, con SNMPv3; necesario para consultar QNAP (DEC-42) |
 | Iconos | `simple-icons` | Incluidos en la aplicación, sin depender de Internet |
 | Tipografía | Schibsted Grotesk, servida por Talaia | Sin peticiones a terceros |
-| CI | GitHub Actions | Pruebas en cada cambio y publicación por etiqueta |
+| CI | GitHub Actions | Pruebas completas en cada cambio de código, solo `docs-check` si solo cambia documentación (DEC-52), y publicación por etiqueta |
 
 Los motivos detallados están en [Decisiones](05-decisiones.md).
 
