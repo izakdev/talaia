@@ -952,3 +952,33 @@ func TestIconsCached(t *testing.T) {
 		t.Fatalf("estado %d, caché %q", res.StatusCode, res.Header.Get("Cache-Control"))
 	}
 }
+
+func TestEditKeepsVanishedIcon(t *testing.T) {
+	c, st := newServer(t)
+	c.want(200, "POST", "/api/setup", creds())
+	m := adguardConn("correcta")
+	created := c.want(201, "POST", "/api/admin/connections", m)
+	var conn struct{ ID string }
+	if err := json.Unmarshal([]byte(created), &conn); err != nil {
+		t.Fatal(err)
+	}
+	// Un icono elegido con una versión anterior de simple-icons que ya no está en el índice.
+	saved, err := st.GetConnection(context.Background(), conn.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	saved.Icon = "retirado"
+	if _, err := st.UpdateConnection(context.Background(), saved, nil); err != nil {
+		t.Fatal(err)
+	}
+	m["icon"] = "retirado"
+	m["name"] = "Otro nombre"
+	delete(m, "secret")
+	if got := c.want(200, "PUT", "/api/admin/connections/"+conn.ID, m); !strings.Contains(got, `"name":"Otro nombre"`) {
+		t.Fatal(got)
+	}
+	waitDashboard(t, newClient(t, c.base), `"icon":null`)
+	// Otro icono que no existe sigue sin admitirse.
+	m["icon"] = "tampoco-existe"
+	c.want(400, "PUT", "/api/admin/connections/"+conn.ID, m)
+}

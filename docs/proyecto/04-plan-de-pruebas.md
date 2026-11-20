@@ -37,6 +37,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestConnectionInvalidIcon` | Rechaza con `invalid_icon` un icono que no está en el índice, una ruta o un texto largo | RF-28 |
 | `TestEveryTypeHasDefaultIcon` | Cada tipo de conexión tiene icono por defecto | RF-28 |
 | `TestIconsCached` | `/icons/` se sirve con una semana de caché | RF-28 |
+| `TestEditKeepsVanishedIcon` | Al editar se conserva un icono guardado que una versión nueva de `simple-icons` retiró; otro icono inexistente sigue rechazándose | RF-28 |
 | `TestConnectionTestReportsNotes` | La prueba de conexión devuelve los avisos de la integración | RF-53 |
 | `TestOPNsenseCredentialsAreCleaned` | Limpia las líneas `key=` y `secret=` pegadas de OPNsense y rechaza una clave con espacios | RF-73 |
 | `TestMultipleConnectionsOfSameService` | Admite varias conexiones del mismo servicio, ordenadas por nombre | RF-11 |
@@ -114,6 +115,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestHas` | Distingue los iconos del índice de los demás valores | RF-28 |
 | `TestLoadMissingIndex` | Sin la web compilada no hay iconos ni pánico | RF-28 |
 | `TestLoadBrokenIndex` | Un índice mal formado no da iconos | RF-28 |
+| `TestDefaultsMatchCatalog` | El icono por defecto de cada tipo es el mismo en Go y en el catálogo de la web | RF-28 |
 
 ### `internal/collector`
 
@@ -504,7 +506,7 @@ Los requisitos pendientes se probarán en su hito.
 | RF-26 | E2E-25, E2E-37 |
 | RF-27 | `TestNewConnectionsFillThreeColumns`, E2E-24, E2E-38 |
 | RF-24 | `TestSettingsValidation`, `TestSettingsDefaultsAndSave`, E2E-26 |
-| RF-28 | `TestResolveDefault`, `TestResolveNone`, `TestResolveCustom`, `TestResolveUnknownStoredSlug`, `TestHas`, `TestLoadMissingIndex`, `TestLoadBrokenIndex`, `TestConnectionIconRoundTrip`, `TestMigrationKeepsDefaultIcon`, `TestDashboardDefaultIcon`, `TestConnectionIconChange`, `TestConnectionInvalidIcon`, `TestEveryTypeHasDefaultIcon`, `TestIconsCached`, E2E-50, E2E-51 |
+| RF-28 | `TestResolveDefault`, `TestResolveNone`, `TestResolveCustom`, `TestResolveUnknownStoredSlug`, `TestHas`, `TestLoadMissingIndex`, `TestLoadBrokenIndex`, `TestConnectionIconRoundTrip`, `TestMigrationKeepsDefaultIcon`, `TestDashboardDefaultIcon`, `TestConnectionIconChange`, `TestConnectionInvalidIcon`, `TestEveryTypeHasDefaultIcon`, `TestIconsCached`, `TestEditKeepsVanishedIcon`, `TestDefaultsMatchCatalog`, E2E-50, E2E-51 |
 | RF-60 | INS-01, INS-07, INS-08, INS-09, INS-10 |
 | RF-70 | `TestCollect`, `TestParseSize`, E2E-31 |
 | RF-71 | `TestGatewayStates`, E2E-31 |

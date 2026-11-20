@@ -321,7 +321,7 @@ Las respuestas son JSON. Las escrituras exigen `Content-Type: application/json` 
 | `GET /api/admin/notifications/log` | Sesión | Los 50 últimos envíos |
 | `GET /icons/{slug}.svg` y `GET /icons/index.json` | Público | Los iconos incluidos en el binario y su índice (`slug`, `title`, `hex`), con caché de una semana. No dependen de ninguna conexión |
 
-El campo `icon` de una conexión vale `""` (el icono de su tipo, que sigue al catálogo), `"none"` (sin icono) o un `slug` del índice; otro valor da `invalid_icon`. Un icono guardado que desaparece del índice al actualizar `simple-icons` deja el bloque sin icono, sin error.
+El campo `icon` de una conexión vale `""` (el icono de su tipo, que sigue al catálogo), `"none"` (sin icono) o un `slug` del índice; otro valor da `invalid_icon`. Un icono guardado que desaparece del índice al actualizar `simple-icons` deja el bloque sin icono, sin error, y al editar la conexión se admite conservarlo.
 
 Las respuestas de los canales nunca incluyen el token, el tópico ni la URL del webhook: solo el nombre, el tipo, si está activo, el chat ID de Telegram y el servidor de ntfy.
 

@@ -468,12 +468,14 @@ func toOut(c store.Connection) connectionOut {
 	return connectionOut{c.ID, c.Name, c.Type, c.BaseURL, c.Username, c.IntervalSeconds, c.TLSSkipVerify, c.Options, c.Entities, c.LinkURL, c.Notify, c.Icon, c.UpdatedAt}
 }
 
-// validate comprueba la conexión y que su icono exista.
-func (s *Server) validate(in *connectionIn) string {
+// validate comprueba la conexión y que su icono exista. saved es el icono ya guardado:
+// se admite aunque una versión nueva de simple-icons lo haya retirado, para poder editar
+// el resto de la conexión sin tocarlo.
+func (s *Server) validate(in *connectionIn, saved string) string {
 	if code := validateConnection(in); code != "" {
 		return code
 	}
-	if in.Icon != "" && in.Icon != icons.None && !s.icons.Has(in.Icon) {
+	if in.Icon != "" && in.Icon != icons.None && in.Icon != saved && !s.icons.Has(in.Icon) {
 		return "invalid_icon"
 	}
 	return ""
@@ -624,7 +626,7 @@ func (s *Server) createConnection(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_secret")
 		return
 	}
-	if code := s.validate(&in); code != "" {
+	if code := s.validate(&in, ""); code != "" {
 		writeError(w, http.StatusBadRequest, code)
 		return
 	}
@@ -659,7 +661,7 @@ func (s *Server) updateConnection(w http.ResponseWriter, r *http.Request) {
 	if in.PrivacySecret != nil && *in.PrivacySecret == "" {
 		in.PrivacySecret = nil
 	}
-	if code := s.validate(&in); code != "" {
+	if code := s.validate(&in, current.Icon); code != "" {
 		writeError(w, http.StatusBadRequest, code)
 		return
 	}
