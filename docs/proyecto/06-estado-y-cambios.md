@@ -21,7 +21,7 @@
 | 15 | SAI a través de un servidor NUT: estado, batería y autonomía | Terminado y verificado con el SAI del cliente, publicado en `v0.3.1` |
 | 16 | Notificaciones por Telegram, ntfy o webhook cuando un servicio cambia de color | Terminado y verificado con el Telegram del cliente, publicado en `v0.4.0` |
 | 17 | Disponibilidad de equipos de red por TCP o HTTP, sin credenciales | Terminado y verificado con cuatro equipos del cliente (TCP, caída con sus avisos y HTTPS), publicado en `v0.5.0` |
-| 18 | Impresora por IPP: estado, avisos y nivel de los tóneres | Terminado y verificado con la impresora del cliente (en reposo, con sus cuatro tóneres) |
+| 18 | Impresora por IPP: estado, avisos y nivel de los tóneres | Terminado y verificado con la impresora del cliente (en reposo, con sus cuatro tóneres, y con la tapa abierta en rojo) |
 
 ## Historial
 
@@ -33,7 +33,7 @@
 - Verde «Lista» o «Imprimiendo»; ámbar con un consumible en su nivel bajo o un aviso; rojo con un atasco, la tapa abierta, sin papel, sin tóner u otro error que impide imprimir, y si no responde (DEC-58).
 - No publica el nombre de la impresora, su ubicación, su número de serie, el mensaje de su pantalla ni su dirección.
 
-**Verificado** con la Brother DCP-L3550CDW real del cliente en su Proxmox VE: «Lista» en verde, con los cuatro tóneres, el modelo y el firmware; ver el [plan de pruebas](04-plan-de-pruebas.md#verificaciones-manuales).
+**Verificado** con la Brother DCP-L3550CDW real del cliente en su Proxmox VE: «Lista» en verde, con los cuatro tóneres, el modelo y el firmware, y «Tapa abierta» en rojo al abrirla; ver el [plan de pruebas](04-plan-de-pruebas.md#verificaciones-manuales).
 
 ### Haz del faro sin corte (2026-11-20)
 
