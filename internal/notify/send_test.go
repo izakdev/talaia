@@ -96,8 +96,12 @@ func TestNtfyJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	r, b := ntfyReceived(t, got)
-	if r.path != "/" || b.Topic != "talaia-avisos" || b.Message != sample().Text || b.Title != "🔴 Talaia · Necesita atención" {
+	// ntfy pone delante el emoji de la etiqueta: el título va sin él y el cuerpo no lo repite.
+	if r.path != "/" || b.Topic != "talaia-avisos" || b.Title != "Talaia · Necesita atención" || !strings.HasPrefix(b.Message, "Portainer: ") || strings.Contains(b.Message, "Necesita atención") {
 		t.Fatalf("petición = %+v %+v", r, b)
+	}
+	if !strings.Contains(b.Message, "\n\n🟢 Talaia · Vuelve a estar en orden\nAdGuard: ") {
+		t.Fatalf("el bloque de recuperados se pierde: %q", b.Message)
 	}
 	if b.Priority != 4 || len(b.Tags) != 1 || b.Tags[0] != "red_circle" || r.headers.Get("Authorization") != "Bearer tk_1" {
 		t.Fatalf("prioridad, etiquetas o token: %+v %v", b, r.headers)
@@ -117,7 +121,7 @@ func TestNtfyJSON(t *testing.T) {
 		t.Fatalf("aviso: %+v", b)
 	}
 	_ = send(t, ch, `{"topic":"t"}`, ComposeTest("es", now))
-	if _, b = ntfyReceived(t, got); b.Tags[0] != "bell" || b.Priority != 3 {
+	if _, b = ntfyReceived(t, got); b.Tags[0] != "bell" || b.Priority != 3 || b.Title != "Talaia · Mensaje de prueba" || b.Message != "Si lo ves, este canal funciona." {
 		t.Fatalf("prueba: %+v", b)
 	}
 }

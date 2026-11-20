@@ -23,6 +23,11 @@
 
 ## Historial
 
+### Formato de los avisos en ntfy (2026-11-20)
+
+**Corregido:**
+- En ntfy, el emoji salía dos veces y el texto repetía el título. Ahora el título va sin emoji, porque ntfy ya pone el de la etiqueta, y el texto empieza en la línea siguiente: la lista de servicios, o «Si lo ves, este canal funciona.» en la prueba. Telegram y el webhook no cambian. Se vio al configurar ntfy en la verificación real.
+
 ### Avisos sin duplicados (2026-11-20)
 
 **Corregido:**

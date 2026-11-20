@@ -261,7 +261,7 @@ VPN: Túnel parado
 AdGuard: Protección activa
 ```
 
-El emoji del título es el del peor color: 🔴 rojo, 🟠 ámbar y 🟢 verde. En inglés: «Talaia · Needs attention» y «Talaia · Back to normal». La prueba dice «🔔 Talaia · Mensaje de prueba. Si lo ves, este canal funciona.».
+El emoji del título es el del peor color: 🔴 rojo, 🟠 ámbar y 🟢 verde. En inglés: «Talaia · Needs attention» y «Talaia · Back to normal». La prueba dice «🔔 Talaia · Mensaje de prueba. Si lo ves, este canal funciona.». En ntfy, el emoji lo pone la propia app según la etiqueta, así que el título se envía sin él y el texto empieza en la línea siguiente al título: «Talaia · Mensaje de prueba» con «Si lo ves, este canal funciona.», o «Talaia · Necesita atención» con la lista de servicios.
 
 **Reglas:**
 

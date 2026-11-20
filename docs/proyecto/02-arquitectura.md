@@ -156,7 +156,7 @@ sequenceDiagram
 | Canal | Petición |
 |---|---|
 | Telegram | `POST {api}/bot{token}/sendMessage` con `{chat_id, text}` en texto plano |
-| ntfy | `POST {servidor}/` con `{topic, title, message, priority, tags}` (publicación en JSON, que admite tildes y emojis en el título) y `Authorization: Bearer` si hay token. Prioridad 4 con rojo, 3 con ámbar o prueba y 2 con vueltas a verde |
+| ntfy | `POST {servidor}/` con `{topic, title, message, priority, tags}` (publicación en JSON, que admite tildes y emojis en el título) y `Authorization: Bearer` si hay token. El título va sin emoji, porque ntfy pone delante el de la etiqueta, y el mensaje no repite el título: en un aviso, las líneas que siguen al título; en la prueba, «Si lo ves, este canal funciona.». Prioridad 4 con rojo, 3 con ámbar o prueba y 2 con vueltas a verde |
 | Webhook | `POST` con `{event, language, text, services: [{name, type, tone, previous, label}], sent_at}`; `event` es `change` o `test` |
 
 Los errores del envío son códigos públicos: los de las integraciones más `rejected` (otro `4xx`) y `secret_unreadable`. Ni el registro ni los logs guardan la URL, el token ni la respuesta del servicio.

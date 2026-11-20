@@ -55,10 +55,10 @@ func TestComposeOnlyRecoveries(t *testing.T) {
 
 func TestComposeTest(t *testing.T) {
 	es, en := ComposeTest("es", now), ComposeTest("en", now)
-	if es.Text != "🔔 Talaia · Mensaje de prueba. Si lo ves, este canal funciona." || es.Event != "test" || es.Title != es.Text {
+	if es.Text != "🔔 Talaia · Mensaje de prueba. Si lo ves, este canal funciona." || es.Event != "test" || es.Title != "🔔 Talaia · Mensaje de prueba" {
 		t.Fatalf("es = %+v", es)
 	}
-	if en.Text != "🔔 Talaia · Test message. If you can see it, this channel works." {
+	if en.Text != "🔔 Talaia · Test message. If you can see it, this channel works." || en.Title != "🔔 Talaia · Test message" {
 		t.Fatalf("en = %q", en.Text)
 	}
 }

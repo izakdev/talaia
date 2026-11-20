@@ -532,6 +532,8 @@ AdGuard: Protección desactivada
 VPN: Túnel parado
 ```
 
+En ntfy, la app pone el emoji delante del título y la lista de servicios va debajo.
+
 En la administración, abre **Ajustes** y baja hasta **Notificaciones**.
 
 ![Sección de notificaciones en los ajustes](img/26-ajustes-notificaciones.png)
