@@ -23,6 +23,10 @@
 
 ## Historial
 
+### `v0.4.1` (2026-11-20)
+
+Corrige los avisos: un canal que tarda en responder ya no recibe el mismo aviso varias veces, porque un envío que salió sin respuesta queda «Sin confirmar» y no se repite (DEC-53), y en ntfy el título y el texto ya no se repiten. Incluye los binarios para amd64 y arm64, las sumas SHA-256 y el instalador; se actualiza desde `v0.4.0` con `talaia-proxmox.sh update`.
+
 ### Formato de los avisos en ntfy (2026-11-20)
 
 **Corregido:**
