@@ -1,4 +1,4 @@
-export type ConnectionType = "proxmox" | "homeassistant" | "adguard" | "opnsense" | "portainer" | "qnap" | "nut" | "wgdashboard" | "availability";
+export type ConnectionType = "proxmox" | "homeassistant" | "adguard" | "opnsense" | "portainer" | "qnap" | "nut" | "wgdashboard" | "availability" | "printer";
 
 export interface AppState {
   setup_required: boolean;
@@ -271,6 +271,30 @@ export interface NUTData {
   status: NUTFlag[];
   charge_percent: number | null;
   runtime_seconds: number | null;
+}
+
+export interface PrinterReason {
+  reason: string;
+  severity: "error" | "warning";
+}
+
+export interface PrinterMarker {
+  name: string;
+  // #RRGGBB, o vacío si la impresora no lo da.
+  color: string;
+  type: string;
+  // Porcentaje, o null si la impresora no lo sabe.
+  level: number | null;
+  low: number;
+}
+
+export interface PrinterData {
+  model: string;
+  firmware: string;
+  status: "idle" | "processing" | "stopped";
+  accepting_jobs: boolean;
+  reasons: PrinterReason[];
+  markers: PrinterMarker[];
 }
 
 export interface WGDashboardTunnel {

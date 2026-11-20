@@ -37,6 +37,7 @@
 | QNAP | Disks with SMART health and temperature, volumes, CPU, RAM and temperatures, over SNMPv3 |
 | UPS (NUT) | Mains or battery, battery charge and estimated runtime, read from a NUT server (`upsd`) with no credentials |
 | Availability | Whether any network device responds, over TCP or HTTP, and its latency, with no credentials: for switches with no API or SNMP |
+| Printer | Status, alerts and the level of each toner or ink with its colour over IPP, with no credentials: any AirPrint, Mopria or IPP Everywhere printer |
 
 ## Quick start on Proxmox VE
 

@@ -24,6 +24,7 @@ var Defaults = map[string]string{
 	"nut":           "talaia-nut",
 	"opnsense":      "opnsense",
 	"portainer":     "portainer",
+	"printer":       "talaia-printer",
 	"proxmox":       "proxmox",
 	"qnap":          "qnap",
 	"wgdashboard":   "wireguard",

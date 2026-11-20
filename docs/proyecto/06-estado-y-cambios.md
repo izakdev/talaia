@@ -21,8 +21,19 @@
 | 15 | SAI a través de un servidor NUT: estado, batería y autonomía | Terminado y verificado con el SAI del cliente, publicado en `v0.3.1` |
 | 16 | Notificaciones por Telegram, ntfy o webhook cuando un servicio cambia de color | Terminado y verificado con el Telegram del cliente, publicado en `v0.4.0` |
 | 17 | Disponibilidad de equipos de red por TCP o HTTP, sin credenciales | Terminado y verificado con cuatro equipos del cliente (TCP, caída con sus avisos y HTTPS), publicado en `v0.5.0` |
+| 18 | Impresora por IPP: estado, avisos y nivel de los tóneres | Terminado y verificado con la impresora del cliente (en reposo, con sus cuatro tóneres, y con la tapa abierta en rojo) |
 
 ## Historial
+
+### Hito 18 (2026-11-20)
+
+**Añadido:**
+- Integración «Impresora» por IPP (`ipp://` o `ipps://`), sin usuario ni contraseña, solo con la consulta `Get-Printer-Attributes` (DEC-57). Pensada para la Brother DCP-L3550CDW del cliente; sirve para cualquier impresora AirPrint, Mopria o IPP Everywhere y para una cola de CUPS.
+- El bloque muestra una barra por tóner o tinta con su color y su nivel, los avisos activos y si no acepta trabajos; en el pie, el modelo y el firmware. Icono propio en el catálogo.
+- Verde «Lista» o «Imprimiendo»; ámbar con un consumible en su nivel bajo o un aviso; rojo con un atasco, la tapa abierta, sin papel, sin tóner u otro error que impide imprimir, y si no responde (DEC-58).
+- No publica el nombre de la impresora, su ubicación, su número de serie, el mensaje de su pantalla ni su dirección.
+
+**Verificado** con la Brother DCP-L3550CDW real del cliente en su Proxmox VE: «Lista» en verde, con los cuatro tóneres, el modelo y el firmware, y «Tapa abierta» en rojo al abrirla; ver el [plan de pruebas](04-plan-de-pruebas.md#verificaciones-manuales).
 
 ### Haz del faro sin corte (2026-11-20)
 
@@ -346,6 +357,8 @@ Primera versión estable, con los binarios para amd64 y arm64, las sumas de comp
 | SAI sin tensiones ni consumo | Solo estado, batería y autonomía, como pidió el cliente | Bajo demanda |
 | Disponibilidad sin ICMP | Un equipo sin ningún puerto TCP abierto no se puede vigilar: un ping exige ampliar `net.ipv4.ping_group_range` en el LXC sin privilegios; ver DEC-55 | Bajo demanda |
 | Disponibilidad sin código HTTP configurable | Solo 2xx y 3xx cuentan como respuesta; una web que da 401 en la ruta elegida sale en ámbar. Se puede usar otra ruta o TCP; ver DEC-54 | Bajo demanda |
+| Impresora sin tambor, cinta ni páginas | IPP no los da y la impresora del cliente no ofrece SNMPv3; solo se ven sus avisos (tambor casi agotado…). Ver DEC-57 | Si la impresora ofrece SNMPv3 |
+| Impresora sin IPPS | Con `ipp://`, el estado de la impresora viaja en claro por la red, sin credenciales; ver DEC-57 | Depende de la impresora |
 | Avisos sin recordatorios | Un servicio que sigue en rojo no vuelve a avisar hasta que cambia | Por diseño, a petición del cliente |
 | Avisos solo por cambio de color | Un cambio de etiqueta dentro del mismo color (de un ámbar a otro) no avisa | Bajo demanda |
 | Telegram y ntfy.sh necesitan Internet | Sin salida a Internet, solo funcionan un ntfy propio o un webhook local | Por diseño de esos servicios |

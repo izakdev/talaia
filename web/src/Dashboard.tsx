@@ -6,6 +6,7 @@ import { useI18n, type I18n, type Language } from "./i18n";
 import { adguardWidget } from "./widgets/adguard";
 import { availabilityWidget } from "./widgets/availability";
 import { nutWidget } from "./widgets/nut";
+import { printerWidget } from "./widgets/printer";
 import { opnsenseWidget } from "./widgets/opnsense";
 import { portainerWidget } from "./widgets/portainer";
 import { homeAssistantWidget } from "./widgets/homeassistant";
@@ -23,6 +24,7 @@ const WIDGETS: Partial<Record<ConnectionType, unknown>> = {
   availability: availabilityWidget,
   homeassistant: homeAssistantWidget,
   nut: nutWidget,
+  printer: printerWidget,
   opnsense: opnsenseWidget,
   portainer: portainerWidget,
   proxmox: proxmoxWidget,

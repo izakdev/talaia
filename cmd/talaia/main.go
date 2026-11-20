@@ -26,6 +26,7 @@ import (
 	"github.com/izakdev/talaia/internal/integrations/nut"
 	"github.com/izakdev/talaia/internal/integrations/opnsense"
 	"github.com/izakdev/talaia/internal/integrations/portainer"
+	"github.com/izakdev/talaia/internal/integrations/printer"
 	"github.com/izakdev/talaia/internal/integrations/proxmox"
 	"github.com/izakdev/talaia/internal/integrations/qnap"
 	"github.com/izakdev/talaia/internal/integrations/wgdashboard"
@@ -122,7 +123,7 @@ func run(log *slog.Logger) error {
 	}
 	defer st.Close()
 
-	registry := integrations.Registry{"adguard": adguard.New, "availability": availability.New, "homeassistant": homeassistant.New, "opnsense": opnsense.New, "portainer": portainer.New, "nut": nut.New, "proxmox": proxmox.New, "qnap": qnap.New, "wgdashboard": wgdashboard.New}
+	registry := integrations.Registry{"adguard": adguard.New, "availability": availability.New, "homeassistant": homeassistant.New, "opnsense": opnsense.New, "portainer": portainer.New, "printer": printer.New, "nut": nut.New, "proxmox": proxmox.New, "qnap": qnap.New, "wgdashboard": wgdashboard.New}
 	manager := collector.New(st, registry, log)
 	manager.SetIcons(icons.Load(web.Dist()))
 	notifier := notify.New(st, manager, log)

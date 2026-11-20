@@ -434,9 +434,11 @@ function ConnectionDialog({
   const nut = type === "nut";
   // La disponibilidad tampoco pide credenciales; el TLS solo vale para https.
   const availability = type === "availability";
-  const noSecret = nut || availability;
+  // La impresora se lee por IPP sin credenciales; el TLS solo vale para ipps.
+  const printer = type === "printer";
+  const noSecret = nut || availability || printer;
   // Los textos de la clave solo existen para los servicios que la piden.
-  const secretType = type as Exclude<ConnectionType, "nut" | "availability">;
+  const secretType = type as Exclude<ConnectionType, "nut" | "availability" | "printer">;
   const [interval, setIntervalValue] = useState(String(connection?.interval_seconds ?? 30));
   const [skipTls, setSkipTls] = useState(connection?.tls_skip_verify ?? false);
   const [options, setOptions] = useState<Record<string, boolean>>(connection?.options ?? entry.defaultOptions);
@@ -513,7 +515,7 @@ function ConnectionDialog({
         </label>
         <IconPicker type={type} value={icon} onChange={setIcon} />
         <label>
-          {t(snmp ? "form.url.qnap" : nut ? "form.url.nut" : availability ? "form.url.availability" : "form.url")}
+          {t(snmp ? "form.url.qnap" : nut ? "form.url.nut" : availability ? "form.url.availability" : printer ? "form.url.printer" : "form.url")}
           <input
             type="url"
             value={url}
@@ -524,6 +526,7 @@ function ConnectionDialog({
           {snmp && <small>{t("form.urlHint.qnap")}</small>}
           {nut && <small>{t("form.urlHint.nut")}</small>}
           {availability && <small>{t("form.urlHint.availability")}</small>}
+          {printer && <small>{t("form.urlHint.printer")}</small>}
         </label>
         {(type === "adguard" || type === "opnsense" || type === "qnap") && (
           <label>
@@ -534,6 +537,7 @@ function ConnectionDialog({
         )}
         {nut && <small>{t("form.noSecret.nut")}</small>}
         {availability && <small>{t("form.noSecret.availability")}</small>}
+        {printer && <small>{t("form.noSecret.printer")}</small>}
         {!noSecret && (
           <label>
             {t(`form.secret.${secretType}`)}

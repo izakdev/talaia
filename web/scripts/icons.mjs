@@ -11,6 +11,7 @@ const out = join(web, "dist", "icons");
 const own = {
   "talaia-availability": { title: "Disponibilidad", hex: "0EA5E9" },
   "talaia-nut": { title: "Network UPS Tools", hex: "16A34A" },
+  "talaia-printer": { title: "Impresora", hex: "6366F1" },
 };
 
 const titleTag = /<title>.*?<\/title>/s;

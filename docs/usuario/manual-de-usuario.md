@@ -510,6 +510,38 @@ El bloque muestra la **latencia**, lo que tarda el equipo en aceptar la conexió
 
 Talaia no hace ping: en el contenedor sin privilegios que crea el instalador, hacerlo exigiría cambiar su configuración de red. Un equipo sin ningún puerto TCP abierto no se puede vigilar.
 
+### Impresora
+
+Talaia lee el estado y los consumibles de la impresora por **IPP**, el protocolo con el que imprimen los ordenadores y los móviles (AirPrint, Mopria e IPP Everywhere). Solo pregunta su estado: no imprime, no cambia nada y **no necesita usuario ni contraseña**. Sirve para la mayoría de las impresoras de red, como las Brother, HP, Canon o Epson, y para una impresora compartida con CUPS.
+
+En la impresora, IPP suele venir activado. En una Brother, compruébalo en su web, en **Red** > **Red** > **Protocolo**, con la casilla **IPP** marcada. El equipo de Talaia debe llegar al puerto **TCP 631** de la impresora.
+
+| Campo | Qué poner |
+|---|---|
+| Dirección IPP de la impresora | `ipp://` y la dirección de la impresora, por ejemplo `ipp://impresora.local`. Usa el puerto 631 y la ruta `/ipp/print`; si la tuya es otra, añádelas: en CUPS, `ipp://servidor:631/printers/nombre`. Usa `ipps://` si la impresora tiene IPP con TLS |
+| Enlace para abrir el servicio | Opcional, por ejemplo la web de la impresora. Sin él, el nombre del bloque no enlaza a ningún sitio |
+| No verificar el certificado TLS | Solo tiene efecto con `ipps://` y un certificado autofirmado, el habitual en las impresoras |
+
+El formulario no tiene campo de contraseña. Si al probar la conexión ves **No se puede conectar con el servicio**, revisa la dirección y que IPP esté activado. Si ves **La respuesta no es la esperada**, la ruta no es la de IPP de tu impresora.
+
+![Bloque de impresora](img/30-panel-impresora.png)
+
+El bloque muestra una barra por tóner o tinta, con su color y su nivel en %, o **Sin dato** si la impresora no lo sabe. La cifra se pone en ámbar cuando el consumible llega a su nivel bajo, el que fija la impresora. Debajo, en **Avisos**, lo que avisa la impresora y **No acepta trabajos** si los rechaza. En el pie, el modelo y la versión del firmware. No muestra el nombre de la impresora, su ubicación, su número de serie, el mensaje de su pantalla ni su dirección.
+
+IPP no da el **tambor**, la **cinta de arrastre**, la **caja de tóner residual** ni el **contador de páginas**: el bloque no los muestra, aunque sí los avisos de la impresora sobre ellos, como **Tambor casi agotado** o **Caja de tóner residual casi llena**.
+
+**Estado de la impresora:**
+
+| Indicador | Significado |
+|---|---|
+| Círculo verde: **Lista** | En reposo y sin avisos |
+| Círculo verde: **Imprimiendo** | Está imprimiendo |
+| Triángulo ámbar: **Nivel bajo: amarillo (8 %)** | Un tóner o tinta ha llegado a su nivel bajo; si son varios, el más gastado |
+| Triángulo ámbar: **Tóner bajo**, **Queda poco papel**, **Tambor casi agotado**… | La impresora avisa de algo que todavía no le impide imprimir |
+| Cuadrado rojo: **Atasco de papel**, **Tapa abierta**, **Sin papel**, **Sin tóner**… | Un error que impide imprimir |
+| Cuadrado rojo: **Detenida** | La impresora se ha detenido por otro motivo |
+| Cuadrado rojo: **Con fallos** | La impresora no responde: apagada, sin red o con IPP desactivado |
+
 ## Editar y eliminar conexiones
 
 **Editar:** pulsa **Editar** en la conexión. Deja la credencial vacía para conservar la actual. Si cambias la URL, tendrás que volver a escribirla: así evitas enviarla por error a otro servidor.
@@ -696,6 +728,7 @@ Telegram y ntfy.sh necesitan que el equipo de Talaia tenga salida a Internet. Si
 | Home Assistant tarda mucho o da error de tiempo de espera | En instalaciones muy grandes, sube el refresco, por ejemplo a 60 segundos |
 | QNAP no responde a tiempo | Comprueba que SNMP esté activado con la versión SNMP V3, que el protocolo de cifrado coincida y que el firewall deje pasar UDP 161 |
 | Un equipo de disponibilidad sale en ámbar con HTTP 401 o 404 | La página indicada pide contraseña o no existe. Usa la página principal o una dirección `tcp://` con el puerto de su web |
+| La impresora no conecta | Comprueba que IPP esté activado en la impresora y que el firewall deje pasar TCP 631. Con IPPS, el puerto puede ser otro, como el 443 |
 | El SAI no conecta | Comprueba la línea `LISTEN` de `upsd.conf` en el equipo que tiene el SAI y que el firewall deje pasar TCP 3493 |
 | Un aviso dice «el canal rechaza el token o la clave» | Revisa el token del bot de Telegram o el de ntfy. Si lo has revocado en @BotFather, escribe el nuevo |
 | Un aviso dice «el canal ha rechazado el mensaje» | En Telegram, revisa el chat ID y que hayas escrito antes al bot o que el bot siga en el grupo. En ntfy, revisa el tópico y si tu servidor permite publicar en él |
@@ -712,6 +745,7 @@ Telegram y ntfy.sh necesitan que el equipo de Talaia tenga salida a Internet. Si
 - El bloque de QNAP usa los umbrales de temperatura de QTS por defecto, no los tuyos, y no distingue qué volumen es de un disco USB.
 - El bloque del SAI muestra un solo SAI, sin tensiones ni consumo, y la conexión con NUT no va cifrada; no viaja ninguna contraseña.
 - La disponibilidad comprueba un equipo por conexión, solo por TCP o HTTP, sin ping, y solo cuenta como respuesta un código HTTP 2xx o 3xx.
+- El bloque de la impresora no muestra el tambor, la cinta, la caja de tóner residual ni el contador de páginas, porque IPP no los da, y con `ipp://` la consulta no va cifrada; no viaja ninguna contraseña.
 - Las notificaciones avisan de cambios de color, sin recordatorios: un cambio de etiqueta dentro del mismo color no avisa, y todos los canales activos reciben todos los avisos.
 
 El estado de cada punto está en [Estado y cambios](../proyecto/06-estado-y-cambios.md).

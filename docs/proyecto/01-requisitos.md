@@ -144,6 +144,14 @@ Verificado con un Home Assistant real en local y con la instalación del cliente
 | RF-115 | Marca en verde «Responde» si conecta por TCP o el HTTP devuelve un código 2xx o 3xx; en ámbar «Responde con HTTP …» con otro código; y en rojo el equipo que no responde, agota el plazo o falla el TLS | 17 | Implementado |
 | RF-116 | No pide credenciales ni envía datos al equipo, y no publica su dirección, su puerto ni su URL: solo el estado, la latencia, el tipo de prueba y el código HTTP | 17 | Implementado |
 
+### Impresora (IPP)
+
+| ID | Requisito | Hito | Estado |
+|---|---|---|---|
+| RF-117 | Muestra el estado de la impresora (lista, imprimiendo, detenida), sus avisos (atasco, sin papel, tapa abierta…), el nivel de cada tóner o tinta con su color, si no acepta trabajos, el modelo y el firmware | 18 | Implementado |
+| RF-118 | Marca en verde «Lista» e «Imprimiendo»; en ámbar un consumible en su nivel bajo o por debajo y los avisos que no impiden imprimir (tóner bajo, poco papel, tambor casi agotado…); y en rojo los errores que impiden imprimir (atasco, tapa abierta, sin papel, sin tóner…), la impresora detenida y la que no responde | 18 | Implementado |
+| RF-119 | Lee la impresora por IPP (`ipp://` o `ipps://`) sin credenciales, solo con la operación de consulta `Get-Printer-Attributes`, y no publica su nombre, su ubicación, su UUID, su número de serie, el mensaje de su pantalla ni su dirección | 18 | Implementado |
+
 ### Notificaciones
 
 | ID | Requisito | Hito | Estado |

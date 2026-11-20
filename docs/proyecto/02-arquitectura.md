@@ -24,6 +24,7 @@ flowchart LR
     QN[QNAP]
     NU[Servidor NUT del SAI]
     EQ[Equipos de red, p. ej. switches]
+    IM[Impresora]
     CH[Telegram, ntfy o webhook]
 
     B -->|HTTP y SSE| A
@@ -41,6 +42,7 @@ flowchart LR
     C -->|SNMPv3, solo lectura| QN
     C -->|protocolo de NUT, solo lectura| NU
     C -->|TCP o HTTP, sin credenciales| EQ
+    C -->|IPP, solo consulta| IM
     C -->|cambios de estado| N
     N --> S
     N -->|avisos, sin direcciones ni secretos| CH
@@ -85,11 +87,12 @@ Los motivos detallados están en [Decisiones](05-decisiones.md).
 | `internal/integrations/qnap` | Integración con QNAP por SNMPv3 |
 | `internal/integrations/nut` | Integración con un SAI a través de su servidor NUT (`upsd`), con un cliente propio del protocolo de red de NUT |
 | `internal/integrations/availability` | Disponibilidad de un equipo de red por TCP o HTTP, sin credenciales |
+| `internal/integrations/printer` | Estado y consumibles de una impresora por IPP, con un codificador propio de `Get-Printer-Attributes` |
 | `web` | Frontend; `web/embed.go` lo incluye en el binario y `web/states.go`, los textos de estado |
 | `web/src/i18n/states.json` | Textos de estado de los servicios en español e inglés, compartidos por el panel y los avisos |
 | `web/src/widgets` | Contenido y pie del bloque de cada integración |
 | `web/src/IconPicker.tsx` | Buscador de iconos del formulario de conexión |
-| `web/scripts/icons.mjs` y `web/icons` | Copia los iconos de `simple-icons` y los propios (`talaia-nut` y `talaia-availability`, que el buscador nombra como su tipo) a `dist/icons/`, con su índice |
+| `web/scripts/icons.mjs` y `web/icons` | Copia los iconos de `simple-icons` y los propios (`talaia-nut`, `talaia-availability` y `talaia-printer`, que el buscador nombra como su tipo) a `dist/icons/`, con su índice |
 | `web/src/PanelEditor.tsx` | Editor de páginas y bloques |
 | `web/src/Settings.tsx` | Tema, acento, acceso y contraseña |
 | `web/src/Notifications.tsx` | Ajustes de avisos, canales y últimos envíos |
@@ -309,6 +312,23 @@ Proxmox filtra `/cluster/resources` según los permisos. Una lista sin nodos se 
 | Enlace | La dirección nunca se publica como enlace, tampoco la `http(s)://`: solo el enlace propio, si se pone |
 | Datos públicos | Tipo de prueba (`tcp` o `http`), latencia y código HTTP. No incluyen el host, el puerto ni la URL |
 
+### Impresora (IPP)
+
+| Aspecto | Detalle |
+|---|---|
+| Protocolo | IPP 2.0 (RFC 8010 y 8011): un `POST` con `Content-Type: application/ipp` y la operación `Get-Printer-Attributes` (`0x000B`), con el cliente HTTP de las integraciones, sin proxy y sin seguir redirecciones. Codificador y lector propios, sin dependencias; ver DEC-57 |
+| Dirección | `ipp://host[:puerto][/ruta]` o `ipps://…`, con el puerto 631 y la ruta `/ipp/print` (AirPrint e IPP Everywhere) por defecto. `ipp` va por HTTP e `ipps` por HTTPS; «No verificar TLS» solo se guarda en `ipps://`. Sin usuario, consulta ni fragmento; si no, `invalid_printer_url` |
+| Credenciales | Ninguna: las impresoras responden a esta consulta sin autenticación. El tipo no pide usuario ni secreto y guarda un secreto vacío, como NUT |
+| Atributos pedidos | `printer-state`, `printer-state-reasons`, `printer-is-accepting-jobs`, `printer-make-and-model`, `printer-firmware-string-version`, `marker-names`, `marker-colors`, `marker-types`, `marker-levels` y `marker-low-levels`. Los demás no se piden, y si llegan no se leen; los miembros de las colecciones se saltan |
+| Estado | `printer-state` 3, 4 y 5 son `idle`, `processing` y `stopped`; otro valor, o sin él, `bad_response` |
+| Motivos | De `printer-state-reasons` se descartan `none`, los `-report` y `fuser-under-temp` (el fusor calentándose al salir del reposo). El sufijo `-warning` es aviso; `-error`, o sin sufijo, error (RFC 8011, 5.4.12). Un motivo que no está en la lista conocida (RFC 8011 y PWG 5100.9) se publica como `other`. Como mucho 16, sin repetir |
+| Consumibles | Uno por valor de `marker-names`, hasta 16: nombre, color si es `#RRGGBB`, tipo si es conocido (`toner`, `ink`…, si no `other`), nivel de 0 a 100 o nulo (`-2` y `-3` son «desconocido» y «queda algo») y nivel bajo, el de la impresora o el 10 % si no lo da |
+| Regla del color | Rojo con un motivo que impide imprimir como error (atasco, tapa o puerta abierta, sin papel, sin tóner, caja de residuos llena, bandeja ausente, salida llena, tambor agotado) y con la impresora detenida; ámbar con cualquier otro motivo, o el mismo como aviso, y con un consumible en su nivel bajo o por debajo; verde «Lista» o «Imprimiendo». Ver DEC-58 |
+| Errores | HTTP `401` o `403`, o IPP `0x0401` a `0x0403`, dan `unauthorized`; otro código HTTP, una respuesta que no es `application/ipp`, un status-code de IPP de error o una respuesta cortada, `bad_response` |
+| Límites | 10 s por consulta y respuestas de 1 MiB como máximo; el modelo, el firmware y el nombre de cada consumible se recortan a 128 caracteres |
+| Enlace | Una dirección `ipp://` no se publica como enlace: se puede poner como enlace propio la de la web de la impresora |
+| Datos públicos | Estado, motivos, si acepta trabajos, consumibles, modelo y firmware. No incluyen el nombre de la impresora, su ubicación, su UUID, su `printer-device-id` (lleva el número de serie), el mensaje de su pantalla ni la dirección |
+
 ## API HTTP
 
 Las respuestas son JSON. Las escrituras exigen `Content-Type: application/json` y rechazan otro origen en la cabecera `Origin`.
@@ -448,10 +468,10 @@ erDiagram
 | Avisos | Solo el nombre de la conexión, su etiqueta de estado y, en el webhook, el tipo y los colores; nunca URL, IP, usuarios ni credenciales. El cliente es el de las integraciones (sin proxy ni redirecciones), con 30 s de espera y lee 64 KiB de respuesta como máximo, que nunca se guardan |
 | Clave de cifrado | `secret.key` con permisos `600`; Talaia no arranca si son más abiertos |
 | Archivos | Al crearlos, directorio de datos `700` y base de datos `600` |
-| Salida a servicios | Sin proxy, sin seguir redirecciones, 10 s de espera por petición y respuestas de 32 MiB como máximo. Por SNMP, 3 s por petición y un reintento. Por NUT, 5 s para conectar y 10 s por consulta. Por disponibilidad, 10 s por prueba |
+| Salida a servicios | Sin proxy, sin seguir redirecciones, 10 s de espera por petición y respuestas de 32 MiB como máximo. Por SNMP, 3 s por petición y un reintento. Por NUT, 5 s para conectar y 10 s por consulta. Por disponibilidad, 10 s por prueba. Por IPP, 10 s y 1 MiB |
 | TLS | Verificación activa por defecto, con excepción explícita por conexión |
 | API pública | Sin usuarios ni credenciales. Incluye el enlace al servicio: la URL de conexión o la dirección propia configurada |
-| Enlaces | Solo `http` y `https`, sin credenciales; se abren con `noopener` y `noreferrer`. Una dirección `snmp://` o `nut://`, y la de una conexión de disponibilidad, nunca se publica como enlace |
+| Enlaces | Solo `http` y `https`, sin credenciales; se abren con `noopener` y `noreferrer`. Una dirección `snmp://`, `nut://` o `ipp(s)://`, y la de una conexión de disponibilidad, nunca se publica como enlace |
 | Navegador | Sin `unsafe-inline`: el editor evita el `<style>` que `react-draggable` insertaría. CSP `default-src 'self'`, `frame-ancestors 'none'`, `nosniff` y `Referrer-Policy: same-origin` |
 | CSRF | Cookie `SameSite=Lax`, comprobación de `Origin` y JSON obligatorio |
 | Tamaño de petición | 64 KiB como máximo |
@@ -470,6 +490,7 @@ erDiagram
 - **Tópico de ntfy.sh:** en el servidor público de ntfy, quien conozca el tópico puede leer los avisos. Por eso se guarda cifrado y la ayuda pide un nombre difícil de adivinar.
 - **Avisos fuera de la red:** Telegram y ntfy.sh necesitan salida a Internet y reciben el nombre de cada servicio y su estado. Un servidor ntfy propio o un webhook local lo evitan.
 - **NUT sin cifrar:** Talaia no usa STARTTLS con `upsd`, de modo que el estado del SAI viaja en claro por la red. No viaja ninguna credencial; ver DEC-47.
+- **IPP sin cifrar:** con `ipp://`, el estado y los consumibles de la impresora viajan en claro por la red. Muchas impresoras domésticas, como la Brother del cliente, no ofrecen IPPS; no viaja ninguna credencial; ver DEC-57.
 
 ## Despliegue
 

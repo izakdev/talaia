@@ -886,6 +886,47 @@ func TestNUTConnectionRules(t *testing.T) {
 	}
 }
 
+func TestPrinterConnectionRules(t *testing.T) {
+	c, st := newServer(t)
+	c.want(200, "POST", "/api/setup", creds())
+	conn := func(base string) map[string]any {
+		return map[string]any{
+			"name": "Impresora", "type": "printer", "base_url": base, "interval_seconds": 60,
+			"tls_skip_verify": true, "username": "nadie",
+		}
+	}
+	for name, base := range map[string]string{
+		"http": "http://192.0.2.40", "sin host": "ipp://", "usuario": "ipp://admin@192.0.2.40", "puerto": "ipp://192.0.2.40:0", "consulta": "ipp://192.0.2.40?x=1",
+	} {
+		if got := c.want(400, "POST", "/api/admin/connections", conn(base)); !strings.Contains(got, "invalid_printer_url") {
+			t.Fatalf("%s: %s", name, got)
+		}
+	}
+	// Sin credenciales: el alta no pide secreto ni guarda usuario, y en ipp:// no hay TLS.
+	body := c.want(201, "POST", "/api/admin/connections", conn("ipp://192.0.2.40/"))
+	var out connectionOut
+	if err := json.Unmarshal([]byte(body), &out); err != nil {
+		t.Fatal(err)
+	}
+	if out.TLSSkipVerify || out.Username != "" || out.BaseURL != "ipp://192.0.2.40" {
+		t.Fatalf("IPP sin TLS ni usuario: %s", body)
+	}
+	// En ipps:// se respeta la opción de no verificar el certificado, y un secreto no se guarda.
+	secure := conn("ipps://192.0.2.41:443/ipp/print")
+	secure["secret"] = "no-debe-guardarse"
+	path := "/api/admin/connections/" + out.ID
+	if got := c.want(200, "PUT", path, secure); !strings.Contains(got, `"tls_skip_verify":true`) {
+		t.Fatalf("ipps con TLS sin verificar: %s", got)
+	}
+	if got, err := st.ConnectionSecret(t.Context(), out.ID); err != nil || got != "" {
+		t.Fatalf("secreto guardado = %q, %v", got, err)
+	}
+	dashboard := c.want(200, "GET", "/api/dashboard", nil)
+	if strings.Contains(dashboard, "ipp://") || strings.Contains(dashboard, "ipps://") || strings.Contains(dashboard, "192.0.2.4") {
+		t.Fatalf("el panel muestra la dirección IPP: %s", dashboard)
+	}
+}
+
 func TestDashboardDefaultIcon(t *testing.T) {
 	c, _ := newServer(t)
 	c.want(200, "POST", "/api/setup", creds())
