@@ -116,7 +116,7 @@ If there are no services yet, it takes you to the administration to add them:
 
 ![Dashboard with no services](img/02-panel-vacio.png)
 
-Once there are services, each one has its own block. Its name is a link that opens the service in a new tab:
+Once there are services, each one has its own block, with the service's icon next to its name; you can [change it](#changing-the-icon). The name is a link that opens the service in a new tab:
 
 ![Dashboard with an AdGuard service](img/07-panel.png)
 
@@ -227,6 +227,7 @@ In **Connections** you see your services, their configuration and whether they w
 | Field | What to enter |
 |---|---|
 | Name | How you want to see it on the dashboard |
+| Icon | The service's own, unless you [choose another](#changing-the-icon) |
 | URL | The service's address with `http://` or `https://` and its port |
 | Refresh | How often it is queried, in seconds, from 5 to 3600 |
 | Link to open the service | Optional. The address you use in the browser, if it differs from the URL. If empty, the URL is used |
@@ -486,6 +487,26 @@ If the server answers but gets no data from the UPS, the block turns red with th
 **Edit:** click **Edit** on the connection. Leave the credential empty to keep the current one. If you change the URL, you'll have to enter it again: this prevents sending it to another server by mistake.
 
 **Delete:** click **Delete** and confirm on the same row. It can't be undone, and the service disappears from the dashboard.
+
+### Changing the icon
+
+Each block shows its service's icon. If you'd rather have another one (for example Pi-hole's for an AdGuard, or your router's brand), change it in the connection:
+
+1. Edit the connection and click the **Icon** button.
+2. Type the brand's name. Capitals, accents and hyphens don't matter: "pi hole" finds Pi-hole.
+3. Pick the icon with the mouse, or with the arrow keys and Enter. **Esc** closes the search without closing the form.
+4. Click **Save**.
+
+![Choosing a connection's icon](img/28-icono-de-la-conexion.png)
+
+- **No icon:** the first option in the search. The block shows just its name.
+- **Reset:** goes back to the service's icon.
+
+Talaia ships with the [Simple Icons](https://simpleicons.org) logos, over 3,400 brands, so it doesn't connect to the Internet to show them. If a logo is black and you use dark mode, it is drawn in the text colour so you can see it:
+
+![Black icon on a phone in dark mode](img/29-icono-movil-oscuro.png)
+
+The icon shows on the public dashboard: it's only a picture and says nothing about your service.
 
 ## Arranging the dashboard
 

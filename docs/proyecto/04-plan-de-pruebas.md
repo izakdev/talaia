@@ -32,6 +32,11 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestWebFallback` | Las rutas de la web sirven la aplicación; archivos y API inexistentes dan 404 | RF-01 |
 | `TestDashboardIsPublicAndHidesConfiguration` | El dashboard es público, con enlace y sin usuarios ni credenciales | RF-01, RF-25, RNF-03 |
 | `TestConnectionLink` | Rechaza enlaces con otro esquema o con credenciales; uno propio sustituye a la URL de conexión en la API pública | RF-25 |
+| `TestDashboardDefaultIcon` | Sin elegir icono, el panel público da el del tipo, con su nombre y color | RF-28 |
+| `TestConnectionIconChange` | Un icono elegido sale en el panel; «none» lo quita y vacío vuelve al del tipo | RF-28 |
+| `TestConnectionInvalidIcon` | Rechaza con `invalid_icon` un icono que no está en el índice, una ruta o un texto largo | RF-28 |
+| `TestEveryTypeHasDefaultIcon` | Cada tipo de conexión tiene icono por defecto | RF-28 |
+| `TestIconsCached` | `/icons/` se sirve con una semana de caché | RF-28 |
 | `TestConnectionTestReportsNotes` | La prueba de conexión devuelve los avisos de la integración | RF-53 |
 | `TestOPNsenseCredentialsAreCleaned` | Limpia las líneas `key=` y `secret=` pegadas de OPNsense y rechaza una clave con espacios | RF-73 |
 | `TestMultipleConnectionsOfSameService` | Admite varias conexiones del mismo servicio, ordenadas por nombre | RF-11 |
@@ -88,6 +93,8 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestSettingsDefaultsAndSave` | Valores por defecto y guardado de los ajustes, también los de avisos | RF-07, RF-24, RF-107 |
 | `TestPasswordChangeAndReset` | El cambio revoca las demás sesiones y la recuperación, todas | RF-08 |
 | `TestMigratesExistingDatabase` | Una base de datos anterior migra, conserva sus conexiones y las coloca en el panel | RNF-05, RF-22 |
+| `TestConnectionIconRoundTrip` | El icono elegido se guarda al crear y al editar | RF-28 |
+| `TestMigrationKeepsDefaultIcon` | Una conexión anterior a la columna del icono queda con el de su tipo | RF-28, RNF-05 |
 | `TestChannelSecretEncrypted` | El secreto de un canal no está en claro y se recupera | RF-108, RNF-04 |
 | `TestUpdateChannelKeepsSecret` | Editar sin secreto lo conserva; con secreto, lo cambia; borrar elimina el canal | RF-108 |
 | `TestNotifiedToneCascade` | El color avisado se guarda y se borra con la conexión | RF-112 |
@@ -95,6 +102,18 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestLogKeepsLatest50` | El registro guarda los 50 envíos más recientes, del último al primero | RF-111 |
 | `TestSettingsNotifyDefaults` | Sin idioma de avisos y 2 minutos por defecto; el primer canal fija el idioma una sola vez | RF-107, RF-110 |
 | `TestConnectionNotifyDefaultTrue` | Una conexión, también las anteriores a la migración, avisa salvo que se silencie | RF-109 |
+
+### `internal/icons`
+
+| Prueba | Verifica | Requisitos |
+|---|---|---|
+| `TestResolveDefault` | Sin icono elegido, da el del tipo con su nombre y color | RF-28 |
+| `TestResolveNone` | «none» no da icono | RF-28 |
+| `TestResolveCustom` | Da el icono elegido | RF-28 |
+| `TestResolveUnknownStoredSlug` | Un icono guardado que ya no está en el índice no da icono, sin error | RF-28 |
+| `TestHas` | Distingue los iconos del índice de los demás valores | RF-28 |
+| `TestLoadMissingIndex` | Sin la web compilada no hay iconos ni pánico | RF-28 |
+| `TestLoadBrokenIndex` | Un índice mal formado no da iconos | RF-28 |
 
 ### `internal/collector`
 
@@ -290,6 +309,8 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-13 | Móvil y modo oscuro sin desbordamiento | RF-06 |
 | E2E-14 | La API pública no expone configuración ni credenciales | RNF-03 |
 | E2E-23 | Enlace a cada servicio desde su bloque | RF-25 |
+| E2E-50 | Icono de cada bloque: el de su tipo (servido desde `/icons/`, sin iconos en la atalaya), otro elegido con el buscador («PI HOLE» encuentra Pi-hole; Esc cierra el buscador y no el formulario) y publicado en la API pública, sin icono y restablecido | RF-28 |
+| E2E-51 | Icono legible en modo oscuro (el negro de GitHub, con el color del texto) y sin desbordar en el móvil con un nombre largo | RF-28, RF-06 |
 | E2E-15 | Sin errores de JavaScript durante el recorrido | RF-01 |
 | E2E-16 | Alta de Proxmox con validación del token | RF-10, RF-13 |
 | E2E-17 | Clúster en el panel: agregados, nodos y detalle | RF-40, RF-41 |
@@ -427,6 +448,7 @@ El workflow también prueba todo cuando no puede calcular la lista: en un push q
 - WGDashboard: código de la v4.3.4, en `src/dashboard.py` y `src/modules/WireguardConfiguration.py`, para rutas, autenticación, registro de accesos y cálculo de los peers conectados.
 
 **Aún sin verificar:**
+- **Iconos de los bloques en una instalación real:** hasta la prueba del cliente en su Proxmox VE, solo se han visto en Chromium con la E2E. Tampoco se ha probado en Safari ni Firefox la máscara CSS con la que se pintan.
 - **Avisos reales por webhook:** solo se han probado con el receptor simulado. Telegram y ntfy.sh, solo con avisos en ámbar y verde de un servicio cada vez: no se han probado un grupo o un canal de Telegram, un servidor ntfy propio, un aviso en rojo real, varios servicios a la vez ni un envío «Sin confirmar».
 - **SAI real por NUT, casos no probados:** batería baja durante un corte (el corte con batería sí, el 2026-11-20), batería cargándose («Cargando»), aviso de cambiar batería, sobrecarga, driver desconectado, varios SAI en un servidor y SAI de otros fabricantes. Solo se han probado con el simulador.
 - **QNAP real, casos no probados:** aviso o fallo SMART, RAID degradado o reconstruyéndose, pool en aviso, ventilador averiado, volumen lleno y QTS clásico (no hero). Los textos de estado de RAID y volumen distintos de «Ready» no están documentados; solo se han probado con el simulador.
@@ -455,7 +477,7 @@ Los requisitos pendientes se probarán en su hito.
 | RF-03 | `TestSetupOnlyOnceAndLogin`, `TestFirstUserOnlyOnce`, E2E-01 |
 | RF-04 | `TestLoginLimiter`, `TestLogoutRevokesSessionOnServer`, `TestPassword`, `TestExpiredSessionIsRejected`, E2E-03 |
 | RF-05 | E2E-12 |
-| RF-06 | E2E-13 |
+| RF-06 | E2E-13, E2E-51 |
 | RF-10 | `TestConnectionValidation`, `TestConnectionsNeverExposeSecret`, E2E-06, E2E-11 |
 | RF-11 | `TestMultipleConnectionsOfSameService` |
 | RF-12 | E2E-04 |
@@ -482,6 +504,7 @@ Los requisitos pendientes se probarán en su hito.
 | RF-26 | E2E-25, E2E-37 |
 | RF-27 | `TestNewConnectionsFillThreeColumns`, E2E-24, E2E-38 |
 | RF-24 | `TestSettingsValidation`, `TestSettingsDefaultsAndSave`, E2E-26 |
+| RF-28 | `TestResolveDefault`, `TestResolveNone`, `TestResolveCustom`, `TestResolveUnknownStoredSlug`, `TestHas`, `TestLoadMissingIndex`, `TestLoadBrokenIndex`, `TestConnectionIconRoundTrip`, `TestMigrationKeepsDefaultIcon`, `TestDashboardDefaultIcon`, `TestConnectionIconChange`, `TestConnectionInvalidIcon`, `TestEveryTypeHasDefaultIcon`, `TestIconsCached`, E2E-50, E2E-51 |
 | RF-60 | INS-01, INS-07, INS-08, INS-09, INS-10 |
 | RF-70 | `TestCollect`, `TestParseSize`, E2E-31 |
 | RF-71 | `TestGatewayStates`, E2E-31 |

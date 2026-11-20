@@ -67,6 +67,7 @@ Mientras no exista un administrador, todas las rutas muestran el asistente de pr
 | Elemento | Comportamiento |
 |---|---|
 | Nombre del servicio | Enlace a su URL, con un icono, que se abre en una pestaña nueva |
+| Icono del servicio | A la izquierda del nombre, a su altura, con el color de la marca. Si ese color apenas se distingue del fondo del bloque (contraste menor de 1,5, como el negro de GitHub en modo oscuro), se pinta con el color del texto. No se encoge aunque el nombre ocupe varias líneas. Sin icono, el nombre queda solo. La atalaya de la cabecera no lleva iconos |
 | Actualización | En vivo. Si se pierde, muestra un aviso y reintenta |
 | Antigüedad | En la cabecera, «Actualizado hace…» con el dato más reciente, recalculado cada 10 segundos. Un bloque solo indica la suya si falla («Último dato hace…»); si no, su pie da solo el servicio y su versión |
 | Estado | Se indica con texto y forma, no solo con color |
@@ -164,6 +165,7 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 | Campo | Servicios | Reglas |
 |---|---|---|
 | Nombre | Todos | Obligatorio, hasta 80 caracteres |
+| Icono | Todos | El de su tipo por defecto. Se cambia con un buscador de los logotipos de `simple-icons`; también «Sin icono» y «Restablecer»; ver [Icono de la conexión](#icono-de-la-conexión) |
 | URL | Todos salvo QNAP y SAI (NUT) | `http` o `https`, sin credenciales, parámetros ni fragmento |
 | Dirección SNMP | QNAP | `snmp://host` o `snmp://host:puerto`, sin ruta ni credenciales; puerto 161 por defecto |
 | Dirección del servidor NUT | SAI (NUT) | `nut://host`, `nut://host:puerto` o `nut://host/sai`, sin credenciales; puerto 3493 por defecto. El nombre del SAI solo admite letras, cifras, `.`, `_` y `-` |
@@ -193,6 +195,14 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 | SAI (NUT) | Ninguna: el formulario no muestra el campo y avisa de que NUT no pide usuario ni contraseña para leer; ver DEC-47 |
 
 **Probar conexión:** consulta el servicio una vez con los datos del formulario, sin guardar nada. En Home Assistant, avisa si no hay CPU, memoria ni disco disponibles. En OPNsense, avisa si faltan datos por los privilegios del usuario. Si se cambia algún dato de conexión, el resultado anterior desaparece. Al editar, puede usar la credencial guardada si la URL no ha cambiado.
+
+### Icono de la conexión
+
+- El campo «Icono» muestra el actual con su nombre, o «Sin icono». Al pulsarlo se abre un buscador; «Restablecer», que solo aparece si se eligió otro, vuelve al icono del tipo.
+- La búsqueda no distingue mayúsculas, tildes ni signos («PI HOLE» encuentra Pi-hole) y muestra hasta 48 resultados. Vacía, ofrece los iconos de los tipos de Talaia, primero el de la conexión. La primera opción es siempre «Sin icono».
+- Con el teclado: flechas para moverse, Intro para elegir y Esc para cerrar el buscador sin cerrar el formulario. Las opciones miden 44 px de alto para tocarlas en el móvil.
+- El icono que se elige se guarda al guardar la conexión. El icono del tipo se guarda como «el de su tipo», no como ese logotipo: si cambia en el catálogo, cambia también el bloque.
+- Error: «El icono no existe.» si se envía uno que no está en Talaia.
 
 ### Selector de entidades
 

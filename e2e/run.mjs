@@ -487,6 +487,113 @@ const scenarios = [
     body = await publicDashboard();
     assert.doesNotMatch(body, /Potencia de casa/);
   }],
+  ["E2E-50", "Icono de cada bloque: el de su tipo, otro elegido, sin icono y restablecido", async () => {
+    await toDashboard();
+    const block = () => page.locator(".service", { hasText: "AdGuard principal" });
+    const iconOf = async () => {
+      // El bloque y su icono se pintan a la vez: basta esperar al bloque.
+      await block().waitFor();
+      const icon = block().locator(".service-head .brand-icon");
+      return (await icon.count()) ? icon.getAttribute("data-icon") : null;
+    };
+    assert.equal(await iconOf(), "adguard");
+    const svg = await fetch(`${BASE}/icons/adguard.svg`);
+    assert.equal(svg.status, 200);
+    assert.match(await svg.text(), /^<svg[^>]*><path d="/);
+    // La atalaya de la cabecera no lleva iconos.
+    assert.equal(await page.locator(".lookout-sky .brand-icon").count(), 0);
+
+    const choose = async (pick) => {
+      await toAdmin();
+      await row("AdGuard principal").getByRole("button", { name: "Editar" }).click();
+      await pick(page.locator("dialog"));
+      await page.getByRole("button", { name: "Guardar" }).click();
+      await page.locator("dialog").waitFor({ state: "detached" });
+      await toDashboard();
+    };
+    await choose(async (dialog) => {
+      await dialog.getByRole("button", { name: /^Icono AdGuard/ }).click();
+      const search = dialog.getByRole("combobox", { name: "Buscar un icono" });
+      // Sin búsqueda: «Sin icono» y, en cuanto llega el índice, primero el icono de su tipo.
+      await dialog.getByRole("option", { name: "AdGuard", exact: true }).waitFor();
+      assert.deepEqual((await dialog.getByRole("option").allInnerTexts()).slice(0, 2), ["Sin icono", "AdGuard"]);
+      await search.fill("PI HOLE");
+      await dialog.getByRole("option", { name: "Pi-hole" }).waitFor();
+      await search.press("ArrowDown");
+      // Esc cierra el buscador y no el diálogo.
+      await search.press("Escape");
+      assert.equal(await dialog.getByRole("combobox").count(), 0);
+      assert.equal(await dialog.isVisible(), true);
+      await dialog.getByRole("button", { name: /^Icono AdGuard/ }).click();
+      await dialog.getByRole("combobox").fill("pi");
+      await dialog.getByRole("option", { name: "Pi-hole" }).waitFor();
+      await dialog.locator(".icon-field").evaluate((el) => el.scrollIntoView({ block: "start" }));
+      await page.mouse.move(0, 0);
+      await shot(page, "28-icono-de-la-conexion");
+      await dialog.getByRole("combobox").fill("pihole");
+      await dialog.getByRole("combobox").press("ArrowDown");
+      await dialog.getByRole("combobox").press("Enter");
+      await dialog.getByRole("button", { name: /^Icono Pi-hole/ }).waitFor();
+    });
+    assert.equal(await iconOf(), "pihole");
+    const publicBody = JSON.parse(await publicDashboard());
+    assert.deepEqual(publicBody.connections.find((c) => c.name === "AdGuard principal").icon, { slug: "pihole", title: "Pi-hole", hex: "96060C" });
+
+    await choose(async (dialog) => {
+      await dialog.getByRole("button", { name: /^Icono Pi-hole/ }).click();
+      await dialog.getByRole("option", { name: "Sin icono" }).click();
+      await dialog.getByRole("button", { name: /^Icono Sin icono/ }).waitFor();
+    });
+    assert.equal(await iconOf(), null);
+
+    await choose(async (dialog) => {
+      await dialog.getByRole("button", { name: "Restablecer" }).click();
+      await dialog.getByRole("button", { name: /^Icono AdGuard/ }).waitFor();
+      assert.equal(await dialog.getByRole("button", { name: "Restablecer" }).count(), 0);
+    });
+    assert.equal(await iconOf(), "adguard");
+    await toAdmin();
+  }],
+  ["E2E-51", "Icono legible en modo oscuro y sin desbordar en el móvil", async () => {
+    // E2E-50 termina en la administración.
+    await row("AdGuard principal").getByRole("button", { name: "Editar" }).click();
+    const dialog = page.locator("dialog");
+    const name = dialog.getByLabel("Nombre");
+    const original = await name.inputValue();
+    const long = "AdGuard principal de la casa con un nombre larguísimo que ocupa dos líneas";
+    await name.fill(long);
+    await dialog.getByRole("button", { name: /^Icono AdGuard/ }).click();
+    await dialog.getByRole("combobox").fill("github");
+    await dialog.getByRole("option", { name: "GitHub", exact: true }).click();
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await dialog.waitFor({ state: "detached" });
+
+    const mobile = await browser.newContext({
+      locale: "es-ES",
+      viewport: { width: 375, height: 800 },
+      colorScheme: "dark",
+      storageState: await context.storageState(),
+    });
+    const phone = await mobile.newPage();
+    await phone.goto(BASE);
+    const icon = phone.locator(".service", { hasText: long }).locator(".service-head .brand-icon");
+    await icon.waitFor();
+    // GitHub es negro: sobre el fondo oscuro se pinta con el color del texto.
+    assert.match((await icon.getAttribute("class")) ?? "", /low-on-dark/);
+    const colors = await icon.evaluate((el) => [getComputedStyle(el).backgroundColor, getComputedStyle(el.closest("h2")).color]);
+    assert.equal(colors[0], colors[1]);
+    const box = await icon.boundingBox();
+    assert.ok(box.width >= 16 && box.height >= 16, `el icono mide ${box.width}×${box.height}`);
+    assert.equal(await phone.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    await shot(phone, "29-icono-movil-oscuro");
+    await mobile.close();
+
+    await row(long).getByRole("button", { name: "Editar" }).click();
+    await dialog.getByLabel("Nombre").fill(original);
+    await dialog.getByRole("button", { name: "Restablecer" }).click();
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await dialog.waitFor({ state: "detached" });
+  }],
   ["E2E-23", "Enlace a cada servicio desde su bloque", async () => {
     await toDashboard();
     const adguardLink = page.locator(".service", { hasText: "AdGuard principal" }).locator(".service-link");
@@ -859,7 +966,7 @@ const scenarios = [
     await toAdmin();
   }],
   ["E2E-36", "WireGuard en el bloque de OPNsense, opcional y sin nombres de peers", async () => {
-    assert.doesNotMatch(await publicDashboard(), /"wireguard"/);
+    assert.doesNotMatch(await publicDashboard(), /"wireguard":/);
     await row("Cortafuegos").getByRole("button", { name: "Editar" }).click();
     await page.getByLabel(/estado de WireGuard/).check();
     opnsense.state.wireguard = false;
