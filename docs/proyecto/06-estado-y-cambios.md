@@ -19,9 +19,13 @@
 | 13 | Bloques que se apilan solos y panel a todo el ancho | Terminado y verificado con el panel real del cliente, publicado en `v0.2.5` |
 | 14 | QNAP por SNMPv3: discos, volúmenes y recursos | Terminado y verificado con el QNAP del cliente, publicado en `v0.3.0` |
 | 15 | SAI a través de un servidor NUT: estado, batería y autonomía | Terminado y verificado con el SAI del cliente, publicado en `v0.3.1` |
-| 16 | Notificaciones por Telegram, ntfy o webhook cuando un servicio cambia de color | Terminado y verificado con el Telegram del cliente |
+| 16 | Notificaciones por Telegram, ntfy o webhook cuando un servicio cambia de color | Terminado y verificado con el Telegram del cliente, publicado en `v0.4.0` |
 
 ## Historial
+
+### `v0.4.0` (2026-11-20)
+
+Trae el hito 16: las notificaciones por Telegram, ntfy o un webhook cuando un servicio del panel cambia de color, con su sección en los ajustes y la casilla para silenciar cada conexión. Incluye los binarios para amd64 y arm64, las sumas SHA-256 y el instalador; se actualiza desde `v0.3.1` con `talaia-proxmox.sh update`.
 
 ### Hito 16 (2026-11-19)
 
