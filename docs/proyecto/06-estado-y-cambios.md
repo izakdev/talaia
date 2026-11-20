@@ -20,9 +20,13 @@
 | 14 | QNAP por SNMPv3: discos, volúmenes y recursos | Terminado y verificado con el QNAP del cliente, publicado en `v0.3.0` |
 | 15 | SAI a través de un servidor NUT: estado, batería y autonomía | Terminado y verificado con el SAI del cliente, publicado en `v0.3.1` |
 | 16 | Notificaciones por Telegram, ntfy o webhook cuando un servicio cambia de color | Terminado y verificado con el Telegram del cliente, publicado en `v0.4.0` |
-| 17 | Disponibilidad de equipos de red por TCP o HTTP, sin credenciales | Terminado y verificado con un switch del cliente; sin publicar |
+| 17 | Disponibilidad de equipos de red por TCP o HTTP, sin credenciales | Terminado y verificado con un switch del cliente, publicado en `v0.5.0` |
 
 ## Historial
+
+### `v0.5.0` (2026-11-20)
+
+Trae el hito 17, la disponibilidad de equipos de red por TCP o HTTP sin credenciales, y los iconos en los bloques del panel, que se pueden cambiar en cada conexión por cualquier logotipo de `simple-icons` o quitar. Incluye los binarios para amd64 y arm64, las sumas SHA-256 y el instalador; se actualiza desde `v0.4.1` con `talaia-proxmox.sh update`.
 
 ### Iconos en los bloques (2026-11-20)
 
