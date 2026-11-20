@@ -16,11 +16,12 @@ Talaia es un panel para ver de un vistazo el estado de los servicios de tu labor
 6. [Editar y eliminar conexiones](#editar-y-eliminar-conexiones)
 7. [Organizar el panel](#organizar-el-panel)
 8. [Ajustes](#ajustes)
-9. [Idioma y apariencia](#idioma-y-apariencia)
-10. [Seguridad y acceso remoto](#seguridad-y-acceso-remoto)
-11. [Copias de seguridad](#copias-de-seguridad)
-12. [Solución de problemas](#solución-de-problemas)
-13. [Limitaciones actuales](#limitaciones-actuales)
+9. [Notificaciones](#notificaciones)
+10. [Idioma y apariencia](#idioma-y-apariencia)
+11. [Seguridad y acceso remoto](#seguridad-y-acceso-remoto)
+12. [Copias de seguridad](#copias-de-seguridad)
+13. [Solución de problemas](#solución-de-problemas)
+14. [Limitaciones actuales](#limitaciones-actuales)
 
 ## Instalación
 
@@ -521,6 +522,61 @@ En la administración, abre **Ajustes**.
 - **Exigir inicio de sesión para ver el panel:** los datos dejan de ser públicos, y quien tuviera el panel abierto deja de verlo. Actívalo si el panel es accesible desde fuera de tu red de confianza.
 - **Contraseña:** escribe la actual y dos veces la nueva, de al menos 12 caracteres. Se cierran las demás sesiones.
 
+## Notificaciones
+
+Talaia puede avisarte en el móvil cuando un servicio del panel pasa a ámbar o a rojo, y otra vez cuando vuelve a estar en orden. Funciona sin ningún navegador abierto. El aviso lleva el nombre de cada servicio y su estado tal como sale en su bloque, sin direcciones ni contraseñas:
+
+```
+🟠 Talaia · Necesita atención
+AdGuard: Protección desactivada
+VPN: Túnel parado
+```
+
+En la administración, abre **Ajustes** y baja hasta **Notificaciones**.
+
+![Sección de notificaciones en los ajustes](img/26-ajustes-notificaciones.png)
+
+**Añadir un canal:** pulsa **Añadir canal**, elige el tipo y rellena sus datos. **Enviar prueba** manda un mensaje de prueba sin guardar nada, para comprobar que llega. Puedes tener varios canales, y todos los activos reciben cada aviso.
+
+![Alta de un canal de Telegram](img/25-canal-telegram.png)
+
+- **Telegram:**
+  1. Abre una conversación con [@BotFather](https://t.me/BotFather), envía `/newbot` y sigue sus pasos. Te dará el **token del bot**.
+  2. Escribe cualquier cosa a tu bot nuevo; si quieres los avisos en un grupo, añade el bot al grupo.
+  3. Consigue el **chat ID**: [@userinfobot](https://t.me/userinfobot) te da el tuyo, o abre `https://api.telegram.org/botTOKEN/getUpdates` en el navegador y busca `"chat":{"id":…}`. En un grupo, el número es negativo.
+- **ntfy:** deja vacío el servidor para usar [ntfy.sh](https://ntfy.sh) o escribe el tuyo. El **tópico** es el nombre del canal en ntfy: suscríbete a él en la app de ntfy. En ntfy.sh, quien conozca el tópico puede leer tus avisos, así que elige uno difícil de adivinar. El token de acceso solo hace falta si tu servidor exige iniciar sesión.
+- **Webhook:** Talaia envía un `POST` con este JSON a la URL que indiques, por ejemplo la de un webhook de Home Assistant o de n8n:
+
+  ```json
+  {
+    "event": "change",
+    "language": "es",
+    "text": "🟠 Talaia · Necesita atención\nAdGuard: Protección desactivada",
+    "services": [
+      { "name": "AdGuard", "type": "adguard", "tone": "warn", "previous": "good", "label": "Protección desactivada" }
+    ],
+    "sent_at": "2026-11-19T10:00:00Z"
+  }
+  ```
+
+  `tone` y `previous` valen `good`, `warn` o `bad`. El mensaje de prueba lleva `"event": "test"` y la lista de servicios vacía.
+
+El token, el tópico y la URL se guardan cifrados y no se vuelven a mostrar. Al editar un canal, déjalos en blanco para conservarlos; si cambias el servidor de ntfy, tendrás que volver a escribir el tópico y el token.
+
+**Cuándo avisa:**
+- **Avisar si el cambio dura:** el estado nuevo tiene que mantenerse ese tiempo, 2 minutos por defecto. Así no recibes avisos por un corte de unos segundos. **Sin espera** avisa en cuanto Talaia ve el cambio.
+- Si varios servicios cambian a la vez, recibes un solo mensaje.
+- No hay recordatorios: un aviso cuando cambia y otro cuando vuelve a verde.
+- Solo avisan los servicios que están en alguna página del panel. Un estado gris, como «Consultando…» o «Sin túneles», no avisa.
+- Al reiniciar Talaia no se repiten los avisos ya enviados.
+- **Silenciar un servicio:** edita su conexión y desmarca **Avisar de sus cambios**. Sigue en el panel, y en la lista de conexiones aparece «Sin avisos». Al volver a marcarlo no te llegan avisos atrasados.
+
+**Idioma de los avisos:** español o inglés. Al dar de alta el primer canal se elige el de la administración; cámbialo y pulsa **Guardar avisos**.
+
+**Últimos envíos:** la tabla muestra los 50 últimos avisos y pruebas, por qué canal, y si se enviaron o por qué fallaron. Si un canal no responde, Talaia lo reintenta dos veces en los dos minutos siguientes.
+
+Telegram y ntfy.sh necesitan que el equipo de Talaia tenga salida a Internet. Si no la tiene, usa un servidor ntfy propio o un webhook de tu red.
+
 ## Idioma y apariencia
 
 - **Idioma:** Talaia usa el de tu navegador si es español y, si no, inglés. El botón **English** o **Español** lo cambia, se recuerda en ese navegador y se aplica a sus otras pestañas abiertas.
@@ -589,6 +645,10 @@ En la administración, abre **Ajustes**.
 | Home Assistant tarda mucho o da error de tiempo de espera | En instalaciones muy grandes, sube el refresco, por ejemplo a 60 segundos |
 | QNAP no responde a tiempo | Comprueba que SNMP esté activado con la versión SNMP V3, que el protocolo de cifrado coincida y que el firewall deje pasar UDP 161 |
 | El SAI no conecta | Comprueba la línea `LISTEN` de `upsd.conf` en el equipo que tiene el SAI y que el firewall deje pasar TCP 3493 |
+| Un aviso dice «el canal rechaza el token o la clave» | Revisa el token del bot de Telegram o el de ntfy. Si lo has revocado en @BotFather, escribe el nuevo |
+| Un aviso dice «el canal ha rechazado el mensaje» | En Telegram, revisa el chat ID y que hayas escrito antes al bot o que el bot siga en el grupo. En ntfy, revisa el tópico y si tu servidor permite publicar en él |
+| Un aviso dice «no se puede conectar con el servidor» | Comprueba que el equipo de Talaia tenga salida a Internet (Telegram, ntfy.sh) o llegue a tu servidor ntfy o a tu webhook |
+| No llegan avisos | Comprueba que el canal esté activo, que el servicio esté en el panel y que su conexión tenga marcado **Avisar de sus cambios**. Con **Enviar prueba** sabrás si el canal funciona |
 
 ## Limitaciones actuales
 
@@ -599,5 +659,6 @@ En la administración, abre **Ajustes**.
 - Los bloques de Portainer y WGDashboard, y el WireGuard de OPNsense, no detallan cada contenedor ni cada peer: solo dan recuentos.
 - El bloque de QNAP usa los umbrales de temperatura de QTS por defecto, no los tuyos, y no distingue qué volumen es de un disco USB.
 - El bloque del SAI muestra un solo SAI, sin tensiones ni consumo, y la conexión con NUT no va cifrada; no viaja ninguna contraseña.
+- Las notificaciones avisan de cambios de color, sin recordatorios: un cambio de etiqueta dentro del mismo color no avisa, y todos los canales activos reciben todos los avisos.
 
 El estado de cada punto está en [Estado y cambios](../proyecto/06-estado-y-cambios.md).

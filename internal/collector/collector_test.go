@@ -51,6 +51,7 @@ func setup(t *testing.T) *env {
 		e.cfgs <- c
 		return fake{e.fail, e.calls}
 	}}
+	registry["stated"] = func(integrations.Config) integrations.Integration { return stated{e.fail} }
 	e.m = New(st, registry, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	ctx, cancel := context.WithCancel(context.Background())
 	if err := e.m.Start(ctx); err != nil {
@@ -228,4 +229,62 @@ func TestSubscribersAreNotified(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("sin aviso")
 	}
+}
+
+// stated devuelve datos con estado propio, como las integraciones reales.
+type stated struct{ fail *atomic.Bool }
+
+type statedData struct{}
+
+func (statedData) State() integrations.State {
+	return integrations.State{Tone: integrations.ToneWarn, Key: "adguard.protectionOff"}
+}
+
+func (s stated) Collect(context.Context) (any, error) {
+	if s.fail.Load() {
+		return nil, &integrations.Error{Code: integrations.CodeTimeout, Err: errors.New("no")}
+	}
+	return statedData{}, nil
+}
+
+func TestSnapshotState(t *testing.T) {
+	e := setup(t)
+	e.fail.Store(true)
+	c := e.create(t, "stated")
+	failed := e.waitFor(t, func(s Snapshot) bool { return s.Status == StatusError })
+	if want := (integrations.State{Tone: integrations.ToneBad, Key: "status.noResponse"}); !equalState(failed.State, want) {
+		t.Fatalf("con error: %+v", failed.State)
+	}
+
+	e.fail.Store(false)
+	if err := e.m.Refresh(context.Background(), c.ID); err != nil {
+		t.Fatal(err)
+	}
+	ok := e.waitFor(t, func(s Snapshot) bool { return s.Status == StatusOK })
+	if want := (integrations.State{Tone: integrations.ToneWarn, Key: "adguard.protectionOff"}); !equalState(ok.State, want) {
+		t.Fatalf("con datos: %+v", ok.State)
+	}
+
+	// Un error con datos anteriores sigue siendo rojo.
+	e.fail.Store(true)
+	if err := e.m.Refresh(context.Background(), c.ID); err != nil {
+		t.Fatal(err)
+	}
+	again := e.waitFor(t, func(s Snapshot) bool { return s.Status == StatusError })
+	if again.Data == nil || again.State.Tone != integrations.ToneBad {
+		t.Fatalf("error con datos: %+v", again)
+	}
+}
+
+func TestPendingSnapshotState(t *testing.T) {
+	s := pendingSnapshot(store.Connection{ID: "x", Name: "X", Type: "adguard"})
+	if want := (integrations.State{Tone: integrations.ToneMuted, Key: "status.checking"}); !equalState(s.State, want) {
+		t.Fatalf("pendiente: %+v", s.State)
+	}
+}
+
+func equalState(a, b integrations.State) bool {
+	ja, _ := json.Marshal(a)
+	jb, _ := json.Marshal(b)
+	return string(ja) == string(jb)
 }

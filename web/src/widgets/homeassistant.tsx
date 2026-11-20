@@ -168,14 +168,6 @@ function HomeAssistant({ data }: { data: HomeAssistantData }) {
 }
 
 export const homeAssistantWidget: Widget<HomeAssistantData> = {
-  state: (data, t) => {
-    if (data.state !== "RUNNING") return { tone: "warn", label: t("homeassistant.starting") };
-    if (data.recovery_mode) return { tone: "bad", label: t("homeassistant.recovery") };
-    if (data.safe_mode) return { tone: "warn", label: t("homeassistant.safeMode") };
-    const missing = data.entities.filter(hasNoData).length;
-    if (missing > 0) return { tone: "warn", label: t("homeassistant.unavailable", { n: missing }) };
-    return { tone: "good", label: t("homeassistant.running") };
-  },
   Body: HomeAssistant,
   footer: (data) => (data.version ? `Home Assistant ${data.version}` : ""),
 };

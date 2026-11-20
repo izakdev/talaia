@@ -16,6 +16,7 @@ import { fakeWGDashboard, WGDASHBOARD_KEY } from "./fake-wgdashboard.mjs";
 import { fakeProxmox, TOKEN } from "./fake-proxmox.mjs";
 import { fakeQNAP, QNAP_AUTH, QNAP_PRIV, QNAP_USER } from "./fake-qnap.mjs";
 import { fakeNUT, NUT_SERIAL, NUT_UPS } from "./fake-nut.mjs";
+import { BAD_TELEGRAM_TOKEN, fakeNotify, NTFY_TOKEN, NTFY_TOPIC, TELEGRAM_TOKEN, WEBHOOK_PATH } from "./fake-notify.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const screenshotsDir = process.argv.includes("--screenshots") ? join(root, "docs/usuario/img") : null;
@@ -30,6 +31,7 @@ const portainer = fakePortainer(13004);
 const wgdashboard = fakeWGDashboard(13005);
 const qnap = fakeQNAP(13006); // UDP
 const nut = fakeNUT(13007); // TCP, protocolo de NUT
+const notifier = fakeNotify(13010); // Telegram, ntfy y webhook
 const dataDir = mkdtempSync(join(tmpdir(), "talaia-e2e-"));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -96,7 +98,11 @@ async function coverShots() {
 
 const publicDashboard = async () => (await fetch(`${BASE}/api/dashboard`)).text();
 
-const talaia = spawn(join(root, "bin/talaia"), ["-listen", "127.0.0.1:18080", "-data", dataDir], { stdio: "ignore" });
+// La API de Telegram apunta al receptor simulado.
+const talaia = spawn(join(root, "bin/talaia"), ["-listen", "127.0.0.1:18080", "-data", dataDir], {
+  stdio: "ignore",
+  env: { ...process.env, TALAIA_TELEGRAM_API: notifier.url },
+});
 const browser = await chromium.launch();
 const context = await browser.newContext({ locale: "es-ES", viewport: { width: 1280, height: 800 }, colorScheme: "light" });
 const page = await context.newPage();
@@ -131,6 +137,42 @@ const fillAdGuard = async (password) => {
 };
 const toDashboard = () => page.getByRole("link", { name: "Ver el panel" }).click();
 const toAdmin = () => page.getByRole("link", { name: "Administración" }).click();
+
+// Notificaciones
+const toSettings = async () => {
+  await page.goto(`${BASE}/admin/settings`);
+  await page.getByRole("heading", { name: "Notificaciones" }).waitFor();
+};
+const notifications = page.locator("section.notifications");
+const channelDialog = page.getByRole("dialog");
+const setNotify = async (field, option) => {
+  await notifications.getByLabel(field).selectOption({ label: option });
+  await notifications.getByRole("button", { name: "Guardar avisos" }).click();
+  await notifications.getByText("Ajustes guardados.").waitFor();
+};
+const addChannel = async (type, fields) => {
+  await notifications.getByRole("button", { name: "Añadir canal" }).click();
+  await channelDialog.getByLabel(type, { exact: true }).check();
+  // Los campos con ayuda la incluyen en su nombre accesible; «Nombre» aparece en otras ayudas.
+  for (const [label, value] of Object.entries(fields)) {
+    await channelDialog.getByLabel(label, { exact: label === "Nombre" }).fill(value);
+  }
+};
+const saveChannel = async () => {
+  await channelDialog.getByRole("button", { name: "Guardar", exact: true }).click();
+  await channelDialog.waitFor({ state: "detached" });
+};
+// Estado de un servicio según la API pública, para saber que Talaia ya ha visto el cambio.
+const publicTone = async (name, tone) => {
+  for (let i = 0; i < 100; i++) {
+    const body = JSON.parse(await publicDashboard());
+    if (body.connections.find((c) => c.name === name)?.state.tone === tone) return;
+    await sleep(200);
+  }
+  throw new Error(`${name} no ha pasado a ${tone}`);
+};
+const aboutVPN = () => notifier.messages.filter((m) => m.text.includes("VPN"));
+const ATTENTION = "🟠 Talaia · Necesita atención\nAdGuard principal: Protección desactivada\nVPN: Túnel parado";
 
 const scenarios = [
   ["E2E-01", "Primer arranque y creación del administrador", async () => {
@@ -992,6 +1034,131 @@ const scenarios = [
     await state.getByText("Con red").waitFor({ timeout: 30000 });
     await toAdmin();
   }],
+  ["E2E-43", "Alta de canales de Telegram, ntfy y webhook con mensaje de prueba", async () => {
+    await toSettings();
+    await notifications.getByText("Todavía no hay canales").waitFor();
+    await addChannel("Telegram", { Nombre: "Móvil", "Token del bot": TELEGRAM_TOKEN, "Chat ID": "-1001234" });
+    await shot(page, "25-canal-telegram");
+    await channelDialog.getByRole("button", { name: "Enviar prueba" }).click();
+    await channelDialog.getByText("Mensaje de prueba enviado.").waitFor();
+    const telegram = await notifier.waitFor("telegram", (text) => text.includes("Mensaje de prueba"));
+    assert.equal(telegram.chatId, "-1001234");
+    assert.equal(telegram.text, "🔔 Talaia · Mensaje de prueba. Si lo ves, este canal funciona.");
+    assert.equal(telegram.body.parse_mode, undefined);
+    await saveChannel();
+
+    await addChannel("ntfy", { Nombre: "ntfy propio", "Servidor (opcional)": notifier.url, Tópico: NTFY_TOPIC, "Token de acceso (opcional)": NTFY_TOKEN });
+    await saveChannel();
+    await notifications.locator(".channels li", { hasText: "ntfy propio" }).getByRole("button", { name: "Enviar prueba" }).click();
+    await notifications.locator(".channels li", { hasText: "ntfy propio" }).getByText("Mensaje de prueba enviado.").waitFor();
+    const ntfy = await notifier.waitFor("ntfy", (text) => text.includes("Mensaje de prueba"));
+    assert.equal(ntfy.body.topic, NTFY_TOPIC);
+    assert.equal(ntfy.auth, `Bearer ${NTFY_TOKEN}`);
+    assert.deepEqual(ntfy.body.tags, ["bell"]);
+
+    await addChannel("Webhook", { Nombre: "Domótica", "URL del webhook": notifier.url + WEBHOOK_PATH });
+    await channelDialog.getByRole("button", { name: "Enviar prueba" }).click();
+    await channelDialog.getByText("Mensaje de prueba enviado.").waitFor();
+    const hook = await notifier.waitFor("webhook", (text) => text.includes("Mensaje de prueba"));
+    assert.equal(hook.body.event, "test");
+    assert.equal(hook.body.language, "es");
+    assert.deepEqual(hook.body.services, []);
+    await saveChannel();
+
+    assert.equal(await notifications.locator(".channels li").count(), 3);
+    await notifications.locator(".send-log tbody tr").nth(2).waitFor();
+    // El primer canal fija el idioma de los avisos con el de la administración.
+    assert.equal(await notifications.getByLabel("Idioma de los avisos").inputValue(), "es");
+    // Ni la administración ni el panel devuelven los secretos.
+    const responses = await page.evaluate(() =>
+      Promise.all(["/api/admin/notifications/channels", "/api/admin/notifications/log", "/api/admin/settings"].map((p) => fetch(p).then((r) => r.text()))),
+    );
+    responses.push(await publicDashboard());
+    for (const body of responses) {
+      for (const secret of [TELEGRAM_TOKEN, NTFY_TOPIC, NTFY_TOKEN, WEBHOOK_PATH]) assert.equal(body.includes(secret), false, secret);
+    }
+    await notifications.scrollIntoViewIfNeeded();
+    await shot(page, "26-ajustes-notificaciones");
+  }],
+  ["E2E-44", "Avisos agrupados con las etiquetas del panel y vuelta a la normalidad", async () => {
+    await setNotify("Avisar si el cambio dura", "1 minuto");
+    notifier.clear();
+    adguard.state.protection = false;
+    wgdashboard.state.stopped = true;
+    const alert = await notifier.waitFor("telegram", (text) => text.includes("Necesita atención"), 100000);
+    assert.equal(alert.text, ATTENTION);
+    await notifier.waitFor("ntfy", (text) => text === ATTENTION);
+    const hook = await notifier.waitFor("webhook", (text) => text === ATTENTION);
+    assert.deepEqual(
+      hook.body.services.map((s) => [s.name, s.type, s.tone, s.previous, s.label]),
+      [
+        ["AdGuard principal", "adguard", "warn", "good", "Protección desactivada"],
+        ["VPN", "wgdashboard", "warn", "good", "Túnel parado"],
+      ],
+    );
+    assert.equal(JSON.stringify(hook.body).includes(adguard.url), false);
+    // Un solo aviso por canal, aunque los dos servicios se consulten por separado.
+    await sleep(6000);
+    assert.equal(notifier.messages.filter((m) => m.kind === "telegram").length, 1);
+    await notifications.locator(".send-log tbody tr", { hasText: "AdGuard principal: aviso, VPN: aviso" }).first().waitFor();
+
+    await setNotify("Avisar si el cambio dura", "Sin espera");
+    adguard.state.protection = true;
+    wgdashboard.state.stopped = false;
+    for (const line of ["AdGuard principal: Protección activa", "VPN: Túneles activos"]) {
+      const back = await notifier.waitFor("telegram", (text) => text.includes(line));
+      assert.match(back.text, /^🟢 Talaia · Vuelve a estar en orden\n/);
+    }
+  }],
+  ["E2E-45", "Una conexión silenciada no avisa", async () => {
+    await page.goto(`${BASE}/admin`);
+    await row("VPN").getByRole("button", { name: "Editar" }).click();
+    await page.getByLabel("Avisar de sus cambios").uncheck();
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await row("VPN").getByText("Sin avisos").waitFor();
+    notifier.clear();
+    wgdashboard.state.stopped = true;
+    await publicTone("VPN", "warn");
+    await sleep(3000);
+    wgdashboard.state.stopped = false;
+    await publicTone("VPN", "good");
+    await sleep(3000);
+    assert.deepEqual(aboutVPN(), []);
+    // Al volver a activarlo no llega un aviso atrasado.
+    await row("VPN").getByRole("button", { name: "Editar" }).click();
+    await page.getByLabel("Avisar de sus cambios").check();
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await row("VPN").getByText("Sin avisos").waitFor({ state: "detached" });
+    await sleep(6000);
+    assert.deepEqual(aboutVPN(), []);
+  }],
+  ["E2E-46", "Avisos en inglés", async () => {
+    await toSettings();
+    await setNotify("Idioma de los avisos", "English");
+    notifier.clear();
+    adguard.state.protection = false;
+    const alert = await notifier.waitFor("telegram", (text) => text.includes("Protection off"));
+    assert.equal(alert.text, "🟠 Talaia · Needs attention\nAdGuard principal: Protection off");
+    adguard.state.protection = true;
+    const back = await notifier.waitFor("telegram", (text) => text.includes("Protection on"));
+    assert.equal(back.text, "🟢 Talaia · Back to normal\nAdGuard principal: Protection on");
+    await setNotify("Idioma de los avisos", "Español");
+  }],
+  ["E2E-47", "Un canal con errores aparece en los últimos envíos", async () => {
+    await addChannel("Telegram", { Nombre: "Bot revocado", "Token del bot": BAD_TELEGRAM_TOKEN, "Chat ID": "-1001234" });
+    await channelDialog.getByRole("button", { name: "Enviar prueba" }).click();
+    await channelDialog.getByText("No se ha podido enviar: el canal rechaza el token o la clave").waitFor();
+    await saveChannel();
+    const failed = notifications.locator(".send-log tbody tr", { hasText: "Bot revocado" }).first();
+    await failed.getByText("Bot revocado").waitFor();
+    await failed.getByText("el canal rechaza el token o la clave").waitFor();
+    const item = notifications.locator(".channels li", { hasText: "Bot revocado" });
+    await item.getByRole("button", { name: "Eliminar" }).click();
+    await item.getByRole("button", { name: "Eliminar" }).click();
+    await item.waitFor({ state: "detached" });
+    // El registro conserva el envío aunque el canal ya no exista.
+    await failed.getByText("Bot revocado").waitFor();
+  }],
   ["E2E-38", "Bloques apilados por su altura real, panel a todo el ancho y editor sin cambios falsos", async () => {
     // Dos bloques cortos a la izquierda, uno encima de otro, y uno largo a la derecha.
     const layout = await page.evaluate(async () => {
@@ -1151,7 +1318,7 @@ const scenarios = [
   }],
   ["E2E-14", "La API pública no expone configuración ni credenciales", async () => {
     const body = await publicDashboard();
-    for (const leak of [USER, PASSWORD, TOKEN, HA_TOKEN, OPN_KEY, OPN_SECRET, "localhost:13002", "192.0.2.11", "192.0.2.50", "cortafuegos.simulado", "proceso-simulado", "pppoe1", PORTAINER_TOKEN, "192.0.2.60", "docker.simulado", "instancia-simulada", WGDASHBOARD_KEY, "clave-privada-simulada", "clave-publica-simulada", "10.66.0", "51666", "wg-simulado", "vpn.simulado", "192.0.2.53", QNAP_USER, QNAP_AUTH, QNAP_PRIV, "snmp://", NUT_UPS, NUT_SERIAL, "nut://", "127.0.0.1:13007", "base_url", "link_url", "secret", "privacy_secret"]) {
+    for (const leak of [USER, PASSWORD, TOKEN, HA_TOKEN, OPN_KEY, OPN_SECRET, "localhost:13002", "192.0.2.11", "192.0.2.50", "cortafuegos.simulado", "proceso-simulado", "pppoe1", PORTAINER_TOKEN, "192.0.2.60", "docker.simulado", "instancia-simulada", WGDASHBOARD_KEY, "clave-privada-simulada", "clave-publica-simulada", "10.66.0", "51666", "wg-simulado", "vpn.simulado", "192.0.2.53", QNAP_USER, QNAP_AUTH, QNAP_PRIV, "snmp://", NUT_UPS, NUT_SERIAL, "nut://", "127.0.0.1:13007", "base_url", "link_url", "secret", "privacy_secret", TELEGRAM_TOKEN, NTFY_TOPIC, NTFY_TOKEN, WEBHOOK_PATH, "chat_id", "-1001234"]) {
       assert.equal(body.includes(leak), false, leak);
     }
     const headers = (await fetch(BASE)).headers;
@@ -1173,6 +1340,7 @@ try {
   await wgdashboard.start();
   await qnap.start();
   await nut.start();
+  await notifier.start();
   await waitForServer();
   for (const [id, title, run] of scenarios) {
     try {
@@ -1195,6 +1363,7 @@ try {
   await wgdashboard.stop().catch(() => {});
   await qnap.stop().catch(() => {});
   await nut.stop().catch(() => {});
+  await notifier.stop().catch(() => {});
   rmSync(dataDir, { recursive: true, force: true });
 }
 if (failed) process.exit(1);

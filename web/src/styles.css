@@ -94,7 +94,7 @@ button:disabled { opacity: 0.6; cursor: progress; }
 .quiet { background: transparent; color: inherit; padding-inline: 0.5rem; font-weight: 500; }
 .quiet:hover { text-decoration: underline; }
 
-input:not([type="radio"], [type="checkbox"]) {
+input:not([type="radio"], [type="checkbox"]), select {
   font: inherit; width: 100%; min-height: 2.75rem; padding: 0.5rem 0.75rem;
   color: var(--ink); background: var(--surface);
   border: 1px solid var(--ink-soft); border-radius: 3px;
@@ -366,4 +366,26 @@ details > summary { cursor: pointer; list-style-position: outside; margin-left: 
 }
 @media (prefers-reduced-motion: reduce) {
   .beam { animation: none; }
+}
+
+/* Notificaciones */
+.notifications > p { color: var(--ink-soft); max-width: 34rem; }
+.notifications h3 { margin: 0; font-size: 1rem; font-weight: 600; }
+.notifications .panel-head { align-items: center; }
+.field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: 1rem; align-items: start; }
+.muted-text { color: var(--ink-soft); font-size: 0.9375rem; }
+.channels li { grid-template-columns: minmax(8rem, 1fr) minmax(0, 1fr) auto; }
+.connection-meta .ok { color: var(--good); font-weight: 550; }
+.connection-meta [role="status"] { font-size: 0.875rem; }
+.table-scroll { overflow-x: auto; }
+.send-log { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.send-log th, .send-log td { text-align: left; vertical-align: top; padding: 0.5rem 0.75rem 0.5rem 0; border-bottom: 1px solid var(--line); }
+.send-log th { color: var(--ink-soft); font-weight: 550; }
+.send-log td.test-ok, .send-log td.error { font-size: inherit; }
+/* Safari no aplica la altura a un select nativo: se dibuja como los campos de texto, con su flecha. */
+select {
+  -webkit-appearance: none; appearance: none; padding-right: 2.25rem;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%), linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+  background-position: calc(100% - 1.125rem) 50%, calc(100% - 0.8125rem) 50%;
+  background-size: 0.3125rem 0.3125rem; background-repeat: no-repeat;
 }

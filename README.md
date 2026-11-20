@@ -18,6 +18,7 @@
 
 - **Answers one question first.** The header sums up every service on every page: "All 6 services are fine", or "Needs attention: VPN" with a link to the block. The watchtower's light and each affected block turn amber or red.
 - **Read-only and safe to share.** Talaia only reads from your services. Credentials are stored encrypted and never leave the server; the public dashboard shows no URLs, IP addresses, keys or peer names.
+- **Tells you, even when you're not looking.** When a service turns amber or red, and when it's back to normal, Talaia sends an alert through Telegram, ntfy or a JSON webhook, with the same words as the dashboard.
 - **Live.** Blocks update on their own, without reloading. If a service fails, its block keeps the last data and says how old it is.
 - **One command on Proxmox VE.** The installer creates an unprivileged LXC container, and updates make a backup and roll back if the new version doesn't start.
 - **Light.** A single Go binary with an embedded web app and SQLite. No Docker, no external database.

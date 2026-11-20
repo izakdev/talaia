@@ -10,10 +10,57 @@ export interface AppState {
   require_login: boolean;
 }
 
+export type NotifyLanguage = "" | "es" | "en";
+
 export interface AppSettings {
   theme: string;
   accent: string;
   require_login: boolean;
+  notify_language: NotifyLanguage;
+  notify_delay_seconds: number;
+}
+
+export type ChannelType = "telegram" | "ntfy" | "webhook";
+
+/** Canal de avisos tal como lo devuelve el servidor: nunca incluye sus secretos. */
+export interface Channel {
+  id: string;
+  name: string;
+  type: ChannelType;
+  enabled: boolean;
+  tls_skip_verify: boolean;
+  chat_id?: string;
+  server?: string;
+  updated_at: string;
+}
+
+/** Los secretos vacíos o ausentes conservan el valor guardado. */
+export interface ChannelInput {
+  id?: string;
+  name: string;
+  type: ChannelType;
+  enabled: boolean;
+  tls_skip_verify: boolean;
+  chat_id?: string;
+  server?: string;
+  token?: string;
+  topic?: string;
+  url?: string;
+  language?: "es" | "en";
+}
+
+export type Tone = "good" | "warn" | "bad" | "muted";
+
+export interface LogEntry {
+  id: number;
+  at: string;
+  channel: string;
+  channel_type: ChannelType;
+  event: "change" | "test";
+  services: { name: string; tone: Tone; previous: Tone }[];
+  result: "ok" | "error";
+  code?: string;
+  attempts: number;
 }
 
 export interface PlacedWidget {
@@ -42,6 +89,7 @@ export interface Connection {
   options: Record<string, boolean> | null;
   entities: string[] | null;
   link_url: string;
+  notify: boolean;
   updated_at: string;
 }
 
@@ -57,6 +105,7 @@ export interface ConnectionInput {
   options: Record<string, boolean>;
   entities: string[];
   link_url: string;
+  notify: boolean;
 }
 
 export interface EntityOption {
@@ -274,6 +323,13 @@ export interface ProxmoxData {
   nodes: ProxmoxNode[];
 }
 
+/** Estado de un servicio calculado por el servidor: color y clave del texto en i18n/states.json. */
+export interface ServiceState {
+  tone: Tone;
+  key: string;
+  params?: Record<string, string | number>;
+}
+
 export interface ConnectionState {
   id: string;
   name: string;
@@ -281,6 +337,7 @@ export interface ConnectionState {
   link: string;
   status: "pending" | "ok" | "error";
   error?: string;
+  state: ServiceState;
   data: unknown;
   checked_at: string | null;
   last_success_at: string | null;
@@ -346,5 +403,14 @@ export const api = {
   saveSettings: (settings: AppSettings) => request<AppSettings>("PUT", "/api/admin/settings", settings),
   changePassword: (current: string, next: string) =>
     request("POST", "/api/admin/password", { current, new: next }),
+  channels: () => request<Channel[]>("GET", "/api/admin/notifications/channels"),
+  createChannel: (input: ChannelInput) => request<Channel>("POST", "/api/admin/notifications/channels", input),
+  updateChannel: (id: string, input: ChannelInput) =>
+    request<Channel>("PUT", `/api/admin/notifications/channels/${encodeURIComponent(id)}`, input),
+  deleteChannel: (id: string) => request("DELETE", `/api/admin/notifications/channels/${encodeURIComponent(id)}`),
+  testSavedChannel: (id: string) =>
+    request<LogEntry>("POST", `/api/admin/notifications/channels/${encodeURIComponent(id)}/test`),
+  testChannel: (input: ChannelInput) => request<LogEntry>("POST", "/api/admin/notifications/test", input),
+  notificationLog: () => request<LogEntry[]>("GET", "/api/admin/notifications/log"),
   deleteConnection: (id: string) => request("DELETE", `/api/admin/connections/${encodeURIComponent(id)}`),
 };

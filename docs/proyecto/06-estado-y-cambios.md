@@ -19,8 +19,20 @@
 | 13 | Bloques que se apilan solos y panel a todo el ancho | Terminado y verificado con el panel real del cliente, publicado en `v0.2.5` |
 | 14 | QNAP por SNMPv3: discos, volúmenes y recursos | Terminado y verificado con el QNAP del cliente, publicado en `v0.3.0` |
 | 15 | SAI a través de un servidor NUT: estado, batería y autonomía | Terminado y verificado con el SAI del cliente, publicado en `v0.3.1` |
+| 16 | Notificaciones por Telegram, ntfy o webhook cuando un servicio cambia de color | Terminado y verificado con el Telegram del cliente |
 
 ## Historial
+
+### Hito 16 (2026-11-19)
+
+**Añadido:**
+- Notificaciones: cuando un servicio del panel pasa a ámbar o a rojo, y cuando vuelve a estar en orden, Talaia envía un aviso por Telegram, ntfy o un webhook JSON, sin ningún navegador abierto. El aviso lleva el nombre del servicio y su estado tal como sale en el bloque, en español o en inglés.
+- Sección «Notificaciones» en los ajustes: idioma de los avisos, tiempo que debe durar un cambio antes de avisar, canales con «Enviar prueba» y los 50 últimos envíos con su resultado.
+- Casilla «Avisar de sus cambios» en cada conexión, para silenciar una sin quitarla del panel.
+
+**Cambiado:**
+- El color y la etiqueta de cada bloque los calcula ahora el servidor, con la misma regla para el panel, la cabecera y los avisos; ver DEC-48. El panel se ve igual que antes.
+
 
 ### `v0.3.1` (2026-11-19)
 
@@ -274,6 +286,11 @@ Primera versión estable, con los binarios para amd64 y arm64, las sumas de comp
 | Un SAI por conexión | Si el servidor NUT tiene varios, cada uno necesita su conexión con `nut://host/sai`; ver DEC-46 | Bajo demanda |
 | NUT sin STARTTLS | El estado del SAI viaja en claro por la red, sin credenciales; ver DEC-47 | Bajo demanda |
 | SAI sin tensiones ni consumo | Solo estado, batería y autonomía, como pidió el cliente | Bajo demanda |
+| Avisos sin recordatorios | Un servicio que sigue en rojo no vuelve a avisar hasta que cambia | Por diseño, a petición del cliente |
+| Avisos solo por cambio de color | Un cambio de etiqueta dentro del mismo color (de un ámbar a otro) no avisa | Bajo demanda |
+| Telegram y ntfy.sh necesitan Internet | Sin salida a Internet, solo funcionan un ntfy propio o un webhook local | Por diseño de esos servicios |
+| Un envío que agota el tiempo puede haber llegado | Si el canal responde después de 10 s, Talaia lo da por fallido y lo reintenta, y el aviso llega dos veces. Se vio con una prueba de Telegram en la verificación real | Al darse la ocasión |
+| Sin reglas por canal | Todos los canales activos reciben todos los avisos | Bajo demanda |
 | Sistema del contenedor sin actualizaciones automáticas | Hay que actualizarlo con `apt` | Bajo demanda |
 
 ## Consumo medido

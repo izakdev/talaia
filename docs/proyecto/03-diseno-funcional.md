@@ -147,7 +147,7 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 
 ### Conexiones
 
-- **Lista:** nombre, servicio, URL, intervalo, estado y aviso si no se verifica TLS.
+- **Lista:** nombre, servicio, URL, intervalo, estado, aviso si no se verifica TLS y «Sin avisos» si la conexión no avisa de sus cambios.
 - **Estado:** se refresca cada 10 segundos.
 - **Eliminar:** pide confirmación en la propia fila.
 - **Sin conexiones:** invita a añadir la primera.
@@ -179,6 +179,7 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 | Mostrar resumen | Home Assistant | Activado por defecto |
 | Enlace para abrir el servicio | Todos | Opcional, `http` o `https`, sin credenciales. Vacío, usa la URL de conexión |
 | No verificar TLS | Todos salvo QNAP y SAI (NUT) | Desactivado por defecto |
+| Avisar de sus cambios | Todos | Activado por defecto. Desactivado, la conexión sigue en el panel, pero no envía avisos; ver [Notificaciones](#notificaciones) |
 
 | Credencial | Formato |
 |---|---|
@@ -220,6 +221,70 @@ Una misma conexión puede estar en varias páginas, una vez en cada una. Una con
 | Exigir inicio de sesión para ver el panel | Sí o no | No |
 
 Se aplican a todos los usuarios del panel. El idioma sigue siendo de cada navegador.
+
+#### Notificaciones
+
+Sección de Ajustes, después de «Acceso». Talaia avisa cuando un servicio del panel cambia de color y cuando vuelve a estar en orden, sin ningún navegador abierto.
+
+| Ajuste | Valores | Por defecto |
+|---|---|---|
+| Idioma de los avisos | Español o English | El de la administración al dar de alta el primer canal |
+| Avisar si el cambio dura | Sin espera, 1, 2, 5, 10 o 15 minutos | 2 minutos |
+
+El botón es «Guardar avisos», aparte de «Guardar ajustes», y cada uno guarda solo lo suyo.
+
+**Canales:** una lista con el nombre, el tipo, si está activo y el resultado de su última prueba, y los botones «Enviar prueba», «Editar» y «Eliminar» (con confirmación en la fila). Sin canales, indica que Talaia no envía avisos. «Añadir canal» abre un diálogo:
+
+| Campo | Tipos | Reglas |
+|---|---|---|
+| Tipo | Al crear | Telegram, ntfy o Webhook; no se cambia al editar |
+| Nombre | Todos | Obligatorio, hasta 60 caracteres |
+| Token del bot | Telegram | Obligatorio al crear, con la forma `número:texto` que da @BotFather. Cifrado |
+| Chat ID | Telegram | Obligatorio: un número (negativo en grupos) o `@canal`. La ayuda explica que hay que escribir antes al bot |
+| Servidor | ntfy | Opcional, `http` o `https`; vacío, ntfy.sh |
+| Tópico | ntfy | Obligatorio al crear: letras, cifras, `_` y `-`, hasta 64. Cifrado, porque en ntfy.sh quien lo conoce lee los avisos |
+| Token de acceso | ntfy | Opcional. Cifrado |
+| URL del webhook | Webhook | Obligatoria al crear, `http` o `https`. Cifrada, porque suele llevar un token |
+| Enviar avisos por este canal | Todos | Activado por defecto |
+| No verificar TLS | ntfy y Webhook | Desactivado por defecto |
+
+Al editar, los campos cifrados aparecen vacíos con «Déjalo en blanco para conservar el actual». Si se cambia el servidor de ntfy, hay que volver a escribir el tópico y, si lo había, el token, igual que al cambiar la URL de una conexión. «Enviar prueba» manda el mensaje de prueba con los datos del formulario sin guardar, y usa los secretos guardados si se dejan en blanco. Si se cambia un dato, el resultado anterior desaparece.
+
+**Mensaje:** primero los problemas, del más grave al menos grave, y luego las vueltas a la normalidad. Cada línea es el nombre de la conexión y su estado tal como sale en el bloque. No lleva URL, IP, versiones ni credenciales.
+
+```
+🔴 Talaia · Necesita atención
+Portainer: Entorno caído
+VPN: Túnel parado
+
+🟢 Talaia · Vuelve a estar en orden
+AdGuard: Protección activa
+```
+
+El emoji del título es el del peor color: 🔴 rojo, 🟠 ámbar y 🟢 verde. En inglés: «Talaia · Needs attention» y «Talaia · Back to normal». La prueba dice «🔔 Talaia · Mensaje de prueba. Si lo ves, este canal funciona.».
+
+**Reglas:**
+
+- Solo avisan los servicios que están en alguna página del panel, como en la cabecera.
+- Avisa un cambio de color (verde, ámbar o rojo) que dura el retardo elegido. Un cambio de etiqueta dentro del mismo color no avisa, ni un estado neutro como «Consultando…» o «Sin túneles», que tampoco interrumpe el plazo.
+- Los cambios que coinciden van en un solo mensaje, aunque Talaia los vea con unos segundos de diferencia.
+- Un servicio que entra ya en ámbar o en rojo avisa una vez pasado el retardo; uno que entra en verde, no.
+- Sin recordatorios: un aviso al cambiar y otro al volver a verde.
+- Un reinicio no repite los avisos. Una conexión silenciada, o Talaia sin canales, sigue el estado en silencio: al activar el aviso no llega nada atrasado.
+
+**Últimos envíos:** una tabla con la fecha, el canal, el aviso (cada servicio y su nuevo estado: «en orden», «aviso» o «fallo»; o «Mensaje de prueba») y el resultado: «Enviado» o el motivo del fallo, y el número de intentos si hubo más de uno. Guarda los 50 últimos y se refresca cada 15 segundos.
+
+| Motivo | Texto |
+|---|---|
+| `unauthorized` | El canal rechaza el token o la clave |
+| `rejected` | El canal ha rechazado el mensaje; revisa el chat ID o el tópico |
+| `unreachable` | No se puede conectar con el servidor |
+| `timeout` | El servidor no responde a tiempo |
+| `tls` | El certificado del servidor no es válido |
+| `bad_response` | El servidor ha respondido con un error |
+| `secret_unreadable` | No se puede descifrar el secreto; vuelve a escribirlo |
+
+Un aviso fallido se reintenta a los 30 s y a los 2 minutos si el fallo es de red o del servidor; si el canal rechaza el mensaje, no.
 
 **Contraseña:** pide la actual y dos veces la nueva, de al menos 12 caracteres. Cierra las demás sesiones. Los fallos cuentan para el bloqueo por IP.
 

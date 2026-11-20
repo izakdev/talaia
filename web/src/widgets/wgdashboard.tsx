@@ -65,11 +65,6 @@ function WGDashboard({ data }: { data: WGDashboardData }) {
 }
 
 export const wgdashboardWidget: Widget<WGDashboardData> = {
-  state: (data, t) => {
-    if (data.tunnels.length === 0) return { tone: "muted", label: t("wgdashboard.none") };
-    if (data.tunnels.some((tunnel) => !tunnel.up)) return { tone: "warn", label: t("wgdashboard.down") };
-    return { tone: "good", label: t("wgdashboard.allUp") };
-  },
   Body: WGDashboard,
   footer: (data) => `WGDashboard ${data.version}`,
 };

@@ -153,7 +153,7 @@ func TestLinkFallsBackToConnectionURL(t *testing.T) {
 func TestMigratesExistingDatabase(t *testing.T) {
 	s, path := newStore(t)
 	ctx := context.Background()
-	if _, err := s.db.Exec(`DROP TABLE widgets; DROP TABLE pages; DROP TABLE settings; ALTER TABLE connections DROP COLUMN link_url; ALTER TABLE connections DROP COLUMN entities; ALTER TABLE connections DROP COLUMN options; PRAGMA user_version = 1;`); err != nil {
+	if _, err := s.db.Exec(`DROP TABLE notify_state; DROP TABLE notification_channels; DROP TABLE notification_log; ALTER TABLE connections DROP COLUMN notify; DROP TABLE widgets; DROP TABLE pages; DROP TABLE settings; ALTER TABLE connections DROP COLUMN link_url; ALTER TABLE connections DROP COLUMN entities; ALTER TABLE connections DROP COLUMN options; PRAGMA user_version = 1;`); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.db.Exec(`INSERT INTO connections(id, name, type, base_url, secret, interval_seconds, created_at, updated_at)
@@ -168,7 +168,7 @@ func TestMigratesExistingDatabase(t *testing.T) {
 	}
 	defer s2.Close()
 	c, err := s2.GetConnection(ctx, "v1")
-	if err != nil || c.Name != "antigua" || c.Options["show_top_domains"] || len(c.Entities) != 0 {
+	if err != nil || c.Name != "antigua" || !c.Notify || c.Options["show_top_domains"] || len(c.Entities) != 0 {
 		t.Fatalf("c = %+v, err = %v", c, err)
 	}
 	pages, err := s2.Panel(ctx)
@@ -228,10 +228,10 @@ func TestSettingsDefaultsAndSave(t *testing.T) {
 	s, _ := newStore(t)
 	ctx := context.Background()
 	got, err := s.GetSettings(ctx)
-	if err != nil || got != (Settings{Theme: "auto", Accent: "amber"}) {
+	if err != nil || got != (Settings{Theme: "auto", Accent: "amber", NotifyDelaySeconds: 120}) {
 		t.Fatalf("por defecto = %+v, err = %v", got, err)
 	}
-	want := Settings{Theme: "dark", Accent: "teal", RequireLogin: true}
+	want := Settings{Theme: "dark", Accent: "teal", RequireLogin: true, NotifyLanguage: "en", NotifyDelaySeconds: 300}
 	if err := s.SaveSettings(ctx, want); err != nil {
 		t.Fatal(err)
 	}

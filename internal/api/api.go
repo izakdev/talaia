@@ -33,6 +33,7 @@ import (
 	"github.com/izakdev/talaia/internal/integrations/opnsense"
 	"github.com/izakdev/talaia/internal/integrations/proxmox"
 	"github.com/izakdev/talaia/internal/integrations/qnap"
+	"github.com/izakdev/talaia/internal/notify"
 	"github.com/izakdev/talaia/internal/store"
 )
 
@@ -58,13 +59,14 @@ type Server struct {
 	dummyHash string
 	failures  *failureLimiter
 	collector *collector.Manager
+	notifier  *notify.Notifier
 	registry  integrations.Registry
 	// SetupTokenFile, si existe ese archivo, protege el primer arranque con su contenido.
 	SetupTokenFile string
 }
 
 // New crea el servidor. web puede estar vacío si el frontend no se ha compilado.
-func New(st *store.Store, manager *collector.Manager, registry integrations.Registry, log *slog.Logger, version string, web fs.FS) (*Server, error) {
+func New(st *store.Store, manager *collector.Manager, notifier *notify.Notifier, registry integrations.Registry, log *slog.Logger, version string, web fs.FS) (*Server, error) {
 	dummy, err := auth.HashPassword("talaia-dummy-password")
 	if err != nil {
 		return nil, err
@@ -75,6 +77,7 @@ func New(st *store.Store, manager *collector.Manager, registry integrations.Regi
 		dummyHash: dummy,
 		failures:  &failureLimiter{entries: map[string]*failureEntry{}},
 		collector: manager,
+		notifier:  notifier,
 		registry:  registry,
 	}, nil
 }
@@ -109,6 +112,13 @@ func (s *Server) Handler() http.Handler {
 			r.Get("/connections/{id}", s.getConnection)
 			r.Put("/connections/{id}", s.updateConnection)
 			r.Delete("/connections/{id}", s.deleteConnection)
+			r.Get("/notifications/channels", s.listChannels)
+			r.Post("/notifications/channels", s.createChannel)
+			r.Put("/notifications/channels/{id}", s.updateChannel)
+			r.Delete("/notifications/channels/{id}", s.deleteChannel)
+			r.Post("/notifications/channels/{id}/test", s.testSavedChannel)
+			r.Post("/notifications/test", s.testChannel)
+			r.Get("/notifications/log", s.notificationLog)
 		})
 		r.NotFound(func(w http.ResponseWriter, _ *http.Request) { writeError(w, http.StatusNotFound, "not_found") })
 		r.MethodNotAllowed(func(w http.ResponseWriter, _ *http.Request) {
@@ -429,6 +439,8 @@ type connectionIn struct {
 	Options         map[string]bool `json:"options"`
 	Entities        []string        `json:"entities"`
 	LinkURL         string          `json:"link_url"`
+	// Notify es opcional: si no llega, la conexión avisa.
+	Notify *bool `json:"notify"`
 }
 
 type connectionOut struct {
@@ -442,11 +454,12 @@ type connectionOut struct {
 	Options         map[string]bool `json:"options"`
 	Entities        []string        `json:"entities"`
 	LinkURL         string          `json:"link_url"`
+	Notify          bool            `json:"notify"`
 	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
 func toOut(c store.Connection) connectionOut {
-	return connectionOut{c.ID, c.Name, c.Type, c.BaseURL, c.Username, c.IntervalSeconds, c.TLSSkipVerify, c.Options, c.Entities, c.LinkURL, c.UpdatedAt}
+	return connectionOut{c.ID, c.Name, c.Type, c.BaseURL, c.Username, c.IntervalSeconds, c.TLSSkipVerify, c.Options, c.Entities, c.LinkURL, c.Notify, c.UpdatedAt}
 }
 
 func validateConnection(in *connectionIn) string {
@@ -601,6 +614,7 @@ func (s *Server) createConnection(w http.ResponseWriter, r *http.Request) {
 	c, err := s.store.CreateConnection(r.Context(), store.Connection{
 		Name: in.Name, Type: in.Type, BaseURL: in.BaseURL, Username: in.Username,
 		IntervalSeconds: in.IntervalSeconds, TLSSkipVerify: in.TLSSkipVerify, Options: in.Options, Entities: in.Entities, LinkURL: in.LinkURL,
+		Notify: in.Notify == nil || *in.Notify,
 	}, *in.Secret)
 	if err != nil {
 		s.internal(w, err)
@@ -640,6 +654,7 @@ func (s *Server) updateConnection(w http.ResponseWriter, r *http.Request) {
 	c, err := s.store.UpdateConnection(r.Context(), store.Connection{
 		ID: id, Name: in.Name, BaseURL: in.BaseURL, Username: in.Username,
 		IntervalSeconds: in.IntervalSeconds, TLSSkipVerify: in.TLSSkipVerify, Options: in.Options, Entities: in.Entities, LinkURL: in.LinkURL,
+		Notify: in.Notify == nil || *in.Notify,
 	}, in.Secret)
 	if s.storeError(w, err) {
 		return

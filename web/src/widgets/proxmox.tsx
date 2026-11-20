@@ -172,13 +172,6 @@ function Guests({ guests }: { guests: ProxmoxGuest[] }) {
 }
 
 export const proxmoxWidget: Widget<ProxmoxData> = {
-  state: (data, t) => {
-    if (data.quorate === false) return { tone: "bad", label: t("proxmox.noQuorum") };
-    if (data.nodes_online < data.nodes_total) {
-      return { tone: "warn", label: t("proxmox.nodesDown", { online: data.nodes_online, total: data.nodes_total }) };
-    }
-    return { tone: "good", label: t(data.cluster_name ? "proxmox.clusterOk" : "proxmox.nodeOk") };
-  },
   Body: Proxmox,
   footer: (data) => (data.version ? `Proxmox VE ${data.version}` : ""),
 };

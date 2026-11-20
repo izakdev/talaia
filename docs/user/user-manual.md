@@ -16,11 +16,12 @@ Talaia is a dashboard that shows the status of your homelab services at a glance
 6. [Editing and deleting connections](#editing-and-deleting-connections)
 7. [Arranging the dashboard](#arranging-the-dashboard)
 8. [Settings](#settings)
-9. [Language and appearance](#language-and-appearance)
-10. [Security and remote access](#security-and-remote-access)
-11. [Backups](#backups)
-12. [Troubleshooting](#troubleshooting)
-13. [Current limitations](#current-limitations)
+9. [Notifications](#notifications)
+10. [Language and appearance](#language-and-appearance)
+11. [Security and remote access](#security-and-remote-access)
+12. [Backups](#backups)
+13. [Troubleshooting](#troubleshooting)
+14. [Current limitations](#current-limitations)
 
 ## Installation
 
@@ -521,6 +522,61 @@ In the administration, open **Settings**.
 - **Require sign-in to view the dashboard:** the data stops being public, and anyone who had the dashboard open stops seeing it. Turn it on if the dashboard is reachable from outside your trusted network.
 - **Password:** enter the current one and the new one twice, with at least 12 characters. Other sessions are signed out.
 
+## Notifications
+
+Talaia can alert you on your phone when a service on the dashboard turns amber or red, and again when it's back to normal. It works without any browser open. The alert carries each service's name and its status as shown in its block, with no addresses or passwords:
+
+```
+🟠 Talaia · Needs attention
+AdGuard: Protection off
+VPN: Tunnel stopped
+```
+
+In the administration, open **Settings** and scroll down to **Notifications**.
+
+![Notifications section in the settings](img/26-ajustes-notificaciones.png)
+
+**Adding a channel:** press **Add channel**, choose the type and fill in its details. **Send test** sends a test message without saving anything, so you can check it arrives. You can have several channels, and every active one receives each alert.
+
+![Adding a Telegram channel](img/25-canal-telegram.png)
+
+- **Telegram:**
+  1. Open a chat with [@BotFather](https://t.me/BotFather), send `/newbot` and follow the steps. It gives you the **bot token**.
+  2. Write anything to your new bot; if you want the alerts in a group, add the bot to the group.
+  3. Get the **chat ID**: [@userinfobot](https://t.me/userinfobot) gives you yours, or open `https://api.telegram.org/botTOKEN/getUpdates` in the browser and look for `"chat":{"id":…}`. In a group, the number is negative.
+- **ntfy:** leave the server empty to use [ntfy.sh](https://ntfy.sh), or enter your own. The **topic** is the channel's name in ntfy: subscribe to it in the ntfy app. On ntfy.sh, anyone who knows the topic can read your alerts, so pick one that's hard to guess. The access token is only needed if your server requires signing in.
+- **Webhook:** Talaia sends a `POST` with this JSON to the URL you enter, for example a Home Assistant or n8n webhook:
+
+  ```json
+  {
+    "event": "change",
+    "language": "en",
+    "text": "🟠 Talaia · Needs attention\nAdGuard: Protection off",
+    "services": [
+      { "name": "AdGuard", "type": "adguard", "tone": "warn", "previous": "good", "label": "Protection off" }
+    ],
+    "sent_at": "2026-11-19T10:00:00Z"
+  }
+  ```
+
+  `tone` and `previous` are `good`, `warn` or `bad`. The test message has `"event": "test"` and an empty list of services.
+
+The token, the topic and the URL are stored encrypted and never shown again. When you edit a channel, leave them blank to keep them; if you change the ntfy server, you'll have to enter the topic and the token again.
+
+**When it alerts:**
+- **Alert if the change lasts:** the new status has to hold for that long, 2 minutes by default. That way, an outage of a few seconds doesn't alert you. **No wait** alerts as soon as Talaia sees the change.
+- If several services change at once, you get a single message.
+- There are no reminders: one alert when it changes and another when it's back to green.
+- Only services on some dashboard page alert. A grey status, such as "Checking…" or "No tunnels", doesn't alert.
+- Restarting Talaia doesn't repeat alerts already sent.
+- **Silencing a service:** edit its connection and untick **Alert on its changes**. It stays on the dashboard, and the connection list shows "No alerts". When you tick it again, you don't get any late alerts.
+
+**Alert language:** Spanish or English. Adding the first channel picks the administration's language; change it and press **Save alert settings**.
+
+**Recent sends:** the table shows the last 50 alerts and tests, through which channel, and whether they were sent or why they failed. If a channel doesn't respond, Talaia retries twice over the next two minutes.
+
+Telegram and ntfy.sh need the Talaia machine to have Internet access. If it doesn't, use your own ntfy server or a webhook on your network.
+
 ## Language and appearance
 
 - **Language:** Talaia uses your browser's language if it is Spanish, and English otherwise. The **English** or **Español** button switches it, and the choice is remembered in that browser and applied to its other open tabs.
@@ -589,6 +645,10 @@ In the administration, open **Settings**.
 | Home Assistant is slow or times out | In very large installations, increase the refresh, for example to 60 seconds |
 | QNAP doesn't respond in time | Check that SNMP is enabled with version SNMP V3, that the privacy protocol matches and that the firewall lets UDP 161 through |
 | The UPS doesn't connect | Check the `LISTEN` line of `upsd.conf` on the machine with the UPS and that the firewall lets TCP 3493 through |
+| An alert says "the channel rejects the token or key" | Check the Telegram bot token or the ntfy token. If you revoked it in @BotFather, enter the new one |
+| An alert says "the channel rejected the message" | In Telegram, check the chat ID and that you wrote to the bot first or that the bot is still in the group. In ntfy, check the topic and whether your server lets you publish to it |
+| An alert says "can't connect to the server" | Check that the Talaia machine has Internet access (Telegram, ntfy.sh) or can reach your ntfy server or your webhook |
+| No alerts arrive | Check that the channel is active, that the service is on the dashboard and that its connection has **Alert on its changes** ticked. **Send test** tells you whether the channel works |
 
 ## Current limitations
 
@@ -599,5 +659,6 @@ In the administration, open **Settings**.
 - The Portainer and WGDashboard blocks, and OPNsense's WireGuard, don't detail each container or peer: they only give counts.
 - The QNAP block uses QTS's default temperature thresholds, not yours, and doesn't tell which volume is on a USB disk.
 - The UPS block shows a single UPS, without voltages or load, and the connection to NUT isn't encrypted; no password travels over it.
+- Notifications alert on colour changes, without reminders: a label change within the same colour doesn't alert, and every active channel receives every alert.
 
 The status of each item is in [Status and changes](../proyecto/06-estado-y-cambios.md), in Spanish.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strconv"
 )
 
 // Widget es el bloque de una conexión colocado en una página.
@@ -91,11 +92,18 @@ type Settings struct {
 	Theme        string `json:"theme"`
 	Accent       string `json:"accent"`
 	RequireLogin bool   `json:"require_login"`
+	// NotifyLanguage es el idioma de los avisos: "" sin elegir, "es" o "en".
+	NotifyLanguage string `json:"notify_language"`
+	// NotifyDelaySeconds es el tiempo que debe durar un cambio para avisar.
+	NotifyDelaySeconds int `json:"notify_delay_seconds"`
 }
+
+// DefaultNotifyDelaySeconds es el retardo de los avisos si no se ha elegido otro.
+const DefaultNotifyDelaySeconds = 120
 
 // GetSettings devuelve los ajustes, con sus valores por defecto si no se han guardado.
 func (s *Store) GetSettings(ctx context.Context) (Settings, error) {
-	settings := Settings{Theme: "auto", Accent: "amber"}
+	settings := Settings{Theme: "auto", Accent: "amber", NotifyDelaySeconds: DefaultNotifyDelaySeconds}
 	rows, err := s.db.QueryContext(ctx, `SELECT key, value FROM settings`)
 	if err != nil {
 		return settings, err
@@ -113,6 +121,12 @@ func (s *Store) GetSettings(ctx context.Context) (Settings, error) {
 			settings.Accent = value
 		case "require_login":
 			settings.RequireLogin = value == "1"
+		case "notify_language":
+			settings.NotifyLanguage = value
+		case "notify_delay_seconds":
+			if n, err := strconv.Atoi(value); err == nil {
+				settings.NotifyDelaySeconds = n
+			}
 		}
 	}
 	return settings, rows.Err()
@@ -129,7 +143,10 @@ func (s *Store) SaveSettings(ctx context.Context, settings Settings) error {
 		return err
 	}
 	defer tx.Rollback()
-	for key, value := range map[string]string{"theme": settings.Theme, "accent": settings.Accent, "require_login": requireLogin} {
+	for key, value := range map[string]string{
+		"theme": settings.Theme, "accent": settings.Accent, "require_login": requireLogin,
+		"notify_language": settings.NotifyLanguage, "notify_delay_seconds": strconv.Itoa(settings.NotifyDelaySeconds),
+	} {
 		if _, err := tx.ExecContext(ctx,
 			`INSERT INTO settings(key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`, key, value); err != nil {
 			return err

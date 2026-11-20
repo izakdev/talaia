@@ -1,5 +1,5 @@
-import type { QNAPData, QNAPDisk, QNAPTemperature, QNAPVolume } from "../api";
-import { useI18n, type Translate } from "../i18n";
+import type { QNAPData, QNAPDisk, QNAPVolume } from "../api";
+import { useI18n } from "../i18n";
 import { formatBytes } from "./homeassistant";
 import type { Tone, Widget } from "./types";
 
@@ -16,7 +16,6 @@ function tempTone(c: number | null | undefined, warn: number, err: number): Tone
   return "good";
 }
 
-const temperatureTone = (temp?: QNAPTemperature): Tone => (temp ? tempTone(temp.c, temp.warn_c, temp.err_c) : "good");
 const diskTempTone = (data: QNAPData, disk: QNAPDisk) => tempTone(disk.temp_c, data.disk_temp_warn_c, data.disk_temp_err_c);
 
 function diskTone(data: QNAPData, disk: QNAPDisk): Tone {
@@ -29,30 +28,6 @@ function volumeTone(volume: QNAPVolume): Tone {
   if (volume.status === "degraded" || volume.status === "error") return "bad";
   if (volume.status !== "ready" || fill(volume) >= FULL_PERCENT) return "warn";
   return "good";
-}
-
-type Key = Parameters<Translate>[0];
-
-// El primer problema de la lista da la etiqueta; el orden es el de gravedad.
-function state(data: QNAPData, t: Translate): { tone: Tone; label: string } {
-  const temps = [temperatureTone(data.cpu_temperature), temperatureTone(data.system_temperature)];
-  const diskTemps = data.disks.map((disk) => diskTempTone(data, disk));
-  const checks: [boolean, Tone, Key][] = [
-    [data.disks.some((disk) => disk.health === "error"), "bad", "qnap.state.diskError"],
-    [data.storage === "degraded" || data.volumes.some((v) => v.status === "degraded"), "bad", "qnap.state.degraded"],
-    [data.storage === "error" || data.volumes.some((v) => v.status === "error"), "bad", "qnap.state.storageError"],
-    [[...temps, ...diskTemps].includes("bad"), "bad", "qnap.state.hot"],
-    [data.disks.some((disk) => disk.health === "warning"), "warn", "qnap.state.smartWarning"],
-    [data.storage === "syncing" || data.volumes.some((v) => v.status === "syncing"), "warn", "qnap.state.syncing"],
-    [data.storage === "warning" || data.volumes.some((v) => v.status === "warning"), "warn", "qnap.state.storageWarning"],
-    [data.volumes.some((v) => fill(v) >= FULL_PERCENT), "warn", "qnap.state.full"],
-    [[...temps, ...diskTemps].includes("warn"), "warn", "qnap.state.warm"],
-    [data.fan_failed, "warn", "qnap.state.fan"],
-  ];
-  const problem = checks.find(([hit]) => hit);
-  if (problem) return { tone: problem[1], label: t(problem[2]) };
-  if (data.disks.length === 0) return { tone: "muted", label: t("qnap.state.noDisks") };
-  return { tone: "good", label: t("qnap.state.ok") };
 }
 
 const rowClass = (tone: Tone) => (tone === "bad" ? "alarm" : tone === "warn" ? "no-data" : undefined);
@@ -142,7 +117,6 @@ function QNAP({ data }: { data: QNAPData }) {
 }
 
 export const qnapWidget: Widget<QNAPData> = {
-  state,
   Body: QNAP,
   footer: (data) => (data.version ? `QNAP ${data.version}` : "QNAP"),
 };

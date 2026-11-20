@@ -136,16 +136,6 @@ function OPNsense({ data }: { data: OPNsenseData }) {
 }
 
 export const opnsenseWidget: Widget<OPNsenseData> = {
-  state: (data, t) => {
-    const states = data.gateways.map((gateway) => gateway.state);
-    if (states.length === 0) return { tone: "muted", label: t("opnsense.noGateways") };
-    if (states.includes("offline")) return { tone: "bad", label: t("opnsense.offline") };
-    if (states.includes("degraded")) return { tone: "warn", label: t("opnsense.degraded") };
-    if (data.wireguard?.tunnels.some((tunnel) => !tunnel.up)) return { tone: "warn", label: t("opnsense.wireguardDown") };
-    // Un gateway sin monitorizar siempre figura como correcto: no demuestra que haya conexión.
-    if (!states.includes("online")) return { tone: "muted", label: t("opnsense.unmonitored") };
-    return { tone: "good", label: t("opnsense.online") };
-  },
   Body: OPNsense,
   footer: (data) => (data.version ? `OPNsense ${data.version}` : ""),
 };

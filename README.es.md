@@ -18,6 +18,7 @@
 
 - **Responde primero a una pregunta.** La cabecera resume todos los servicios de todas las páginas: «Los 6 servicios están en orden», o «Necesita atención: VPN» con un enlace a su bloque. La luz de la atalaya y cada bloque afectado se ponen en ámbar o en rojo.
 - **Solo lectura, y se puede compartir.** Talaia solo lee de tus servicios. Las credenciales se guardan cifradas y nunca salen del servidor; el panel público no muestra URL, direcciones IP, claves ni nombres de peers.
+- **Te avisa aunque no estés mirando.** Cuando un servicio se pone en ámbar o en rojo, y cuando vuelve a estar en orden, Talaia envía un aviso por Telegram, ntfy o un webhook JSON, con las mismas palabras que el panel.
 - **En vivo.** Los bloques se actualizan solos, sin recargar. Si un servicio falla, su bloque conserva el último dato y dice su antigüedad.
 - **Un comando en Proxmox VE.** El instalador crea un contenedor LXC no privilegiado, y al actualizar hace una copia de seguridad y vuelve atrás si la versión nueva no arranca.
 - **Ligero.** Un único binario de Go con la web integrada y SQLite. Sin Docker ni base de datos externa.

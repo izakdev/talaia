@@ -78,10 +78,8 @@ const SEVERITY: Record<Tone, number> = { muted: 0, good: 0, warn: 1, bad: 2 };
 
 /** Estado de un servicio: el mismo para su bloque y para el resumen de la cabecera. */
 function serviceState(connection: ConnectionState, t: I18n["t"]): { tone: Tone; label: string } {
-  const widget = WIDGETS[connection.type] as Widget<unknown> | undefined;
-  if (connection.status === "error") return { tone: "bad", label: t("status.noResponse") };
-  if (widget && connection.data) return widget.state(connection.data, t);
-  return { tone: "muted", label: t("status.checking") };
+  const { tone, key, params } = connection.state;
+  return { tone, label: t(key as Parameters<I18n["t"]>[0], params) };
 }
 
 export function serviceAnchor(connectionId: string) {

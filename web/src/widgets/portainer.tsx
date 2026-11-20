@@ -62,12 +62,6 @@ function Portainer({ data }: { data: PortainerData }) {
 }
 
 export const portainerWidget: Widget<PortainerData> = {
-  state: (data, t) => {
-    if (data.environments.length === 0) return { tone: "muted", label: t("portainer.none") };
-    if (data.environments.some((e) => !e.online)) return { tone: "bad", label: t("portainer.down") };
-    if (data.environments.some((e) => e.containers?.unhealthy)) return { tone: "warn", label: t("portainer.problems") };
-    return { tone: "good", label: t("portainer.allOnline") };
-  },
   Body: Portainer,
   footer: (data) => `Portainer ${data.version}`,
 };

@@ -2,7 +2,7 @@
 
 ## Visión general
 
-Talaia es un único binario de Go que incluye la web de React y una base de datos SQLite embebida. El navegador solo habla con Talaia, y Talaia consulta los servicios en segundo plano.
+Talaia es un único binario de Go que incluye la web de React y una base de datos SQLite embebida. El navegador solo habla con Talaia, y Talaia consulta los servicios en segundo plano. Si hay canales de notificación, el notificador avisa de los cambios de color sin necesidad de ningún navegador.
 
 ```mermaid
 flowchart LR
@@ -11,6 +11,7 @@ flowchart LR
         W[Web React embebida]
         A[API HTTP]
         C[Recolectores con caché en memoria]
+        N[Notificador]
         S[(SQLite)]
     end
     K[/secret.key/]
@@ -22,6 +23,7 @@ flowchart LR
     WG[WGDashboard]
     QN[QNAP]
     NU[Servidor NUT del SAI]
+    CH[Telegram, ntfy o webhook]
 
     B -->|HTTP y SSE| A
     B --> W
@@ -37,6 +39,9 @@ flowchart LR
     C -->|solo lectura| WG
     C -->|SNMPv3, solo lectura| QN
     C -->|protocolo de NUT, solo lectura| NU
+    C -->|cambios de estado| N
+    N --> S
+    N -->|avisos, sin direcciones ni secretos| CH
 ```
 
 ## Tecnologías
@@ -65,8 +70,9 @@ Los motivos detallados están en [Decisiones](05-decisiones.md).
 | `internal/auth` | Contraseñas y tokens de sesión |
 | `internal/secrets` | Clave de cifrado y cifrado de credenciales |
 | `internal/store` | SQLite, migraciones y consultas |
-| `internal/collector` | Un recolector por conexión, caché de estado y avisos de cambio |
-| `internal/integrations` | Interfaz común, cliente HTTP y códigos de error |
+| `internal/collector` | Un recolector por conexión, caché de estado (con el color de cada servicio) y avisos de cambio |
+| `internal/notify` | Notificador: retardo, agrupación, último color avisado, mensaje y emisores de Telegram, ntfy y webhook |
+| `internal/integrations` | Interfaz común, estado de un servicio (`State`), cliente HTTP y códigos de error |
 | `internal/integrations/adguard` | Integración con AdGuard Home |
 | `internal/integrations/proxmox` | Integración con Proxmox VE |
 | `internal/integrations/homeassistant` | Integración con Home Assistant |
@@ -75,10 +81,12 @@ Los motivos detallados están en [Decisiones](05-decisiones.md).
 | `internal/integrations/wgdashboard` | Integración con WGDashboard |
 | `internal/integrations/qnap` | Integración con QNAP por SNMPv3 |
 | `internal/integrations/nut` | Integración con un SAI a través de su servidor NUT (`upsd`), con un cliente propio del protocolo de red de NUT |
-| `web` | Frontend; `web/embed.go` lo incluye en el binario |
-| `web/src/widgets` | Estado, contenido y pie del bloque de cada integración |
+| `web` | Frontend; `web/embed.go` lo incluye en el binario y `web/states.go`, los textos de estado |
+| `web/src/i18n/states.json` | Textos de estado de los servicios en español e inglés, compartidos por el panel y los avisos |
+| `web/src/widgets` | Contenido y pie del bloque de cada integración |
 | `web/src/PanelEditor.tsx` | Editor de páginas y bloques |
 | `web/src/Settings.tsx` | Tema, acento, acceso y contraseña |
+| `web/src/Notifications.tsx` | Ajustes de avisos, canales y últimos envíos |
 | `e2e` | Pruebas de extremo a extremo y generación de capturas |
 | `scripts/talaia-proxmox.sh` | Instalador y actualizador para Proxmox VE, en un solo archivo |
 | `scripts/test` | Prueba del instalador con systemd real y comandos de Proxmox simulados |
@@ -116,6 +124,43 @@ sequenceDiagram
 - **Reconexión:** `EventSource` reconecta por sí solo y el evento inicial restablece el estado completo.
 - **Límite:** se admiten hasta 256 suscriptores simultáneos; a partir de ahí, la API responde `503`.
 
+### Avisos de cambios de estado
+
+El notificador (`internal/notify`) se suscribe al recolector, igual que la API para el SSE, y revisa los servicios con cada lectura y cada 5 s.
+
+```mermaid
+sequenceDiagram
+    participant C as Recolector
+    participant N as Notificador
+    participant S as SQLite
+    participant K as Canal
+
+    C-->>N: aviso de cambio
+    N->>S: ajustes, panel, conexiones, canales y último color avisado
+    N->>N: color actual distinto del avisado y estable durante el retardo
+    N->>S: guarda el color avisado
+    par cada canal activo
+        N->>K: aviso (hasta 3 intentos)
+        N->>S: entrada en el registro
+    end
+```
+
+- **Qué se vigila:** solo las conexiones que están en alguna página del panel, como la cabecera. Al quitar una del panel se olvida su color avisado.
+- **Qué avisa:** un cambio de color verde, ámbar o rojo. El gris (`muted`) no avisa ni reinicia el plazo, y un servicio sin color guardado parte de verde.
+- **Retardo:** el color nuevo debe durar `notify_delay_seconds` (0, 60, 120, 300, 600 o 900; 120 por defecto). El candidato vive en memoria: tras reiniciar, el plazo empieza de nuevo.
+- **Agrupación:** los cambios que maduran en el mismo ciclo van en un mensaje. Al madurar uno, se adelantan los que lleven al menos el retardo menos la mitad de este, con un máximo de 30 s, porque cada servicio se consulta a su ritmo.
+- **Silencio y sin canales:** el color avisado se actualiza igual, para que al activar el aviso o el primer canal no llegue nada atrasado.
+- **Envío:** cada canal en su propia goroutine, para que uno lento no retrase a los demás. Reintentos a los 30 s y a los 2 min con errores de red, tiempo agotado, `5xx` o `429`; antes de cada uno se comprueba que el canal sigue activo. El color se guarda al decidir el envío, de modo que un canal caído no provoca repeticiones.
+- **Mensaje:** primero los problemas, del más grave al menos grave, y después las vueltas a verde, con el nombre de la conexión y su etiqueta traducida desde `states.json`. Los saltos de línea del nombre se cambian por espacios y se recorta a 80 caracteres.
+
+| Canal | Petición |
+|---|---|
+| Telegram | `POST {api}/bot{token}/sendMessage` con `{chat_id, text}` en texto plano |
+| ntfy | `POST {servidor}/` con `{topic, title, message, priority, tags}` (publicación en JSON, que admite tildes y emojis en el título) y `Authorization: Bearer` si hay token. Prioridad 4 con rojo, 3 con ámbar o prueba y 2 con vueltas a verde |
+| Webhook | `POST` con `{event, language, text, services: [{name, type, tone, previous, label}], sent_at}`; `event` es `change` o `test` |
+
+Los errores del envío son códigos públicos: los de las integraciones más `rejected` (otro `4xx`) y `secret_unreadable`. Ni el registro ni los logs guardan la URL, el token ni la respuesta del servicio.
+
 ### Cambios en una conexión
 
 Al crear, editar o eliminar una conexión, la API reinicia su recolector. Si cambian la URL, el usuario o las opciones, se descarta el dato en caché. Así, un dato de otro destino nunca se muestra como actual, y una opción desactivada deja de exponer datos de inmediato.
@@ -128,7 +173,7 @@ type Integration interface {
 }
 ```
 
-`Collect` devuelve los datos que se enviarán al dashboard público, por lo que no debe incluir credenciales ni direcciones internas. Una integración con entidades que elegir implementa además `EntityLister`, que alimenta el selector de la administración. Los errores se clasifican en códigos públicos con `integrations.Code`:
+`Collect` devuelve los datos que se enviarán al dashboard público, por lo que no debe incluir credenciales ni direcciones internas. Esos datos implementan además `Stater`, que da el color (`good`, `warn`, `bad` o `muted`) y la clave del texto de estado con sus parámetros. El recolector lo publica en el campo `state` de cada conexión: el panel lo traduce y el notificador lo usa para avisar (DEC-48). Con un error, el estado es `bad` y `status.noResponse`; sin datos, `muted` y `status.checking`. Una integración con entidades que elegir implementa además `EntityLister`, que alimenta el selector de la administración. Los errores se clasifican en códigos públicos con `integrations.Code`:
 
 | Código | Causa |
 |---|---|
@@ -142,7 +187,7 @@ type Integration interface {
 
 ### Cómo añadir una integración
 
-1. Crear el paquete en `internal/integrations/<nombre>` e implementar `Integration`.
+1. Crear el paquete en `internal/integrations/<nombre>`, implementar `Integration` y, en sus datos, `Stater`, con los textos de estado en `web/src/i18n/states.json`.
 2. Registrarla en `registry`, en `cmd/talaia/main.go`.
 3. Declarar el tipo y sus opciones en `connectionTypes`, en `internal/api/api.go`.
 4. Añadir la entrada y su icono en `web/src/catalog.ts`, y sus textos en `web/src/i18n.tsx`.
@@ -257,7 +302,7 @@ Las respuestas son JSON. Las escrituras exigen `Content-Type: application/json` 
 | `POST /api/auth/logout` | Público | Cierra la sesión y la revoca en el servidor |
 | `GET /api/admin/status` | Sesión | Estado de todas las conexiones, estén o no en el panel |
 | `GET` y `PUT /api/admin/panel` | Sesión | Lee o sustituye de forma atómica las páginas y sus bloques |
-| `GET` y `PUT /api/admin/settings` | Sesión | Lee o guarda tema, acento y acceso |
+| `GET` y `PUT /api/admin/settings` | Sesión | Lee o guarda tema, acento, acceso, idioma de los avisos y retardo |
 | `POST /api/admin/password` | Sesión | Cambia la contraseña y revoca las demás sesiones |
 | `GET /api/admin/connections` | Sesión | Lista las conexiones |
 | `POST /api/admin/connections` | Sesión | Crea una conexión |
@@ -266,6 +311,13 @@ Las respuestas son JSON. Las escrituras exigen `Content-Type: application/json` 
 | `GET /api/admin/connections/{id}` | Sesión | Devuelve una conexión |
 | `PUT /api/admin/connections/{id}` | Sesión | Actualiza una conexión |
 | `DELETE /api/admin/connections/{id}` | Sesión | Elimina una conexión |
+| `GET` y `POST /api/admin/notifications/channels` | Sesión | Lista los canales o crea uno. El primero fija el idioma de los avisos si aún no se ha elegido |
+| `PUT` y `DELETE /api/admin/notifications/channels/{id}` | Sesión | Actualiza o elimina un canal. El tipo no cambia; un secreto en blanco conserva el guardado, salvo si cambia el servidor de ntfy: entonces hay que escribir otra vez el tópico y el token (`secret_required_for_url_change`), para no enviarlos a otro servidor |
+| `POST /api/admin/notifications/channels/{id}/test` | Sesión | Envía un mensaje de prueba por un canal guardado |
+| `POST /api/admin/notifications/test` | Sesión | Envía una prueba con los datos del formulario, sin guardar; con `id`, completa los secretos en blanco con los guardados |
+| `GET /api/admin/notifications/log` | Sesión | Los 50 últimos envíos |
+
+Las respuestas de los canales nunca incluyen el token, el tópico ni la URL del webhook: solo el nombre, el tipo, si está activo, el chat ID de Telegram y el servidor de ntfy.
 
 ## Modelo de datos
 
@@ -274,6 +326,7 @@ erDiagram
     users ||--o{ sessions : tiene
     pages ||--o{ widgets : contiene
     connections ||--o{ widgets : aparece
+    connections ||--o| notify_state : avisado
     settings {
         text key PK
         text value
@@ -315,15 +368,44 @@ erDiagram
         text options
         text entities
         text link_url
+        integer notify
         integer created_at
         integer updated_at
+    }
+    notify_state {
+        text connection_id PK
+        text tone
+    }
+    notification_channels {
+        text id PK
+        text name
+        text type
+        integer enabled
+        text config
+        blob secret
+        integer tls_skip_verify
+        integer created_at
+        integer updated_at
+    }
+    notification_log {
+        integer id PK
+        integer at
+        text channel
+        text channel_type
+        text event
+        text services
+        text result
+        text code
+        integer attempts
     }
 ```
 
 - **Migraciones:** se aplican al arrancar, y `PRAGMA user_version` guarda la versión. Talaia no arranca con una base de datos de una versión posterior.
 - **Panel inicial:** la migración crea la página «Inicio» con las conexiones existentes. Una conexión nueva se añade a la primera página.
 - **Rejilla:** 12 columnas. Un bloque ocupa de 2 a 12 columnas y de 2 a 60 filas, sin solapes. Las opciones siguen en la conexión, ver [DEC-21](05-decisiones.md).
-- **Estado de los servicios:** se guarda solo en memoria y se reconstruye al arrancar.
+- **Estado de los servicios:** se guarda solo en memoria y se reconstruye al arrancar. Lo único que se guarda es el último color avisado de cada conexión (`notify_state`), para no repetir avisos tras reiniciar.
+- **Canales:** `config` guarda lo que no es secreto (`chat_id` de Telegram y `server` de ntfy). El secreto es un JSON cifrado con el token del bot, el tópico y el token de ntfy, o la URL del webhook.
+- **Registro de envíos:** se conservan las 50 entradas más recientes, con el nombre del canal copiado para que sobreviva a su borrado. Los ajustes de avisos (`notify_language` y `notify_delay_seconds`) están en `settings`.
 
 ## Seguridad
 
@@ -336,7 +418,8 @@ erDiagram
 | Código de instalación | De 192 bits, comparado en tiempo constante y eliminado al usarse |
 | Sesiones | Token aleatorio de 32 bytes en una cookie `HttpOnly` y `SameSite=Lax`; en la base de datos solo se guarda su hash; duran 30 días |
 | Cookie `Secure` | Se activa con TLS o con `X-Forwarded-Proto: https` |
-| Credenciales | AES-256-GCM, vinculadas al ID de la conexión para que no se puedan intercambiar entre filas |
+| Credenciales | AES-256-GCM, vinculadas al ID de la conexión para que no se puedan intercambiar entre filas. Los secretos de los canales de aviso, igual, vinculados al ID del canal |
+| Avisos | Solo el nombre de la conexión, su etiqueta de estado y, en el webhook, el tipo y los colores; nunca URL, IP, usuarios ni credenciales. El cliente es el de las integraciones (sin proxy ni redirecciones, 10 s) y lee 64 KiB de respuesta como máximo, que nunca se guardan |
 | Clave de cifrado | `secret.key` con permisos `600`; Talaia no arranca si son más abiertos |
 | Archivos | Al crearlos, directorio de datos `700` y base de datos `600` |
 | Salida a servicios | Sin proxy, sin seguir redirecciones, 10 s de espera por petición y respuestas de 32 MiB como máximo. Por SNMP, 3 s por petición y un reintento. Por NUT, 5 s para conectar y 10 s por consulta |
@@ -358,6 +441,8 @@ erDiagram
 - **Sin TLS propio:** Talaia sirve HTTP y delega el cifrado en un proxy inverso.
 - **Acceso de administrador:** una sesión de administrador puede hacer que Talaia envíe peticiones a cualquier URL, necesario para probar conexiones.
 - **DES en SNMPv3 de QNAP:** QTS solo ofrece este cifrado, débil. Lo compensan claves largas y aleatorias; ver DEC-43.
+- **Tópico de ntfy.sh:** en el servidor público de ntfy, quien conozca el tópico puede leer los avisos. Por eso se guarda cifrado y la ayuda pide un nombre difícil de adivinar.
+- **Avisos fuera de la red:** Telegram y ntfy.sh necesitan salida a Internet y reciben el nombre de cada servicio y su estado. Un servidor ntfy propio o un webhook local lo evitan.
 - **NUT sin cifrar:** Talaia no usa STARTTLS con `upsd`, de modo que el estado del SAI viaja en claro por la red. No viaja ninguna credencial; ver DEC-47.
 
 ## Despliegue
@@ -371,6 +456,7 @@ erDiagram
 | `-key-file` | `TALAIA_KEY_FILE` | `<datos>/secret.key` | Clave de cifrado |
 | `-setup-token-file` | `TALAIA_SETUP_TOKEN_FILE` | Ninguno | Archivo con el código que protege el primer arranque |
 | `-version` | | | Muestra la versión |
+| | `TALAIA_TELEGRAM_API` | `https://api.telegram.org` | Dirección de la API de bots de Telegram. Solo para las pruebas, que la apuntan al receptor simulado |
 
 **Recuperar la contraseña:** `talaia reset-password -data <datos>` genera una contraseña aleatoria, la muestra y revoca las sesiones. Admite `-key-file` y puede ejecutarse con Talaia en marcha.
 

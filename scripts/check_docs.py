@@ -17,7 +17,7 @@ requirements = REQUIREMENTS.read_text(encoding="utf-8")
 
 # Cada prueba de Go está en el plan, y el plan no cita pruebas inexistentes.
 go_tests = set()
-for path in (ROOT / "internal").rglob("*_test.go"):
+for path in [*(ROOT / "internal").rglob("*_test.go"), *(ROOT / "web").glob("*_test.go")]:
     go_tests.update(re.findall(r"^func (Test\w+)\(", path.read_text(encoding="utf-8"), re.M))
 planned = set(re.findall(r"`(Test\w+)`", plan))
 errors += [f"Prueba de Go sin documentar: {name}" for name in sorted(go_tests - planned)]
