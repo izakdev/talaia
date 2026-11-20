@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/izakdev/talaia/internal/integrations"
 	"github.com/izakdev/talaia/internal/store"
@@ -197,6 +199,7 @@ func TestRetryable(t *testing.T) {
 	cases := map[string]bool{
 		integrations.CodeUnreachable: true, integrations.CodeTimeout: true, integrations.CodeBadResponse: true,
 		integrations.CodeUnauthorized: false, CodeRejected: false, integrations.CodeTLS: false,
+		CodeUnconfirmed: false,
 	}
 	for code, want := range cases {
 		if got := Retryable(&integrations.Error{Code: code, Err: errors.New("x")}); got != want {
@@ -216,4 +219,76 @@ func TestNewSenderRejectsBadSecret(t *testing.T) {
 			t.Errorf("%s con %s debería fallar", c.typ, c.secret)
 		}
 	}
+}
+
+func TestSendTimeoutIsLonger(t *testing.T) {
+	if sendTimeout < 30*time.Second {
+		t.Fatalf("plazo de envío = %v, quiero al menos 30 s", sendTimeout)
+	}
+	cfg := map[string]string{"chat_id": "1"}
+	for typ, secret := range map[string]string{"telegram": `{"token":"9:x"}`, "ntfy": `{"topic":"t"}`, "webhook": `{"url":"http://x"}`} {
+		s, err := NewSender(store.Channel{Type: typ, Config: cfg}, secret)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got time.Duration
+		switch c := s.(type) {
+		case *telegram:
+			got = c.client.Timeout
+		case *ntfy:
+			got = c.client.Timeout
+		case *webhook:
+			got = c.client.Timeout
+		}
+		if got != sendTimeout {
+			t.Errorf("%s: plazo %v, quiero %v", typ, got, sendTimeout)
+		}
+	}
+}
+
+func TestSlowReplyIsUnconfirmed(t *testing.T) {
+	short(t)
+	got := make(chan struct{}, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.ReadAll(r.Body)
+		got <- struct{}{}
+		<-r.Context().Done()
+	}))
+	t.Cleanup(srv.Close)
+	err := send(t, store.Channel{Type: "webhook"}, `{"url":"`+srv.URL+`"}`, sample())
+	<-got
+	if integrations.Code(err) != CodeUnconfirmed || Retryable(err) {
+		t.Fatalf("respuesta tardía tras enviar: código %q, reintentable %v (%v)", integrations.Code(err), Retryable(err), err)
+	}
+}
+
+func TestTimeoutBeforeSendingIsRetried(t *testing.T) {
+	short(t)
+	// Acepta la conexión pero nunca completa el saludo TLS: la petición no sale.
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { ln.Close() })
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			t.Cleanup(func() { c.Close() })
+		}
+	}()
+	err = send(t, store.Channel{Type: "webhook"}, `{"url":"https://`+ln.Addr().String()+`/hook"}`, sample())
+	if integrations.Code(err) != integrations.CodeTimeout || !Retryable(err) {
+		t.Fatalf("plazo agotado antes de enviar: código %q, reintentable %v (%v)", integrations.Code(err), Retryable(err), err)
+	}
+}
+
+// short acorta el plazo de envío durante una prueba.
+func short(t *testing.T) {
+	t.Helper()
+	old := sendTimeout
+	sendTimeout = 300 * time.Millisecond
+	t.Cleanup(func() { sendTimeout = old })
 }

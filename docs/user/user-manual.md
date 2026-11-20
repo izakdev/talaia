@@ -536,7 +536,7 @@ In the administration, open **Settings** and scroll down to **Notifications**.
 
 ![Notifications section in the settings](img/26-ajustes-notificaciones.png)
 
-**Adding a channel:** press **Add channel**, choose the type and fill in its details. **Send test** sends a test message without saving anything, so you can check it arrives. You can have several channels, and every active one receives each alert.
+**Adding a channel:** press **Add channel**, choose the type and fill in its details. **Send test** sends a test message without saving anything, so you can check it arrives. If the channel takes too long to reply, an amber message says it may have arrived: check your phone before sending the test again. You can have several channels, and every active one receives each alert.
 
 ![Adding a Telegram channel](img/25-canal-telegram.png)
 
@@ -573,7 +573,7 @@ The token, the topic and the URL are stored encrypted and never shown again. Whe
 
 **Alert language:** Spanish or English. Adding the first channel picks the administration's language; change it and press **Save alert settings**.
 
-**Recent sends:** the table shows the last 50 alerts and tests, through which channel, and whether they were sent or why they failed. If a channel doesn't respond, Talaia retries twice over the next two minutes.
+**Recent sends:** the table shows the last 50 alerts and tests, through which channel, and whether they were sent or why they failed. If the channel can't be reached or replies with an error, Talaia retries twice over the next two minutes. If the message went out but the channel doesn't reply within 30 seconds, **Unconfirmed: it may have arrived** appears in amber and it isn't retried, so you don't get it twice.
 
 Telegram and ntfy.sh need the Talaia machine to have Internet access. If it doesn't, use your own ntfy server or a webhook on your network.
 

@@ -536,7 +536,7 @@ En la administración, abre **Ajustes** y baja hasta **Notificaciones**.
 
 ![Sección de notificaciones en los ajustes](img/26-ajustes-notificaciones.png)
 
-**Añadir un canal:** pulsa **Añadir canal**, elige el tipo y rellena sus datos. **Enviar prueba** manda un mensaje de prueba sin guardar nada, para comprobar que llega. Puedes tener varios canales, y todos los activos reciben cada aviso.
+**Añadir un canal:** pulsa **Añadir canal**, elige el tipo y rellena sus datos. **Enviar prueba** manda un mensaje de prueba sin guardar nada, para comprobar que llega. Si el canal tarda demasiado en contestar, verás en ámbar que el mensaje puede haber llegado: míralo en el móvil antes de repetir la prueba. Puedes tener varios canales, y todos los activos reciben cada aviso.
 
 ![Alta de un canal de Telegram](img/25-canal-telegram.png)
 
@@ -573,7 +573,7 @@ El token, el tópico y la URL se guardan cifrados y no se vuelven a mostrar. Al 
 
 **Idioma de los avisos:** español o inglés. Al dar de alta el primer canal se elige el de la administración; cámbialo y pulsa **Guardar avisos**.
 
-**Últimos envíos:** la tabla muestra los 50 últimos avisos y pruebas, por qué canal, y si se enviaron o por qué fallaron. Si un canal no responde, Talaia lo reintenta dos veces en los dos minutos siguientes.
+**Últimos envíos:** la tabla muestra los 50 últimos avisos y pruebas, por qué canal, y si se enviaron o por qué fallaron. Si no se puede llegar al canal o responde con un error, Talaia lo reintenta dos veces en los dos minutos siguientes. Si el mensaje salió pero el canal no contesta en 30 segundos, aparece en ámbar **Sin confirmar: puede haber llegado** y no se reintenta, para que no te llegue repetido.
 
 Telegram y ntfy.sh necesitan que el equipo de Talaia tenga salida a Internet. Si no la tiene, usa un servidor ntfy propio o un webhook de tu red.
 

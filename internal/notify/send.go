@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptrace"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/izakdev/talaia/internal/integrations"
@@ -18,6 +20,14 @@ import (
 
 // CodeRejected indica que el canal ha rechazado el aviso (otro 4xx).
 const CodeRejected = "rejected"
+
+// CodeUnconfirmed indica que el aviso se envió entero pero no llegó la respuesta:
+// puede haber llegado, así que no se reintenta para no duplicarlo (DEC-53).
+const CodeUnconfirmed = "unconfirmed"
+
+// sendTimeout es el plazo de cada envío. Es mayor que el de las consultas al
+// panel porque los avisos van en segundo plano y no hacen esperar a nadie.
+var sendTimeout = 30 * time.Second
 
 const (
 	maxReply        = 64 << 10
@@ -76,7 +86,9 @@ func NewSender(ch store.Channel, secret string) (Sender, error) {
 }
 
 func newClient(skipTLS bool) *http.Client {
-	return integrations.NewHTTPClient(integrations.Config{TLSSkipVerify: skipTLS})
+	client := integrations.NewHTTPClient(integrations.Config{TLSSkipVerify: skipTLS})
+	client.Timeout = sendTimeout
+	return client
 }
 
 // Retryable indica si merece la pena repetir un envío fallido.
@@ -92,8 +104,16 @@ func Retryable(err error) bool {
 }
 
 // post envía un cuerpo y traduce el resultado a un código público. El error
-// nunca incluye la dirección, que puede llevar un token.
+// nunca incluye la dirección, que puede llevar un token. Si falla después de
+// enviar la petición entera, el código es CodeUnconfirmed.
 func post(ctx context.Context, client *http.Client, url, contentType string, body []byte, header http.Header) error {
+	var wrote atomic.Bool
+	ctx = httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
+		// El transporte puede repetir la petición por otra conexión si la reutilizada
+		// estaba cerrada: cada intento empieza sin haber enviado nada.
+		GetConn:      func(string) { wrote.Store(false) },
+		WroteRequest: func(info httptrace.WroteRequestInfo) { wrote.Store(info.Err == nil) },
+	})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return &integrations.Error{Code: integrations.CodeInternal, Err: errors.New("dirección no válida")}
@@ -108,6 +128,9 @@ func post(ctx context.Context, client *http.Client, url, contentType string, bod
 		code := integrations.Code(err)
 		if code == integrations.CodeInternal {
 			code = integrations.CodeUnreachable
+		}
+		if wrote.Load() && code != integrations.CodeTLS {
+			return &integrations.Error{Code: CodeUnconfirmed, Err: errors.New("enviado sin respuesta")}
 		}
 		return &integrations.Error{Code: code, Err: errors.New("no se ha podido enviar")}
 	}
