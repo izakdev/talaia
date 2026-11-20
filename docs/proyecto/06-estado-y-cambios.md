@@ -23,6 +23,12 @@
 
 ## Historial
 
+### CI más ligera para la documentación (2026-11-20)
+
+**Cambiado:**
+- Si un cambio solo toca documentación (Markdown, `docs/` o `.claude/`), la CI se salta las pruebas de Go, las E2E y las del instalador, y ejecuta solo `docs-check` y las pruebas de la clasificación, en un minuto. Con cualquier otro archivo, o si no puede saber qué ha cambiado, lo prueba todo como antes; ver DEC-52.
+- Nuevo `make test-ci` para las pruebas de esa clasificación, y las recetas `publicar` y `nueva-integracion` explican qué jobs esperar en cada caso.
+
 ### `v0.4.0` (2026-11-20)
 
 Trae el hito 16: las notificaciones por Telegram, ntfy o un webhook cuando un servicio del panel cambia de color, con su sección en los ajustes y la casilla para silenciar cada conexión. Incluye los binarios para amd64 y arm64, las sumas SHA-256 y el instalador; se actualiza desde `v0.3.1` con `talaia-proxmox.sh update`.

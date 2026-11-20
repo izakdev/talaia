@@ -9,7 +9,56 @@ permissions:
   contents: read
 
 jobs:
+  # Decide si el cambio toca código. Si solo cambia documentación (Markdown, docs/
+  # o .claude/), «test» e «installer» se saltan y basta con «docs»; ver DEC-52.
+  cambios:
+    runs-on: ubuntu-latest
+    outputs:
+      codigo: ${{ steps.clasificar.outputs.codigo }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: clasificar
+        name: Clasificar los archivos cambiados
+        env:
+          EVENTO: ${{ github.event_name }}
+          BASE_PR: ${{ github.event.pull_request.base.sha }}
+          CABEZA_PR: ${{ github.event.pull_request.head.sha }}
+          ANTES: ${{ github.event.before }}
+          DESPUES: ${{ github.sha }}
+        run: |
+          if [ "$EVENTO" = pull_request ]; then
+            rango="$BASE_PR...$CABEZA_PR"
+          elif [ -n "$ANTES" ] && [ "$ANTES" != 0000000000000000000000000000000000000000 ] \
+            && git cat-file -e "$ANTES^{commit}" 2>/dev/null; then
+            rango="$ANTES..$DESPUES"
+          else
+            # Rama nueva o historia reescrita: sin base fiable, se prueba todo.
+            echo "codigo=true" | tee -a "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! archivos=$(git diff --name-only --no-renames "$rango"); then
+            echo "codigo=true" | tee -a "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          printf '%s\n' "$archivos"
+          printf '%s\n' "$archivos" | scripts/ci-cambios.sh | tee -a "$GITHUB_OUTPUT"
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Comprobar documentación
+        run: python3 scripts/check_docs.py
+      - name: Comprobar la clasificación de cambios
+        run: |
+          shellcheck scripts/ci-cambios.sh scripts/test/ci-cambios-test.sh
+          scripts/test/ci-cambios-test.sh
+
   test:
+    needs: cambios
+    if: needs.cambios.outputs.codigo == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,8 +76,6 @@ jobs:
         run: test -z "$(gofmt -l .)"
       - run: go vet ./...
       - run: go test -race ./...
-      - name: Comprobar documentación
-        run: python3 scripts/check_docs.py
       - name: Compilar binario
         run: CGO_ENABLED=0 go build -o bin/talaia ./cmd/talaia
       - run: npm --prefix e2e ci
@@ -38,6 +85,8 @@ jobs:
         run: npm --prefix e2e test
 
   installer:
+    needs: cambios
+    if: needs.cambios.outputs.codigo == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -45,6 +94,6 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Comprobar scripts
-        run: shellcheck scripts/talaia-proxmox.sh scripts/test/*.sh scripts/test/stubs/*
+        run: shellcheck scripts/talaia-proxmox.sh scripts/ci-cambios.sh scripts/test/*.sh scripts/test/stubs/*
       - name: Instalación y actualización con systemd real
         run: sudo env "PATH=$PATH" scripts/test/proxmox-integration.sh

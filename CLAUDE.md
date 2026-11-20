@@ -22,11 +22,15 @@ No incluyas IP, dominios ni otros datos del laboratorio del autor en el reposito
 
 ## Comprobaciones antes de entregar
 
+Si el cambio toca código (cualquier archivo que no sea Markdown, ni esté en `docs/` o `.claude/`):
+
 ```sh
 make test
 make e2e
 make docs-check
 ```
+
+Si solo cambia documentación, basta con `make docs-check`. La CI hace lo mismo: clasifica los archivos con `scripts/ci-cambios.sh` y, con solo documentación, se salta `test` e `installer` y ejecuta solo `docs`, en un minuto (DEC-52). No mezcles en un PR de documentación un cambio de código «pequeño»: haría que la CI lo pruebe todo, como debe.
 
 ## Herramientas de Claude Code
 

@@ -83,4 +83,4 @@ Usa el subagente `revisor-de-hito` antes de pedir el commit.
 1. Commit y push cuando el usuario lo pida.
 2. El usuario lo instala en su Proxmox con `make dist` y `talaia-proxmox.sh update --ctid ID --binary ./talaia-linux-amd64` (dale los comandos con `$PVE_HOST` e `ID` como variables suyas).
 3. Con su captura, registra la verificación en `04-plan-de-pruebas.md` (qué se vio y qué no) y cambia la fila del hito en `06-estado-y-cambios.md` a «Terminado y verificado con el … del cliente».
-4. Abre el PR (resumen, pruebas, verificación real y lo que queda sin verificar) y fusiona solo cuando pase la CI y el usuario lo apruebe.
+4. Abre el PR (resumen, pruebas, verificación real y lo que queda sin verificar) y fusiona solo cuando pase la CI y el usuario lo apruebe. Como toca código, la CI ejecuta `docs`, `test` (unos 10 minutos, por las E2E) e `installer`; si `test` o `installer` salen saltados en un PR con código, la clasificación de `scripts/ci-cambios.sh` está mal y hay que corregirla antes de fusionar (DEC-52).

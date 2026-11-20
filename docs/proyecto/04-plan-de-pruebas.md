@@ -4,12 +4,15 @@
 
 | Nivel | Herramienta | Comando | Se ejecuta |
 |---|---|---|---|
-| Unitarias y de integración | `go test` con detector de carreras | `make test` | CI, en cada cambio |
-| Extremo a extremo (E2E) | Playwright y Chromium contra el binario real, los servicios simulados y un receptor de avisos simulado | `make e2e` | CI, en cada cambio |
-| Compilación | `tsc`, Vite y `go build` | `make build` | CI, en cada cambio |
-| Instalador | `shellcheck` y Bash con systemd real en Docker | `make test-installer`, como root | CI, en cada cambio |
+| Unitarias y de integración | `go test` con detector de carreras | `make test` | CI, en cada cambio de código |
+| Extremo a extremo (E2E) | Playwright y Chromium contra el binario real, los servicios simulados y un receptor de avisos simulado | `make e2e` | CI, en cada cambio de código |
+| Compilación | `tsc`, Vite y `go build` | `make build` | CI, en cada cambio de código |
+| Instalador | `shellcheck` y Bash con systemd real en Docker | `make test-installer`, como root | CI, en cada cambio de código |
 | Documentación | `scripts/check_docs.py` | `make docs-check` | CI, en cada cambio |
+| Clasificación de cambios de la CI | Bash | `make test-ci` | CI, en cada cambio |
 | Contra servicio real | Manual, con el servicio real en local | Ver [verificaciones manuales](#verificaciones-manuales) | Al cerrar cada integración |
+
+Un cambio es «de código» si toca algún archivo que no sea Markdown ni esté en `docs/` o `.claude/`. Si solo cambia documentación, la CI se salta `test` e `installer` y ejecuta solo el job `docs`; ver DEC-52 y las [pruebas de la clasificación](#clasificación-de-cambios-de-la-ci).
 
 Las pruebas E2E comparten un único recorrido: cada escenario parte del estado que deja el anterior, y el primer fallo detiene los siguientes.
 
@@ -329,6 +332,23 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. El 
 | INS-10 | Rechaza opciones no válidas sin tocar nada | RF-60 |
 | INS-11 | Si falla un paso con el servicio parado (`pct push`, configuración o copia), indica el comando y la línea, y deja en marcha la versión anterior con sus datos, sin conservar copias incompletas | RF-61 |
 | INS-12 | La confirmación pregunta en la terminal aunque stderr vaya a un archivo, y sin terminal se niega sin parar el servicio | RF-61 |
+
+## Clasificación de cambios de la CI
+
+`scripts/test/ci-cambios-test.sh` comprueba `scripts/ci-cambios.sh`, que decide si la CI ejecuta las pruebas completas; ver DEC-52. No cubren requisitos del producto.
+
+| ID | Archivos cambiados | Resultado esperado |
+|---|---|---|
+| CI-01 | Solo los README | Solo documentación |
+| CI-02 | Archivos bajo `docs/`, también imágenes y HTML | Solo documentación |
+| CI-03 | Archivos bajo `.claude/` y `CLAUDE.md` | Solo documentación |
+| CI-04 | Documentación y un archivo Go | Código |
+| CI-05 | Un workflow de GitHub Actions | Código |
+| CI-06 | `scripts/check_docs.py` | Código |
+| CI-07 | Lista vacía | Código, por prudencia |
+| CI-08 | Un archivo sin salto de línea final | Solo documentación |
+
+El workflow también prueba todo cuando no puede calcular la lista: en un push que crea la rama o reescribe su historia, o si falla `git diff`.
 
 ## Verificaciones manuales
 
