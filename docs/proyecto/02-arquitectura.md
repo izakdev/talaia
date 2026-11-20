@@ -150,7 +150,7 @@ sequenceDiagram
 - **Retardo:** el color nuevo debe durar `notify_delay_seconds` (0, 60, 120, 300, 600 o 900; 120 por defecto). El candidato vive en memoria: tras reiniciar, el plazo empieza de nuevo.
 - **Agrupación:** los cambios que maduran en el mismo ciclo van en un mensaje. Al madurar uno, se adelantan los que lleven al menos el retardo menos la mitad de este, con un máximo de 30 s, porque cada servicio se consulta a su ritmo.
 - **Silencio y sin canales:** el color avisado se actualiza igual, para que al activar el aviso o el primer canal no llegue nada atrasado.
-- **Envío:** cada canal en su propia goroutine, para que uno lento no retrase a los demás. Reintentos a los 30 s y a los 2 min con errores de red, tiempo agotado, `5xx` o `429`; antes de cada uno se comprueba que el canal sigue activo. El color se guarda al decidir el envío, de modo que un canal caído no provoca repeticiones.
+- **Envío:** cada canal en su propia goroutine, para que uno lento no retrase a los demás. Cada envío espera 30 s como máximo. Reintentos a los 30 s y a los 2 min con errores de red o tiempo agotado antes de enviar la petición, `5xx` o `429`; antes de cada uno se comprueba que el canal sigue activo. Si la petición salió entera en el último intento del transporte (`httptrace`: `GetConn` lo reinicia y `WroteRequest` lo marca) y luego falla o se agota el tiempo, el resultado es `unconfirmed` y no se reintenta (DEC-53). El color se guarda al decidir el envío, de modo que un canal caído no provoca repeticiones.
 - **Mensaje:** primero los problemas, del más grave al menos grave, y después las vueltas a verde, con el nombre de la conexión y su etiqueta traducida desde `states.json`. Los saltos de línea del nombre se cambian por espacios y se recorta a 80 caracteres.
 
 | Canal | Petición |
@@ -419,7 +419,7 @@ erDiagram
 | Sesiones | Token aleatorio de 32 bytes en una cookie `HttpOnly` y `SameSite=Lax`; en la base de datos solo se guarda su hash; duran 30 días |
 | Cookie `Secure` | Se activa con TLS o con `X-Forwarded-Proto: https` |
 | Credenciales | AES-256-GCM, vinculadas al ID de la conexión para que no se puedan intercambiar entre filas. Los secretos de los canales de aviso, igual, vinculados al ID del canal |
-| Avisos | Solo el nombre de la conexión, su etiqueta de estado y, en el webhook, el tipo y los colores; nunca URL, IP, usuarios ni credenciales. El cliente es el de las integraciones (sin proxy ni redirecciones, 10 s) y lee 64 KiB de respuesta como máximo, que nunca se guardan |
+| Avisos | Solo el nombre de la conexión, su etiqueta de estado y, en el webhook, el tipo y los colores; nunca URL, IP, usuarios ni credenciales. El cliente es el de las integraciones (sin proxy ni redirecciones), con 30 s de espera y lee 64 KiB de respuesta como máximo, que nunca se guardan |
 | Clave de cifrado | `secret.key` con permisos `600`; Talaia no arranca si son más abiertos |
 | Archivos | Al crearlos, directorio de datos `700` y base de datos `600` |
 | Salida a servicios | Sin proxy, sin seguir redirecciones, 10 s de espera por petición y respuestas de 32 MiB como máximo. Por SNMP, 3 s por petición y un reintento. Por NUT, 5 s para conectar y 10 s por consulta |

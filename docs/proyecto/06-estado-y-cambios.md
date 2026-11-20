@@ -23,6 +23,12 @@
 
 ## Historial
 
+### Avisos sin duplicados (2026-11-20)
+
+**Corregido:**
+- Un canal que tarda en responder ya no recibe el mismo aviso dos o tres veces. Si el mensaje salió entero y no llega la respuesta, queda «Sin confirmar» en «Últimos envíos» y no se reintenta; solo se reintenta si el mensaje no llegó a salir o si el canal contesta con un error. Ver DEC-53.
+- Los canales esperan 30 s en lugar de 10 s, y «Enviar prueba» avisa en ámbar de que el mensaje puede haber llegado, en lugar de dar un error que invitaba a repetirla.
+
 ### CI más ligera para la documentación (2026-11-20)
 
 **Cambiado:**
@@ -299,7 +305,7 @@ Primera versión estable, con los binarios para amd64 y arm64, las sumas de comp
 | Avisos sin recordatorios | Un servicio que sigue en rojo no vuelve a avisar hasta que cambia | Por diseño, a petición del cliente |
 | Avisos solo por cambio de color | Un cambio de etiqueta dentro del mismo color (de un ámbar a otro) no avisa | Bajo demanda |
 | Telegram y ntfy.sh necesitan Internet | Sin salida a Internet, solo funcionan un ntfy propio o un webhook local | Por diseño de esos servicios |
-| Un envío que agota el tiempo puede haber llegado | Si el canal responde después de 10 s, Talaia lo da por fallido y lo reintenta, y el aviso llega dos veces. Se vio con una prueba de Telegram en la verificación real | Al darse la ocasión |
+| Un envío sin confirmar no se repite | Si el canal recibe el mensaje y no responde en 30 s, queda «Sin confirmar» y no se reintenta; si el canal lo perdió, ese aviso no llega. Ver DEC-53 | Por diseño |
 | Sin reglas por canal | Todos los canales activos reciben todos los avisos | Bajo demanda |
 | Sistema del contenedor sin actualizaciones automáticas | Hay que actualizarlo con `apt` | Bajo demanda |
 

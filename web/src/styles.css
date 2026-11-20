@@ -381,7 +381,7 @@ details > summary { cursor: pointer; list-style-position: outside; margin-left: 
 .send-log { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
 .send-log th, .send-log td { text-align: left; vertical-align: top; padding: 0.5rem 0.75rem 0.5rem 0; border-bottom: 1px solid var(--line); }
 .send-log th { color: var(--ink-soft); font-weight: 550; }
-.send-log td.test-ok, .send-log td.error { font-size: inherit; }
+.send-log td.test-ok, .send-log td.error, .send-log td.warn { font-size: inherit; }
 /* Safari no aplica la altura a un select nativo: se dibuja como los campos de texto, con su flecha. */
 select {
   -webkit-appearance: none; appearance: none; padding-right: 2.25rem;

@@ -231,7 +231,10 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestWebhookBody` | El JSON del webhook, sin el identificador interno de la conexión, y la lista vacía en la prueba | RF-108, RF-110 |
 | `TestSendErrorCodes` | 401 y 403, otros 4xx, 429, 5xx, redirección y servidor caído dan su código | RF-111 |
 | `TestSendErrorsHideURL` | El error no incluye la URL del webhook ni el token del bot | RF-108, RF-111 |
-| `TestRetryable` | Se reintentan los fallos de red, de tiempo, 5xx y 429; no los rechazos | RF-111 |
+| `TestRetryable` | Se reintentan los fallos de red, de tiempo, 5xx y 429; no los rechazos ni los envíos sin confirmar | RF-111 |
+| `TestSendTimeoutIsLonger` | Telegram, ntfy y webhook esperan 30 s, no los 10 s de las consultas al panel | RF-111 |
+| `TestSlowReplyIsUnconfirmed` | Si el canal recibe el mensaje entero y no responde a tiempo, el resultado es «sin confirmar» y no se reintenta | RF-111 |
+| `TestTimeoutBeforeSendingIsRetried` | Si el tiempo se agota antes de enviar (saludo TLS sin respuesta), el fallo es de tiempo y se reintenta | RF-111 |
 | `TestNewSenderRejectsBadSecret` | Un secreto incompleto o un tipo desconocido no crea el emisor | RF-108 |
 | `TestNotifiesAfterDelay` | Avisa al cumplirse el retardo y no antes, una sola vez, y lo anota | RF-106, RF-107, RF-111 |
 | `TestFlapDoesNotNotify` | Un parpadeo reinicia el plazo | RF-107 |
@@ -249,6 +252,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestRestartDoesNotRepeat` | Un notificador nuevo sobre la misma base de datos no repite el aviso | RF-112 |
 | `TestRetryThenLog` | Dos fallos y un acierto dan una entrada «Enviado» con 3 intentos | RF-111 |
 | `TestRejectedIsNotRetried` | Un rechazo se anota sin reintentar | RF-111 |
+| `TestUnconfirmedIsNotRetried` | Un envío sin confirmar se anota con un solo intento y no se repite | RF-111 |
 | `TestRetrySkipsDeletedChannel` | Un canal borrado entre intentos no se reintenta | RF-108 |
 | `TestUnreadableChannelSecret` | Un secreto ilegible da `secret_unreadable` en su canal y no frena a los demás | RF-111 |
 | `TestSlowChannelDoesNotBlockOthers` | Un canal colgado no retrasa la revisión ni a los demás canales | RF-106 |
@@ -495,7 +499,7 @@ Los requisitos pendientes se probarán en su hito.
 | RF-108 | `TestNtfyServerChangeRequiresSecrets`, `TestTelegramRequest`, `TestNtfyJSON`, `TestWebhookBody`, `TestChannelsNeverExposeSecrets`, `TestChannelValidation`, `TestChannelSecretEncrypted`, `TestSendErrorsHideURL`, `TestSendTest`, E2E-43 |
 | RF-109 | `TestSilencedUpdatesTone`, `TestConnectionNotifyRoundTrip`, `TestConnectionNotifyDefaultTrue`, E2E-45 |
 | RF-110 | `TestComposeGroupsProblemsAndRecoveries`, `TestComposeEnglish`, `TestComposeSanitizesNames`, `TestLabelParams`, `TestStateLabelsBothLanguages`, E2E-44, E2E-46 |
-| RF-111 | `TestLogKeepsLatest50`, `TestSendErrorCodes`, `TestRetryThenLog`, `TestRejectedIsNotRetried`, `TestUnreadableChannelSecret`, E2E-47 |
+| RF-111 | `TestLogKeepsLatest50`, `TestSendErrorCodes`, `TestRetryThenLog`, `TestRejectedIsNotRetried`, `TestSendTimeoutIsLonger`, `TestSlowReplyIsUnconfirmed`, `TestTimeoutBeforeSendingIsRetried`, `TestUnconfirmedIsNotRetried`, `TestUnreadableChannelSecret`, E2E-47 |
 | RF-112 | `TestRestartDoesNotRepeat`, `TestNotifiedToneCascade` |
 | RF-113 | `TestState` (cada integración), `TestSnapshotState`, `TestPendingSnapshotState`, E2E-44 y todas las E2E de colores de bloque |
 | RF-61 | INS-04, INS-05, INS-06, INS-11, INS-12 |

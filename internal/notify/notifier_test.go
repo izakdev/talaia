@@ -446,6 +446,23 @@ func TestRejectedIsNotRetried(t *testing.T) {
 	}
 }
 
+func TestUnconfirmedIsNotRetried(t *testing.T) {
+	h := newHarness(t)
+	h.st.SaveSettings(context.Background(), store.Settings{Theme: "auto", Accent: "amber", NotifyDelaySeconds: 0})
+	h.channel(t, "móvil")
+	h.sent.fail = func(string, int) error {
+		return &integrations.Error{Code: CodeUnconfirmed, Err: errors.New("sin respuesta tras enviar")}
+	}
+	id := h.service(t, "AdGuard", true)
+	h.set(id, "AdGuard", warn, "adguard.protectionOff")
+	h.step(t, 0)
+	h.step(t, 5*time.Minute)
+	log, _ := h.st.ListLog(context.Background())
+	if len(log) != 1 || log[0].Result != "error" || log[0].Code != CodeUnconfirmed || log[0].Attempts != 1 {
+		t.Fatalf("registro = %+v", log)
+	}
+}
+
 func TestRetrySkipsDeletedChannel(t *testing.T) {
 	h := newHarness(t)
 	ctx := context.Background()

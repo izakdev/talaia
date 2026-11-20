@@ -283,8 +283,9 @@ El emoji del título es el del peor color: 🔴 rojo, 🟠 ámbar y 🟢 verde. 
 | `tls` | El certificado del servidor no es válido |
 | `bad_response` | El servidor ha respondido con un error |
 | `secret_unreadable` | No se puede descifrar el secreto; vuelve a escribirlo |
+| `unconfirmed` | Sin confirmar: puede haber llegado (en ámbar, no en rojo) |
 
-Un aviso fallido se reintenta a los 30 s y a los 2 minutos si el fallo es de red o del servidor; si el canal rechaza el mensaje, no.
+Cada envío espera hasta 30 s la respuesta del canal. Un aviso fallido se reintenta a los 30 s y a los 2 minutos si no llegó a salir (fallo de red o tiempo agotado antes de enviarlo) o si el servidor respondió con un error; si el canal rechaza el mensaje, no. Si el mensaje salió entero pero no llega la respuesta, queda «Sin confirmar» y no se reintenta, para no duplicar el aviso (DEC-53). En **Enviar prueba**, ese caso muestra en ámbar «Sin respuesta a tiempo: el mensaje puede haber llegado. Compruébalo antes de repetir la prueba.»
 
 **Contraseña:** pide la actual y dos veces la nueva, de al menos 12 caracteres. Cierra las demás sesiones. Los fallos cuentan para el bloqueo por IP.
 

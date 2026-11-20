@@ -80,14 +80,24 @@ function NotifySettings({ initial }: { initial: AppSettings }) {
 function TestOutcome({ entry }: { entry: LogEntry }) {
   const { t } = useI18n();
   return (
-    <p role="status" className={entry.result === "ok" ? "test-ok" : "error"}>
-      {entry.result === "ok" ? t("notify.testOk") : t("notify.testFailed", { error: errorLabel(t, entry.code) })}
+    <p role="status" className={resultClass(entry)}>
+      {entry.result === "ok"
+        ? t("notify.testOk")
+        : entry.code === "unconfirmed"
+          ? t("notify.testUnconfirmed")
+          : t("notify.testFailed", { error: errorLabel(t, entry.code) })}
     </p>
   );
 }
 
+// Un envío sin confirmar puede haber llegado: se muestra como aviso, no como error.
+function resultClass(entry: LogEntry) {
+  if (entry.result === "ok") return "test-ok";
+  return entry.code === "unconfirmed" ? "warn" : "error";
+}
+
 function errorLabel(t: ReturnType<typeof useI18n>["t"], code?: string) {
-  const known = ["unauthorized", "rejected", "unreachable", "timeout", "tls", "bad_response", "secret_unreadable"];
+  const known = ["unauthorized", "rejected", "unreachable", "timeout", "tls", "bad_response", "secret_unreadable", "unconfirmed"];
   return t(`notify.error.${known.includes(code ?? "") ? code : "internal"}` as Parameters<typeof t>[0]);
 }
 
@@ -398,7 +408,7 @@ function SendLog() {
                       ? t("notify.log.test")
                       : entry.services.map((s) => `${s.name}: ${t(`notify.tone.${s.tone}` as Parameters<typeof t>[0])}`).join(", ")}
                   </td>
-                  <td className={entry.result === "ok" ? "test-ok" : "error"}>
+                  <td className={resultClass(entry)}>
                     {entry.result === "ok" ? t("notify.log.ok") : errorLabel(t, entry.code)}
                     {entry.attempts > 1 && ` · ${t("notify.log.attempts", { n: entry.attempts })}`}
                   </td>
