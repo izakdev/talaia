@@ -150,6 +150,20 @@ func TestLinkFallsBackToConnectionURL(t *testing.T) {
 	}
 }
 
+// La dirección de un equipo vigilado por disponibilidad nunca es su enlace.
+func TestAvailabilityLinkHidesAddress(t *testing.T) {
+	for base, link := range map[string]string{"http://192.0.2.50/login": "", "tcp://192.0.2.50:80": ""} {
+		c := Connection{Type: "availability", BaseURL: base}
+		if c.Link() != link {
+			t.Fatalf("%s: enlace = %s", base, c.Link())
+		}
+	}
+	c := Connection{Type: "availability", BaseURL: "http://192.0.2.50", LinkURL: "https://switch.simulado/"}
+	if c.Link() != "https://switch.simulado/" {
+		t.Fatalf("enlace propio = %s", c.Link())
+	}
+}
+
 func TestMigratesExistingDatabase(t *testing.T) {
 	s, path := newStore(t)
 	ctx := context.Background()

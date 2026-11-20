@@ -36,6 +36,7 @@
 | WGDashboard | Tunnels, connected peers and traffic |
 | QNAP | Disks with SMART health and temperature, volumes, CPU, RAM and temperatures, over SNMPv3 |
 | UPS (NUT) | Mains or battery, battery charge and estimated runtime, read from a NUT server (`upsd`) with no credentials |
+| Availability | Whether any network device responds, over TCP or HTTP, and its latency, with no credentials: for switches with no API or SNMP |
 
 ## Quick start on Proxmox VE
 

@@ -2,7 +2,7 @@
 
 Talaia is a dashboard that shows the status of your homelab services at a glance. It is meant to be your browser's start page.
 
-> **Manual version:** `v0.4.1`. It shows data from AdGuard Home, Proxmox VE, Home Assistant, OPNsense, Portainer, WGDashboard, QNAP and a UPS through NUT, and sends notifications through Telegram, ntfy or a webhook when a service changes state. See the [current limitations](#current-limitations).
+> **Manual version:** `v0.4.1`. It shows data from AdGuard Home, Proxmox VE, Home Assistant, OPNsense, Portainer, WGDashboard, QNAP and a UPS through NUT, checks whether other network devices respond, and sends notifications through Telegram, ntfy or a webhook when a service changes state. See the [current limitations](#current-limitations).
 >
 > This manual is a translation of the [Spanish user manual](../usuario/manual-de-usuario.md), which is the reference. The project documentation is only in Spanish.
 
@@ -481,6 +481,34 @@ The block shows the battery charge, with **Charging** while it charges, and the 
 
 If the server answers but gets no data from the UPS, the block turns red with the message **The NUT server gets no data from the UPS**: check the USB cable and the driver on the machine it is plugged into.
 
+### Availability
+
+For devices with no API or SNMP, such as TP-Link switches in the Easy Smart range (TL-SG108PE and similar), Talaia only checks whether they **respond**. It asks for no user or password, doesn't log in to their web interface and changes nothing. Create **one connection per device**: each one has its own block and its own notifications.
+
+| Field | What to enter |
+|---|---|
+| Device address | `tcp://` with the address and the port, for example `tcp://switch.local:80`: Talaia opens the connection and closes it. Or an `http://` or `https://` address, for example `http://switch.local`: Talaia requests that page and only looks at the response code |
+| Link to open the service | Optional, for example the switch's web interface. Without it, the block name links nowhere, not even with an `http://` address |
+| Don't verify the TLS certificate | Only has an effect with `https://` and a self-signed certificate |
+
+Easy Smart switches serve their web interface on port 80, so `tcp://` with the switch address followed by `:80` is enough. With `http://` it also checks that the web interface answers, but if the page you give asks for a password with a 401 code, the block turns amber: use the main page or `tcp://`.
+
+The form has no password field. If testing the connection shows **Can't connect to the service**, check the address and the port, and that the Talaia machine can reach that network.
+
+![Availability block](img/27-panel-disponibilidad.png)
+
+The block shows the **latency**, how long the device takes to accept the connection or to answer, and in the footer whether the check is **TCP** or **HTTP** with its code. It doesn't show the address, the port or the URL.
+
+**Device status:**
+
+| Indicator | Meaning |
+|---|---|
+| Green circle: **Responding** | It accepts the TCP connection, or the web interface answers with a 2xx or 3xx code (redirects aren't followed) |
+| Amber triangle: **Responding with HTTP …** | The web interface answers, but with an error, for example 503: the device is on, but something is wrong |
+| Red square: **Failing** | It doesn't respond within 10 seconds, refuses the connection or the TLS certificate isn't valid |
+
+Talaia doesn't ping: in the unprivileged container the installer creates, that would require changing its network settings. A device with no open TCP port can't be watched.
+
 ## Editing and deleting connections
 
 **Edit:** click **Edit** on the connection. Leave the credential empty to keep the current one. If you change the URL, you'll have to enter it again: this prevents sending it to another server by mistake.
@@ -646,6 +674,7 @@ Telegram and ntfy.sh need the Talaia machine to have Internet access. If it does
 | An entity shows as **Not found** | It no longer exists in Home Assistant or its identifier changed. Edit the connection and update the selection |
 | Home Assistant is slow or times out | In very large installations, increase the refresh, for example to 60 seconds |
 | QNAP doesn't respond in time | Check that SNMP is enabled with version SNMP V3, that the privacy protocol matches and that the firewall lets UDP 161 through |
+| An availability device shows amber with HTTP 401 or 404 | The page you gave asks for a password or doesn't exist. Use the main page or a `tcp://` address with the port of its web interface |
 | The UPS doesn't connect | Check the `LISTEN` line of `upsd.conf` on the machine with the UPS and that the firewall lets TCP 3493 through |
 | An alert says "the channel rejects the token or key" | Check the Telegram bot token or the ntfy token. If you revoked it in @BotFather, enter the new one |
 | An alert says "the channel rejected the message" | In Telegram, check the chat ID and that you wrote to the bot first or that the bot is still in the group. In ntfy, check the topic and whether your server lets you publish to it |
@@ -661,6 +690,7 @@ Telegram and ntfy.sh need the Talaia machine to have Internet access. If it does
 - The Portainer and WGDashboard blocks, and OPNsense's WireGuard, don't detail each container or peer: they only give counts.
 - The QNAP block uses QTS's default temperature thresholds, not yours, and doesn't tell which volume is on a USB disk.
 - The UPS block shows a single UPS, without voltages or load, and the connection to NUT isn't encrypted; no password travels over it.
+- Availability checks one device per connection, only over TCP or HTTP, without ping, and only an HTTP 2xx or 3xx code counts as a response.
 - Notifications alert on colour changes, without reminders: a label change within the same colour doesn't alert, and every active channel receives every alert.
 
 The status of each item is in [Status and changes](../proyecto/06-estado-y-cambios.md), in Spanish.

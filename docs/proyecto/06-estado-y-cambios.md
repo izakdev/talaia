@@ -20,8 +20,16 @@
 | 14 | QNAP por SNMPv3: discos, volúmenes y recursos | Terminado y verificado con el QNAP del cliente, publicado en `v0.3.0` |
 | 15 | SAI a través de un servidor NUT: estado, batería y autonomía | Terminado y verificado con el SAI del cliente, publicado en `v0.3.1` |
 | 16 | Notificaciones por Telegram, ntfy o webhook cuando un servicio cambia de color | Terminado y verificado con el Telegram del cliente, publicado en `v0.4.0` |
+| 17 | Disponibilidad de equipos de red por TCP o HTTP, sin credenciales | Terminado y verificado con un switch del cliente; sin publicar |
 
 ## Historial
+
+### Hito 17 (2026-11-20)
+
+**Añadido:**
+- Integración genérica «Disponibilidad»: comprueba si un equipo responde por TCP (`tcp://host:puerto`) o por HTTP (`http(s)://…`) y muestra la latencia, con una conexión y un bloque por equipo (DEC-54). Pensada para equipos sin API ni SNMP, como los switches TP-Link Easy Smart.
+- Verde «Responde», ámbar «Responde con HTTP …» con un código que no es 2xx ni 3xx, y rojo si no responde; los avisos funcionan sin más.
+- Sin usuario ni contraseña, y sin publicar la dirección, el puerto ni la URL, ni siquiera como enlace del bloque.
 
 ### `v0.4.1` (2026-11-20)
 
@@ -311,6 +319,8 @@ Primera versión estable, con los binarios para amd64 y arm64, las sumas de comp
 | Un SAI por conexión | Si el servidor NUT tiene varios, cada uno necesita su conexión con `nut://host/sai`; ver DEC-46 | Bajo demanda |
 | NUT sin STARTTLS | El estado del SAI viaja en claro por la red, sin credenciales; ver DEC-47 | Bajo demanda |
 | SAI sin tensiones ni consumo | Solo estado, batería y autonomía, como pidió el cliente | Bajo demanda |
+| Disponibilidad sin ICMP | Un equipo sin ningún puerto TCP abierto no se puede vigilar: un ping exige ampliar `net.ipv4.ping_group_range` en el LXC sin privilegios; ver DEC-55 | Bajo demanda |
+| Disponibilidad sin código HTTP configurable | Solo 2xx y 3xx cuentan como respuesta; una web que da 401 en la ruta elegida sale en ámbar. Se puede usar otra ruta o TCP; ver DEC-54 | Bajo demanda |
 | Avisos sin recordatorios | Un servicio que sigue en rojo no vuelve a avisar hasta que cambia | Por diseño, a petición del cliente |
 | Avisos solo por cambio de color | Un cambio de etiqueta dentro del mismo color (de un ámbar a otro) no avisa | Bajo demanda |
 | Telegram y ntfy.sh necesitan Internet | Sin salida a Internet, solo funcionan un ntfy propio o un webhook local | Por diseño de esos servicios |

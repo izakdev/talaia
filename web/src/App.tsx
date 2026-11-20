@@ -431,8 +431,11 @@ function ConnectionDialog({
   const snmp = type === "qnap";
   // NUT se lee sin credenciales ni TLS.
   const nut = type === "nut";
+  // La disponibilidad tampoco pide credenciales; el TLS solo vale para https.
+  const availability = type === "availability";
+  const noSecret = nut || availability;
   // Los textos de la clave solo existen para los servicios que la piden.
-  const secretType = type as Exclude<ConnectionType, "nut">;
+  const secretType = type as Exclude<ConnectionType, "nut" | "availability">;
   const [interval, setIntervalValue] = useState(String(connection?.interval_seconds ?? 30));
   const [skipTls, setSkipTls] = useState(connection?.tls_skip_verify ?? false);
   const [options, setOptions] = useState<Record<string, boolean>>(connection?.options ?? entry.defaultOptions);
@@ -506,7 +509,7 @@ function ConnectionDialog({
           <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required autoFocus />
         </label>
         <label>
-          {t(snmp ? "form.url.qnap" : nut ? "form.url.nut" : "form.url")}
+          {t(snmp ? "form.url.qnap" : nut ? "form.url.nut" : availability ? "form.url.availability" : "form.url")}
           <input
             type="url"
             value={url}
@@ -516,6 +519,7 @@ function ConnectionDialog({
           />
           {snmp && <small>{t("form.urlHint.qnap")}</small>}
           {nut && <small>{t("form.urlHint.nut")}</small>}
+          {availability && <small>{t("form.urlHint.availability")}</small>}
         </label>
         {(type === "adguard" || type === "opnsense" || type === "qnap") && (
           <label>
@@ -525,7 +529,8 @@ function ConnectionDialog({
           </label>
         )}
         {nut && <small>{t("form.noSecret.nut")}</small>}
-        {!nut && (
+        {availability && <small>{t("form.noSecret.availability")}</small>}
+        {!noSecret && (
           <label>
             {t(`form.secret.${secretType}`)}
             <input
