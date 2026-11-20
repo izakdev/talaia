@@ -21,9 +21,13 @@
 | 15 | SAI a través de un servidor NUT: estado, batería y autonomía | Terminado y verificado con el SAI del cliente, publicado en `v0.3.1` |
 | 16 | Notificaciones por Telegram, ntfy o webhook cuando un servicio cambia de color | Terminado y verificado con el Telegram del cliente, publicado en `v0.4.0` |
 | 17 | Disponibilidad de equipos de red por TCP o HTTP, sin credenciales | Terminado y verificado con cuatro equipos del cliente (TCP, caída con sus avisos y HTTPS), publicado en `v0.5.0` |
-| 18 | Impresora por IPP: estado, avisos y nivel de los tóneres | Terminado y verificado con la impresora del cliente (en reposo, con sus cuatro tóneres, y con la tapa abierta en rojo) |
+| 18 | Impresora por IPP: estado, avisos y nivel de los tóneres | Terminado y verificado con la impresora del cliente (en reposo, con sus cuatro tóneres, y con la tapa abierta en rojo), publicado en `v0.6.0` |
 
 ## Historial
+
+### `v0.6.0` (2026-11-21)
+
+Trae el hito 18, la impresora por IPP sin credenciales, con su estado, sus avisos y el nivel de cada tóner o tinta, y el haz del faro de la cabecera, que ahora se desvanece en vez de acabar en un corte. Incluye los binarios para amd64 y arm64, las sumas SHA-256 y el instalador; se actualiza desde `v0.5.0` con `talaia-proxmox.sh update`.
 
 ### Hito 18 (2026-11-20)
 
