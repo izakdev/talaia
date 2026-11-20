@@ -24,6 +24,10 @@
 
 ## Historial
 
+### Haz del faro sin corte (2026-11-20)
+
+**Corregido:** en pantallas anchas, el haz de luz de la cabecera acababa en un corte vertical hacia los 1400 píxeles, muy visible cuando toma el color de un aviso. Ahora se desvanece hasta desaparecer en su extremo. Capturas de los manuales regeneradas.
+
 ### Prueba real de Disponibilidad y avisos en rojo (2026-11-20)
 
 Sin cambios de código. Con `v0.5.0` y cuatro equipos del cliente por Disponibilidad, una impresora apagada dio el bloque en rojo y su aviso por Telegram y ntfy.sh, y al encenderla, el aviso de vuelta a verde. Telegram tardó unos 2 minutos en entregar el aviso en rojo: quedó «Sin confirmar» y llegó una sola vez, lo que confirma DEC-53. Un punto de acceso por HTTPS salió en ámbar con un 403 por una ruta incorrecta, como prevé DEC-54, y en verde con la ruta correcta. Detalle en el plan de pruebas.

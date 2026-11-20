@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import { useId, type CSSProperties, type ReactNode } from "react";
 import type { BrandIconData } from "./api";
 import { useI18n } from "./i18n";
 
@@ -54,9 +54,18 @@ export function LanguageSwitch() {
 }
 
 export function Tower() {
+  // El haz se desvanece hacia su extremo en vez de acabar en un corte, sea cual sea el ancho de la pantalla.
+  const fade = `beam-${useId().replace(/[^a-zA-Z0-9-]/g, "")}`;
   return (
     <svg className="tower" viewBox="0 0 120 200" aria-hidden="true">
-      <path className="beam" d="M64 30 L3000 -110 L3000 170 Z" />
+      <defs>
+        <linearGradient id={fade} gradientUnits="userSpaceOnUse" x1="64" y1="30" x2="3000" y2="30">
+          <stop offset="0" className="beam-stop" />
+          <stop offset="0.45" className="beam-stop" stopOpacity="0.6" />
+          <stop offset="1" className="beam-stop" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path className="beam" fill={`url(#${fade})`} d="M64 30 L3000 -110 L3000 170 Z" />
       <path className="masonry" d="M36 200 46 62h28l10 138Z" />
       <path className="masonry" d="M40 62V44h6v6h7v-6h6v6h7v-6h6v6h7v12Z" transform="translate(-1 0)" />
       <path className="door" d="M54 200v-22a6 6 0 0 1 12 0v22Z" />

@@ -118,7 +118,8 @@ label { display: grid; gap: 0.3rem; font-weight: 550; font-size: 0.9375rem; }
 .masonry { fill: var(--masonry); }
 .door { fill: var(--door); }
 .beacon { fill: var(--beacon); }
-.beam { fill: var(--beacon); opacity: var(--beam-opacity, 0.2); pointer-events: none; transform-origin: 64px 30px; animation: sweep 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.beam-stop { stop-color: var(--beacon); }
+.beam { opacity: var(--beam-opacity, 0.2); pointer-events: none; transform-origin: 64px 30px; animation: sweep 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 @keyframes sweep { from { transform: rotate(14deg); opacity: 0; } to { transform: rotate(0); opacity: var(--beam-opacity, 0.2); } }
 .sea { background: var(--sea); color: var(--on-sea); padding: clamp(1.75rem, 5vw, 3.5rem) clamp(1rem, 8vw, 7rem) 3rem; }
 .sea-content { display: grid; gap: 1.25rem; justify-items: start; max-width: 30rem; }
