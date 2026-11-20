@@ -20,9 +20,13 @@
 | 14 | QNAP por SNMPv3: discos, volúmenes y recursos | Terminado y verificado con el QNAP del cliente, publicado en `v0.3.0` |
 | 15 | SAI a través de un servidor NUT: estado, batería y autonomía | Terminado y verificado con el SAI del cliente, publicado en `v0.3.1` |
 | 16 | Notificaciones por Telegram, ntfy o webhook cuando un servicio cambia de color | Terminado y verificado con el Telegram del cliente, publicado en `v0.4.0` |
-| 17 | Disponibilidad de equipos de red por TCP o HTTP, sin credenciales | Terminado y verificado con un switch del cliente, publicado en `v0.5.0` |
+| 17 | Disponibilidad de equipos de red por TCP o HTTP, sin credenciales | Terminado y verificado con cuatro equipos del cliente (TCP, caída con sus avisos y HTTPS), publicado en `v0.5.0` |
 
 ## Historial
+
+### Prueba real de Disponibilidad y avisos en rojo (2026-11-20)
+
+Sin cambios de código. Con `v0.5.0` y cuatro equipos del cliente por Disponibilidad, una impresora apagada dio el bloque en rojo y su aviso por Telegram y ntfy.sh, y al encenderla, el aviso de vuelta a verde. Telegram tardó unos 2 minutos en entregar el aviso en rojo: quedó «Sin confirmar» y llegó una sola vez, lo que confirma DEC-53. Un punto de acceso por HTTPS salió en ámbar con un 403 por una ruta incorrecta, como prevé DEC-54, y en verde con la ruta correcta. Detalle en el plan de pruebas.
 
 ### `v0.5.0` (2026-11-20)
 
