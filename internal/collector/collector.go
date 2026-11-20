@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/izakdev/talaia/internal/icons"
 	"github.com/izakdev/talaia/internal/integrations"
 	"github.com/izakdev/talaia/internal/store"
 )
@@ -36,6 +37,7 @@ type Snapshot struct {
 	Name          string             `json:"name"`
 	Type          string             `json:"type"`
 	Link          string             `json:"link"`
+	Icon          *icons.Icon        `json:"icon"`
 	Status        string             `json:"status"`
 	Error         string             `json:"error,omitempty"`
 	State         integrations.State `json:"state"`
@@ -56,6 +58,7 @@ type Manager struct {
 	store    *store.Store
 	registry integrations.Registry
 	log      *slog.Logger
+	icons    icons.Set
 
 	mu         sync.Mutex
 	base       context.Context
@@ -72,6 +75,9 @@ func New(st *store.Store, registry integrations.Registry, log *slog.Logger) *Man
 		items: map[string]*item{}, subs: map[chan struct{}]struct{}{},
 	}
 }
+
+// SetIcons indica los iconos con los que se resuelve el de cada conexión; se llama antes de Start.
+func (m *Manager) SetIcons(set icons.Set) { m.icons = set }
 
 // Start arranca los recolectores hasta que se cancele ctx.
 func (m *Manager) Start(ctx context.Context) error {
@@ -144,6 +150,7 @@ func (m *Manager) start(c store.Connection) {
 			snapshot.Name, snapshot.Link = c.Name, c.Link()
 		}
 	}
+	snapshot.Icon = m.icons.Resolve(c.Type, c.Icon)
 	ctx, cancel := context.WithCancel(m.base)
 	m.generation++
 	generation := m.generation

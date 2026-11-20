@@ -24,6 +24,19 @@
 
 ## Historial
 
+### Iconos en los bloques (2026-11-20)
+
+**Añadido:**
+- Cada bloque del panel lleva junto a su nombre el icono de su servicio, el mismo del catálogo, también la nueva «Disponibilidad» (un pulso).
+- Campo «Icono» en cada conexión, con un buscador de los 3.467 logotipos de `simple-icons` (por ejemplo, Pi-hole para un AdGuard o el de tu router), «Sin icono» y «Restablecer». Los iconos van dentro del binario: el navegador no pide nada a terceros; ver DEC-56.
+- La API pública da el icono de cada bloque (`slug`, título y color), un dato visual que no expone nada del servicio.
+
+**Cambiado:**
+- En modo oscuro, un logotipo negro (o en modo claro, uno casi blanco) se pinta con el color del texto para que se vea.
+- El binario crece unos 5 MB por los iconos.
+
+**Verificado** con el panel real del cliente en su Proxmox VE: cada bloque con su icono y la atalaya sin iconos; ver el [plan de pruebas](04-plan-de-pruebas.md#verificaciones-manuales).
+
 ### Hito 17 (2026-11-20)
 
 **Añadido:**

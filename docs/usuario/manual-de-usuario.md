@@ -116,7 +116,7 @@ Si aún no hay servicios, te lleva a la administración para añadirlos:
 
 ![Panel sin servicios](img/02-panel-vacio.png)
 
-Cuando hay servicios, cada uno tiene su propio bloque. Su nombre es un enlace que abre el servicio en una pestaña nueva:
+Cuando hay servicios, cada uno tiene su propio bloque, con el icono del servicio junto a su nombre; puedes [cambiarlo](#cambiar-el-icono). El nombre es un enlace que abre el servicio en una pestaña nueva:
 
 ![Panel con un servicio de AdGuard](img/07-panel.png)
 
@@ -227,6 +227,7 @@ En **Conexiones** ves tus servicios, su configuración y si funcionan:
 | Campo | Qué poner |
 |---|---|
 | Nombre | Cómo quieres verlo en el panel |
+| Icono | El del servicio, salvo que [elijas otro](#cambiar-el-icono) |
 | URL | Dirección del servicio con `http://` o `https://` y su puerto |
 | Refresco | Cada cuántos segundos se consulta, de 5 a 3600 |
 | Enlace para abrir el servicio | Opcional. La dirección que usas en el navegador, si es distinta de la URL. Vacío, se usa la URL |
@@ -514,6 +515,26 @@ Talaia no hace ping: en el contenedor sin privilegios que crea el instalador, ha
 **Editar:** pulsa **Editar** en la conexión. Deja la credencial vacía para conservar la actual. Si cambias la URL, tendrás que volver a escribirla: así evitas enviarla por error a otro servidor.
 
 **Eliminar:** pulsa **Eliminar** y confirma en la misma fila. No se puede deshacer, y el servicio desaparece del panel.
+
+### Cambiar el icono
+
+Cada bloque lleva el icono de su servicio. Si prefieres otro (por ejemplo, el de Pi-hole para un AdGuard, o el de la marca de tu router), cámbialo en la conexión:
+
+1. Edita la conexión y pulsa el botón de **Icono**.
+2. Escribe el nombre de la marca. No importan las mayúsculas, las tildes ni los guiones: «pi hole» encuentra Pi-hole.
+3. Elige el icono con el ratón, o con las flechas e Intro. **Esc** cierra el buscador sin cerrar el formulario.
+4. Pulsa **Guardar**.
+
+![Elegir el icono de una conexión](img/28-icono-de-la-conexion.png)
+
+- **Sin icono:** es la primera opción del buscador. El bloque queda solo con el nombre.
+- **Restablecer:** vuelve al icono del servicio.
+
+Talaia trae dentro los logotipos de [Simple Icons](https://simpleicons.org), más de 3.400 marcas, así que no se conecta a Internet para mostrarlos. Si un logotipo es negro y usas el modo oscuro, se pinta del color del texto para que se vea:
+
+![Icono negro en el móvil, en modo oscuro](img/29-icono-movil-oscuro.png)
+
+El icono se ve en el panel público: es solo un dibujo y no dice nada de tu servicio.
 
 ## Organizar el panel
 

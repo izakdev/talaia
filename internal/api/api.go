@@ -26,6 +26,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/izakdev/talaia/internal/auth"
 	"github.com/izakdev/talaia/internal/collector"
+	"github.com/izakdev/talaia/internal/icons"
 	"github.com/izakdev/talaia/internal/integrations"
 	"github.com/izakdev/talaia/internal/integrations/adguard"
 	"github.com/izakdev/talaia/internal/integrations/availability"
@@ -62,6 +63,7 @@ type Server struct {
 	collector *collector.Manager
 	notifier  *notify.Notifier
 	registry  integrations.Registry
+	icons     icons.Set
 	// SetupTokenFile, si existe ese archivo, protege el primer arranque con su contenido.
 	SetupTokenFile string
 }
@@ -80,6 +82,7 @@ func New(st *store.Store, manager *collector.Manager, notifier *notify.Notifier,
 		collector: manager,
 		notifier:  notifier,
 		registry:  registry,
+		icons:     icons.Load(web),
 	}, nil
 }
 
@@ -443,6 +446,8 @@ type connectionIn struct {
 	LinkURL         string          `json:"link_url"`
 	// Notify es opcional: si no llega, la conexión avisa.
 	Notify *bool `json:"notify"`
+	// Icon: vacío, el de su tipo; "none", sin icono; si no, uno del índice.
+	Icon string `json:"icon"`
 }
 
 type connectionOut struct {
@@ -457,11 +462,25 @@ type connectionOut struct {
 	Entities        []string        `json:"entities"`
 	LinkURL         string          `json:"link_url"`
 	Notify          bool            `json:"notify"`
+	Icon            string          `json:"icon"`
 	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
 func toOut(c store.Connection) connectionOut {
-	return connectionOut{c.ID, c.Name, c.Type, c.BaseURL, c.Username, c.IntervalSeconds, c.TLSSkipVerify, c.Options, c.Entities, c.LinkURL, c.Notify, c.UpdatedAt}
+	return connectionOut{c.ID, c.Name, c.Type, c.BaseURL, c.Username, c.IntervalSeconds, c.TLSSkipVerify, c.Options, c.Entities, c.LinkURL, c.Notify, c.Icon, c.UpdatedAt}
+}
+
+// validate comprueba la conexión y que su icono exista. saved es el icono ya guardado:
+// se admite aunque una versión nueva de simple-icons lo haya retirado, para poder editar
+// el resto de la conexión sin tocarlo.
+func (s *Server) validate(in *connectionIn, saved string) string {
+	if code := validateConnection(in); code != "" {
+		return code
+	}
+	if in.Icon != "" && in.Icon != icons.None && in.Icon != saved && !s.icons.Has(in.Icon) {
+		return "invalid_icon"
+	}
+	return ""
 }
 
 func validateConnection(in *connectionIn) string {
@@ -619,14 +638,14 @@ func (s *Server) createConnection(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_secret")
 		return
 	}
-	if code := validateConnection(&in); code != "" {
+	if code := s.validate(&in, ""); code != "" {
 		writeError(w, http.StatusBadRequest, code)
 		return
 	}
 	c, err := s.store.CreateConnection(r.Context(), store.Connection{
 		Name: in.Name, Type: in.Type, BaseURL: in.BaseURL, Username: in.Username,
 		IntervalSeconds: in.IntervalSeconds, TLSSkipVerify: in.TLSSkipVerify, Options: in.Options, Entities: in.Entities, LinkURL: in.LinkURL,
-		Notify: in.Notify == nil || *in.Notify,
+		Notify: in.Notify == nil || *in.Notify, Icon: in.Icon,
 	}, *in.Secret)
 	if err != nil {
 		s.internal(w, err)
@@ -654,7 +673,7 @@ func (s *Server) updateConnection(w http.ResponseWriter, r *http.Request) {
 	if in.PrivacySecret != nil && *in.PrivacySecret == "" {
 		in.PrivacySecret = nil
 	}
-	if code := validateConnection(&in); code != "" {
+	if code := s.validate(&in, current.Icon); code != "" {
 		writeError(w, http.StatusBadRequest, code)
 		return
 	}
@@ -666,7 +685,7 @@ func (s *Server) updateConnection(w http.ResponseWriter, r *http.Request) {
 	c, err := s.store.UpdateConnection(r.Context(), store.Connection{
 		ID: id, Name: in.Name, BaseURL: in.BaseURL, Username: in.Username,
 		IntervalSeconds: in.IntervalSeconds, TLSSkipVerify: in.TLSSkipVerify, Options: in.Options, Entities: in.Entities, LinkURL: in.LinkURL,
-		Notify: in.Notify == nil || *in.Notify,
+		Notify: in.Notify == nil || *in.Notify, Icon: in.Icon,
 	}, in.Secret)
 	if s.storeError(w, err) {
 		return
@@ -948,6 +967,9 @@ func (s *Server) serveWeb(w http.ResponseWriter, r *http.Request) {
 		if info, err := fs.Stat(s.web, name); err == nil && !info.IsDir() {
 			if strings.HasPrefix(name, "assets/") {
 				w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+			} else if strings.HasPrefix(name, "icons/") {
+				// Sin huella en el nombre: pueden cambiar al actualizar simple-icons.
+				w.Header().Set("Cache-Control", "public, max-age=604800")
 			}
 			http.ServeFileFS(w, r, s.web, name)
 			return

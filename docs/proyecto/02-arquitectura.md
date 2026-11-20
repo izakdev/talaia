@@ -57,7 +57,7 @@ flowchart LR
 | Editor | `react-grid-layout`, cargado solo al abrir el editor | Arrastrar y redimensionar sin cargar el panel |
 | WebSocket | `coder/websocket` | Sin dependencias; necesario para consultar Supervisor |
 | SNMP | `gosnmp/gosnmp` | Go puro, con SNMPv3; necesario para consultar QNAP (DEC-42) |
-| Iconos | `simple-icons` | Incluidos en la aplicación, sin depender de Internet |
+| Iconos | `simple-icons` | Incluidos en la aplicación, sin depender de Internet. La compilación web copia cada uno a `dist/icons/` y genera su índice; ver DEC-56 |
 | Tipografía | Schibsted Grotesk, servida por Talaia | Sin peticiones a terceros |
 | CI | GitHub Actions | Pruebas completas en cada cambio de código, solo `docs-check` si solo cambia documentación (DEC-52), y publicación por etiqueta |
 
@@ -72,6 +72,7 @@ Los motivos detallados están en [Decisiones](05-decisiones.md).
 | `internal/auth` | Contraseñas y tokens de sesión |
 | `internal/secrets` | Clave de cifrado y cifrado de credenciales |
 | `internal/store` | SQLite, migraciones y consultas |
+| `internal/icons` | Índice de iconos (`icons/index.json` de la web), icono por defecto de cada tipo y resolución del de cada conexión |
 | `internal/collector` | Un recolector por conexión, caché de estado (con el color de cada servicio) y avisos de cambio |
 | `internal/notify` | Notificador: retardo, agrupación, último color avisado, mensaje y emisores de Telegram, ntfy y webhook |
 | `internal/integrations` | Interfaz común, estado de un servicio (`State`), cliente HTTP y códigos de error |
@@ -87,6 +88,8 @@ Los motivos detallados están en [Decisiones](05-decisiones.md).
 | `web` | Frontend; `web/embed.go` lo incluye en el binario y `web/states.go`, los textos de estado |
 | `web/src/i18n/states.json` | Textos de estado de los servicios en español e inglés, compartidos por el panel y los avisos |
 | `web/src/widgets` | Contenido y pie del bloque de cada integración |
+| `web/src/IconPicker.tsx` | Buscador de iconos del formulario de conexión |
+| `web/scripts/icons.mjs` y `web/icons` | Copia los iconos de `simple-icons` y los propios (`talaia-nut` y `talaia-availability`, que el buscador nombra como su tipo) a `dist/icons/`, con su índice |
 | `web/src/PanelEditor.tsx` | Editor de páginas y bloques |
 | `web/src/Settings.tsx` | Tema, acento, acceso y contraseña |
 | `web/src/Notifications.tsx` | Ajustes de avisos, canales y últimos envíos |
@@ -314,7 +317,7 @@ Las respuestas son JSON. Las escrituras exigen `Content-Type: application/json` 
 |---|---|---|
 | `GET /healthz` | Público | Comprobación de vida |
 | `GET /api/state` | Público | Si falta el primer arranque, versión, usuario actual, tema, acento y si el panel exige sesión |
-| `GET /api/dashboard` | Público o sesión, según ajustes | Páginas y estado de las conexiones colocadas en ellas, con el enlace a cada servicio |
+| `GET /api/dashboard` | Público o sesión, según ajustes | Páginas y estado de las conexiones colocadas en ellas, con el enlace a cada servicio y su icono (`icon`: `slug`, `title` y `hex`, o `null` sin icono) |
 | `GET /api/dashboard/events` | Público o sesión, según ajustes | Eventos SSE con el mismo contenido. Se cierran si se pierde el permiso |
 | `POST /api/setup` | Público, solo una vez | Crea el primer administrador e inicia sesión |
 | `POST /api/auth/login` | Público | Inicia sesión |
@@ -335,6 +338,9 @@ Las respuestas son JSON. Las escrituras exigen `Content-Type: application/json` 
 | `POST /api/admin/notifications/channels/{id}/test` | Sesión | Envía un mensaje de prueba por un canal guardado |
 | `POST /api/admin/notifications/test` | Sesión | Envía una prueba con los datos del formulario, sin guardar; con `id`, completa los secretos en blanco con los guardados |
 | `GET /api/admin/notifications/log` | Sesión | Los 50 últimos envíos |
+| `GET /icons/{slug}.svg` y `GET /icons/index.json` | Público | Los iconos incluidos en el binario y su índice (`slug`, `title`, `hex`), con caché de una semana. No dependen de ninguna conexión |
+
+El campo `icon` de una conexión vale `""` (el icono de su tipo, que sigue al catálogo), `"none"` (sin icono) o un `slug` del índice; otro valor da `invalid_icon`. Un icono guardado que desaparece del índice al actualizar `simple-icons` deja el bloque sin icono, sin error, y al editar la conexión se admite conservarlo.
 
 Las respuestas de los canales nunca incluyen el token, el tópico ni la URL del webhook: solo el nombre, el tipo, si está activo, el chat ID de Telegram y el servidor de ntfy.
 
@@ -388,6 +394,7 @@ erDiagram
         text entities
         text link_url
         integer notify
+        text icon
         integer created_at
         integer updated_at
     }

@@ -38,7 +38,11 @@ Pregunta al usuario las decisiones de producto que no se deducen: qué mostrar, 
 ## 2. Frontend (React + TypeScript)
 
 - `web/src/api.ts`: el tipo en `ConnectionType` y la interfaz `<X>Data`.
-- `web/src/catalog.ts`: la entrada con `icon` de `simple-icons`, `urlPlaceholder` (`http://<x>.local:puerto`), `hasEntities`, `options` y `defaultOptions`.
+- `web/src/catalog.ts`: la entrada con `iconSlug`, `icon` de `simple-icons`, `urlPlaceholder` (`http://<x>.local:puerto`), `hasEntities`, `options` y `defaultOptions`.
+- Icono del bloque (DEC-56), en tres sitios con el mismo nombre:
+  - `iconSlug` en `catalog.ts`: el `slug` de `simple-icons` (el de `siAdguard` es `adguard`).
+  - `icons.Defaults` en `internal/icons/icons.go`, con el mismo valor. `TestEveryTypeHasDefaultIcon` exige la entrada y `TestDefaultsMatchCatalog`, que coincida con el catálogo.
+  - Si `simple-icons` no tiene la marca: el SVG de 24 × 24 en `web/icons/talaia-<x>.svg`, su título y color en el objeto `own` de `web/scripts/icons.mjs` (sin ellos falla la compilación), e `iconSlug: "talaia-<x>"`.
 - `web/src/widgets/<x>.tsx`: un `Widget<XData>` con `Body` y `footer` (nombre y versión); el estado lo calcula el servidor. Reutiliza `formatBytes` y las clases existentes (`figures compact`, `ha-section`, `ha-entities gateways`, `service-foot`, `no-data`).
 - `web/src/Dashboard.tsx`: importa y registra el widget.
 - `web/src/i18n/states.json`: las etiquetas de estado (`<x>.…`) en español y en inglés; sirven para el bloque y para los avisos.

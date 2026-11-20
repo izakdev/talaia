@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -167,7 +168,7 @@ func TestAvailabilityLinkHidesAddress(t *testing.T) {
 func TestMigratesExistingDatabase(t *testing.T) {
 	s, path := newStore(t)
 	ctx := context.Background()
-	if _, err := s.db.Exec(`DROP TABLE notify_state; DROP TABLE notification_channels; DROP TABLE notification_log; ALTER TABLE connections DROP COLUMN notify; DROP TABLE widgets; DROP TABLE pages; DROP TABLE settings; ALTER TABLE connections DROP COLUMN link_url; ALTER TABLE connections DROP COLUMN entities; ALTER TABLE connections DROP COLUMN options; PRAGMA user_version = 1;`); err != nil {
+	if _, err := s.db.Exec(`ALTER TABLE connections DROP COLUMN icon; DROP TABLE notify_state; DROP TABLE notification_channels; DROP TABLE notification_log; ALTER TABLE connections DROP COLUMN notify; DROP TABLE widgets; DROP TABLE pages; DROP TABLE settings; ALTER TABLE connections DROP COLUMN link_url; ALTER TABLE connections DROP COLUMN entities; ALTER TABLE connections DROP COLUMN options; PRAGMA user_version = 1;`); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.db.Exec(`INSERT INTO connections(id, name, type, base_url, secret, interval_seconds, created_at, updated_at)
@@ -182,7 +183,7 @@ func TestMigratesExistingDatabase(t *testing.T) {
 	}
 	defer s2.Close()
 	c, err := s2.GetConnection(ctx, "v1")
-	if err != nil || c.Name != "antigua" || !c.Notify || c.Options["show_top_domains"] || len(c.Entities) != 0 {
+	if err != nil || c.Name != "antigua" || !c.Notify || c.Icon != "" || c.Options["show_top_domains"] || len(c.Entities) != 0 {
 		t.Fatalf("c = %+v, err = %v", c, err)
 	}
 	pages, err := s2.Panel(ctx)
@@ -285,5 +286,47 @@ func TestPasswordChangeAndReset(t *testing.T) {
 	}
 	if _, err := s.UserBySession(ctx, "actual"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("debe revocar todas las sesiones: %v", err)
+	}
+}
+
+func TestConnectionIconRoundTrip(t *testing.T) {
+	s, _ := newStore(t)
+	ctx := context.Background()
+	c, err := s.CreateConnection(ctx, Connection{Name: "a", Type: "adguard", BaseURL: "http://x", IntervalSeconds: 30, Icon: "pihole"}, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Icon != "pihole" {
+		t.Fatalf("icono al crear = %q", c.Icon)
+	}
+	c.Icon = "none"
+	if c, err = s.UpdateConnection(ctx, c, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := s.GetConnection(ctx, c.ID); got.Icon != "none" {
+		t.Fatalf("icono al actualizar = %q", got.Icon)
+	}
+}
+
+func TestMigrationKeepsDefaultIcon(t *testing.T) {
+	s, path := newStore(t)
+	ctx := context.Background()
+	c, err := s.CreateConnection(ctx, Connection{Name: "a", Type: "adguard", BaseURL: "http://x", IntervalSeconds: 30}, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Vuelve a la base de datos de antes de la migración del icono.
+	if _, err := s.db.Exec(fmt.Sprintf(`ALTER TABLE connections DROP COLUMN icon; PRAGMA user_version = %d`, len(migrations)-1)); err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+	box, _ := secrets.New(bytes.Repeat([]byte{7}, 32))
+	s, err = Open(path, box)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	if got, err := s.GetConnection(ctx, c.ID); err != nil || got.Icon != "" {
+		t.Fatalf("icono tras migrar = %q, %v", got.Icon, err)
 	}
 }

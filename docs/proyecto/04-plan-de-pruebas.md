@@ -32,6 +32,12 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestWebFallback` | Las rutas de la web sirven la aplicación; archivos y API inexistentes dan 404 | RF-01 |
 | `TestDashboardIsPublicAndHidesConfiguration` | El dashboard es público, con enlace y sin usuarios ni credenciales | RF-01, RF-25, RNF-03 |
 | `TestConnectionLink` | Rechaza enlaces con otro esquema o con credenciales; uno propio sustituye a la URL de conexión en la API pública | RF-25 |
+| `TestDashboardDefaultIcon` | Sin elegir icono, el panel público da el del tipo, con su nombre y color | RF-28 |
+| `TestConnectionIconChange` | Un icono elegido sale en el panel; «none» lo quita y vacío vuelve al del tipo | RF-28 |
+| `TestConnectionInvalidIcon` | Rechaza con `invalid_icon` un icono que no está en el índice, una ruta o un texto largo | RF-28 |
+| `TestEveryTypeHasDefaultIcon` | Cada tipo de conexión tiene icono por defecto | RF-28 |
+| `TestIconsCached` | `/icons/` se sirve con una semana de caché | RF-28 |
+| `TestEditKeepsVanishedIcon` | Al editar se conserva un icono guardado que una versión nueva de `simple-icons` retiró; otro icono inexistente sigue rechazándose | RF-28 |
 | `TestConnectionTestReportsNotes` | La prueba de conexión devuelve los avisos de la integración | RF-53 |
 | `TestOPNsenseCredentialsAreCleaned` | Limpia las líneas `key=` y `secret=` pegadas de OPNsense y rechaza una clave con espacios | RF-73 |
 | `TestMultipleConnectionsOfSameService` | Admite varias conexiones del mismo servicio, ordenadas por nombre | RF-11 |
@@ -90,6 +96,8 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestSettingsDefaultsAndSave` | Valores por defecto y guardado de los ajustes, también los de avisos | RF-07, RF-24, RF-107 |
 | `TestPasswordChangeAndReset` | El cambio revoca las demás sesiones y la recuperación, todas | RF-08 |
 | `TestMigratesExistingDatabase` | Una base de datos anterior migra, conserva sus conexiones y las coloca en el panel | RNF-05, RF-22 |
+| `TestConnectionIconRoundTrip` | El icono elegido se guarda al crear y al editar | RF-28 |
+| `TestMigrationKeepsDefaultIcon` | Una conexión anterior a la columna del icono queda con el de su tipo | RF-28, RNF-05 |
 | `TestChannelSecretEncrypted` | El secreto de un canal no está en claro y se recupera | RF-108, RNF-04 |
 | `TestUpdateChannelKeepsSecret` | Editar sin secreto lo conserva; con secreto, lo cambia; borrar elimina el canal | RF-108 |
 | `TestNotifiedToneCascade` | El color avisado se guarda y se borra con la conexión | RF-112 |
@@ -97,6 +105,19 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestLogKeepsLatest50` | El registro guarda los 50 envíos más recientes, del último al primero | RF-111 |
 | `TestSettingsNotifyDefaults` | Sin idioma de avisos y 2 minutos por defecto; el primer canal fija el idioma una sola vez | RF-107, RF-110 |
 | `TestConnectionNotifyDefaultTrue` | Una conexión, también las anteriores a la migración, avisa salvo que se silencie | RF-109 |
+
+### `internal/icons`
+
+| Prueba | Verifica | Requisitos |
+|---|---|---|
+| `TestResolveDefault` | Sin icono elegido, da el del tipo con su nombre y color | RF-28 |
+| `TestResolveNone` | «none» no da icono | RF-28 |
+| `TestResolveCustom` | Da el icono elegido | RF-28 |
+| `TestResolveUnknownStoredSlug` | Un icono guardado que ya no está en el índice no da icono, sin error | RF-28 |
+| `TestHas` | Distingue los iconos del índice de los demás valores | RF-28 |
+| `TestLoadMissingIndex` | Sin la web compilada no hay iconos ni pánico | RF-28 |
+| `TestLoadBrokenIndex` | Un índice mal formado no da iconos | RF-28 |
+| `TestDefaultsMatchCatalog` | El icono por defecto de cada tipo es el mismo en Go y en el catálogo de la web | RF-28 |
 
 ### `internal/collector`
 
@@ -305,6 +326,8 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-13 | Móvil y modo oscuro sin desbordamiento | RF-06 |
 | E2E-14 | La API pública no expone configuración ni credenciales | RNF-03 |
 | E2E-23 | Enlace a cada servicio desde su bloque | RF-25 |
+| E2E-50 | Icono de cada bloque: el de su tipo (servido desde `/icons/`, sin iconos en la atalaya), otro elegido con el buscador («PI HOLE» encuentra Pi-hole; Esc cierra el buscador y no el formulario) y publicado en la API pública, sin icono y restablecido | RF-28 |
+| E2E-51 | Icono legible en modo oscuro (el negro de GitHub, con el color del texto) y sin desbordar en el móvil con un nombre largo | RF-28, RF-06 |
 | E2E-15 | Sin errores de JavaScript durante el recorrido | RF-01 |
 | E2E-16 | Alta de Proxmox con validación del token | RF-10, RF-13 |
 | E2E-17 | Clúster en el panel: agregados, nodos y detalle | RF-40, RF-41 |
@@ -376,6 +399,7 @@ El workflow también prueba todo cuando no puede calcular la lista: en un push q
 
 | Fecha | Versión de Talaia | Servicio | Resultado |
 |---|---|---|---|
+| 2026-11-20 | Iconos en los bloques (`785c1d5`, binario de la rama) | Panel real del cliente con 8 servicios (SAI por NUT, AdGuard Home, QNAP, Proxmox VE, OPNsense, Portainer y otros), con Talaia actualizado en su Proxmox VE con el instalador y `--binary` | Correcto según la captura del cliente: cada bloque lleva a la izquierda del nombre el icono de su tipo, con el color de la marca (la batería propia en el SAI, el escudo de AdGuard, el logotipo de QNAP, el de Proxmox y el de OPNsense), alineado con el nombre y su enlace, y la atalaya sin iconos. El logotipo de QNAP es una palabra ancha y a 18 px se lee mal, aunque se reconoce. No se ha visto en la captura el cambio de icono, «Sin icono», el modo oscuro ni el móvil, que cubren E2E-50 y E2E-51 |
 | 2026-11-20 | Hito 17 (`v0.4.1-2-g30dd9b1-dirty`, binario de la rama) | Switch TP-Link TL-SG108PE v5 real del cliente, dado de alta como `tcp://` al puerto 80 de su web, con Talaia actualizado en su Proxmox VE con el instalador y `--binary` | Correcto según la captura del cliente: bloque en verde «Responde», latencia de 4 ms y «TCP» en el pie, junto al resto de servicios del panel. El nombre enlaza con el enlace propio que puso el cliente. Solo se ha probado un switch por TCP: no se han visto el modo HTTP, el ámbar por un código de error, el rojo de un switch desconectado ni su aviso, ni se ha revisado a mano la API pública, que cubren `TestAvailabilityDataHidesTarget`, `TestAvailabilityLinkHidesAddress`, E2E-14 y E2E-49 |
 | 2026-11-20 | Hito 16 (`v0.3.1-dirty`, binario de la rama) | Bot de Telegram real del cliente en un chat privado, con Talaia actualizado en su Proxmox VE con el instalador y `--binary`, y su AdGuard Home real | Correcto según tres capturas del cliente: alta del canal con el token tecleado por el cliente; «Enviar prueba» recibida; con la protección de AdGuard desactivada, «🟠 Talaia · Necesita atención / Adguard: Protección desactivada» a las 10:05, unos 2 minutos después (retardo por defecto); al reactivarla, «🟢 Talaia · Vuelve a estar en orden / Adguard: Protección activa» a las 10:08; «Últimos envíos» con las cuatro entradas. La primera prueba dio «el servidor no responde a tiempo» (más de 10 s) pero Telegram la entregó igualmente: llegaron dos mensajes de prueba. En Safari, los desplegables de la sección se veían más bajos que los demás campos; corregido después. No se han probado ntfy ni webhook reales, un grupo de Telegram, un aviso en rojo ni varios servicios a la vez, que cubren las pruebas de `internal/notify` y E2E-43 a E2E-47 |
 | 2026-11-19 | Hito 15 (`7d5a8d6`) | upsd 2.8.1 real del cliente, en otro nodo de su Proxmox, dado de alta como `nut://` sin indicar el SAI, con Talaia actualizado en su Proxmox VE con el instalador y `--binary` | Correcto según la captura del cliente: estado verde «Con red», batería 100 %, autonomía en minutos, modelo y «NUT 2.8.1» en el pie, y atalaya con los 7 servicios en orden. Toma el único SAI del servidor sin indicarlo. No se ha visto «Cargando» porque el SAI estaba cargado (`OL`), ni se han provocado un corte de luz u otros avisos, ni revisado a mano la API pública, que cubren `TestNUTDataHidesPrivate`, E2E-14 y E2E-42. La primera actualización falló sin cambiar nada porque `ssh` sin `-t` no deja confirmar; con `ssh -t` fue bien |
@@ -448,6 +472,7 @@ El workflow también prueba todo cuando no puede calcular la lista: en un push q
 - WGDashboard: código de la v4.3.4, en `src/dashboard.py` y `src/modules/WireguardConfiguration.py`, para rutas, autenticación, registro de accesos y cálculo de los peers conectados.
 
 **Aún sin verificar:**
+- **Iconos de los bloques en otros navegadores:** la máscara CSS con la que se pintan solo se ha probado en Chromium (E2E) y en el navegador del cliente con su panel real; no en Safari ni Firefox de forma expresa.
 - **Disponibilidad real, casos no probados:** un switch TP-Link TL-SG108PE v5 real responde por TCP (2026-11-20), pero no se han probado con equipos reales el modo HTTP o HTTPS, un código de error, un equipo caído y su aviso, IPv6 ni un equipo lento. Solo se han probado con el simulador y los servidores de prueba de Go.
 - **Avisos reales por webhook:** solo se han probado con el receptor simulado. Telegram y ntfy.sh, solo con avisos en ámbar y verde de un servicio cada vez: no se han probado un grupo o un canal de Telegram, un servidor ntfy propio, un aviso en rojo real, varios servicios a la vez ni un envío «Sin confirmar».
 - **SAI real por NUT, casos no probados:** batería baja durante un corte (el corte con batería sí, el 2026-11-20), batería cargándose («Cargando»), aviso de cambiar batería, sobrecarga, driver desconectado, varios SAI en un servidor y SAI de otros fabricantes. Solo se han probado con el simulador.
@@ -477,7 +502,7 @@ Los requisitos pendientes se probarán en su hito.
 | RF-03 | `TestSetupOnlyOnceAndLogin`, `TestFirstUserOnlyOnce`, E2E-01 |
 | RF-04 | `TestLoginLimiter`, `TestLogoutRevokesSessionOnServer`, `TestPassword`, `TestExpiredSessionIsRejected`, E2E-03 |
 | RF-05 | E2E-12 |
-| RF-06 | E2E-13 |
+| RF-06 | E2E-13, E2E-51 |
 | RF-10 | `TestConnectionValidation`, `TestConnectionsNeverExposeSecret`, E2E-06, E2E-11 |
 | RF-11 | `TestMultipleConnectionsOfSameService` |
 | RF-12 | E2E-04 |
@@ -504,6 +529,7 @@ Los requisitos pendientes se probarán en su hito.
 | RF-26 | E2E-25, E2E-37 |
 | RF-27 | `TestNewConnectionsFillThreeColumns`, E2E-24, E2E-38 |
 | RF-24 | `TestSettingsValidation`, `TestSettingsDefaultsAndSave`, E2E-26 |
+| RF-28 | `TestResolveDefault`, `TestResolveNone`, `TestResolveCustom`, `TestResolveUnknownStoredSlug`, `TestHas`, `TestLoadMissingIndex`, `TestLoadBrokenIndex`, `TestConnectionIconRoundTrip`, `TestMigrationKeepsDefaultIcon`, `TestDashboardDefaultIcon`, `TestConnectionIconChange`, `TestConnectionInvalidIcon`, `TestEveryTypeHasDefaultIcon`, `TestIconsCached`, `TestEditKeepsVanishedIcon`, `TestDefaultsMatchCatalog`, E2E-50, E2E-51 |
 | RF-60 | INS-01, INS-07, INS-08, INS-09, INS-10 |
 | RF-70 | `TestCollect`, `TestParseSize`, E2E-31 |
 | RF-71 | `TestGatewayStates`, E2E-31 |

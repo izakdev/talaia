@@ -18,6 +18,7 @@ import (
 	"github.com/izakdev/talaia/internal/api"
 	"github.com/izakdev/talaia/internal/auth"
 	"github.com/izakdev/talaia/internal/collector"
+	"github.com/izakdev/talaia/internal/icons"
 	"github.com/izakdev/talaia/internal/integrations"
 	"github.com/izakdev/talaia/internal/integrations/adguard"
 	"github.com/izakdev/talaia/internal/integrations/availability"
@@ -123,6 +124,7 @@ func run(log *slog.Logger) error {
 
 	registry := integrations.Registry{"adguard": adguard.New, "availability": availability.New, "homeassistant": homeassistant.New, "opnsense": opnsense.New, "portainer": portainer.New, "nut": nut.New, "proxmox": proxmox.New, "qnap": qnap.New, "wgdashboard": wgdashboard.New}
 	manager := collector.New(st, registry, log)
+	manager.SetIcons(icons.Load(web.Dist()))
 	notifier := notify.New(st, manager, log)
 	server, err := api.New(st, manager, notifier, registry, log, version, web.Dist())
 	if err != nil {

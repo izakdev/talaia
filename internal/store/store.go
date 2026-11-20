@@ -102,7 +102,8 @@ CREATE TABLE notification_log (
 	result       TEXT NOT NULL,
 	code         TEXT NOT NULL,
 	attempts     INTEGER NOT NULL
-);`}
+);`, `
+ALTER TABLE connections ADD COLUMN icon TEXT NOT NULL DEFAULT '';`}
 
 // Store accede a la base de datos.
 type Store struct {
@@ -254,12 +255,14 @@ type Connection struct {
 	Entities        []string
 	LinkURL         string
 	// Notify indica si sus cambios de estado se avisan por los canales.
-	Notify    bool
+	Notify bool
+	// Icon es el icono elegido: vacío, el de su tipo; "none", sin icono.
+	Icon      string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
 
-const connectionColumns = `id, name, type, base_url, username, interval_seconds, tls_skip_verify, options, entities, link_url, notify, created_at, updated_at`
+const connectionColumns = `id, name, type, base_url, username, interval_seconds, tls_skip_verify, options, entities, link_url, notify, icon, created_at, updated_at`
 
 type scanner interface{ Scan(...any) error }
 
@@ -267,7 +270,7 @@ func scanConnection(row scanner) (Connection, error) {
 	var c Connection
 	var created, updated int64
 	var options, entities string
-	if err := row.Scan(&c.ID, &c.Name, &c.Type, &c.BaseURL, &c.Username, &c.IntervalSeconds, &c.TLSSkipVerify, &options, &entities, &c.LinkURL, &c.Notify, &created, &updated); err != nil {
+	if err := row.Scan(&c.ID, &c.Name, &c.Type, &c.BaseURL, &c.Username, &c.IntervalSeconds, &c.TLSSkipVerify, &options, &entities, &c.LinkURL, &c.Notify, &c.Icon, &created, &updated); err != nil {
 		return c, err
 	}
 	c.CreatedAt, c.UpdatedAt = time.Unix(created, 0).UTC(), time.Unix(updated, 0).UTC()
@@ -333,9 +336,9 @@ func (s *Store) CreateConnection(ctx context.Context, c Connection, secret strin
 	defer tx.Rollback()
 	now := time.Now().Unix()
 	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO connections(id, name, type, base_url, username, secret, interval_seconds, tls_skip_verify, options, entities, link_url, notify, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		c.ID, c.Name, c.Type, c.BaseURL, c.Username, sealed, c.IntervalSeconds, c.TLSSkipVerify, options, entities, c.LinkURL, c.Notify, now, now); err != nil {
+		`INSERT INTO connections(id, name, type, base_url, username, secret, interval_seconds, tls_skip_verify, options, entities, link_url, notify, icon, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		c.ID, c.Name, c.Type, c.BaseURL, c.Username, sealed, c.IntervalSeconds, c.TLSSkipVerify, options, entities, c.LinkURL, c.Notify, c.Icon, now, now); err != nil {
 		return c, err
 	}
 	if err := placeNewConnection(ctx, tx, hex.EncodeToString(widgetID), c.ID); err != nil {
@@ -353,8 +356,8 @@ func (s *Store) UpdateConnection(ctx context.Context, c Connection, secret *stri
 	if err != nil {
 		return c, err
 	}
-	query := `UPDATE connections SET name = ?, base_url = ?, username = ?, interval_seconds = ?, tls_skip_verify = ?, options = ?, entities = ?, link_url = ?, notify = ?, updated_at = ?`
-	args := []any{c.Name, c.BaseURL, c.Username, c.IntervalSeconds, c.TLSSkipVerify, options, entities, c.LinkURL, c.Notify, time.Now().Unix()}
+	query := `UPDATE connections SET name = ?, base_url = ?, username = ?, interval_seconds = ?, tls_skip_verify = ?, options = ?, entities = ?, link_url = ?, notify = ?, icon = ?, updated_at = ?`
+	args := []any{c.Name, c.BaseURL, c.Username, c.IntervalSeconds, c.TLSSkipVerify, options, entities, c.LinkURL, c.Notify, c.Icon, time.Now().Unix()}
 	if secret != nil {
 		sealed, err := s.box.Seal([]byte(*secret), []byte(c.ID))
 		if err != nil {

@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/izakdev/talaia/internal/collector"
+	"github.com/izakdev/talaia/internal/icons"
 	"github.com/izakdev/talaia/internal/integrations"
 	"github.com/izakdev/talaia/internal/notify"
 	"github.com/izakdev/talaia/internal/secrets"
@@ -77,12 +78,17 @@ func newServer(t *testing.T) (*client, *store.Store) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	web := fstest.MapFS{"index.html": {Data: []byte("<html>app</html>")}}
+	web := fstest.MapFS{
+		"index.html":        {Data: []byte("<html>app</html>")},
+		"icons/index.json":  {Data: []byte(`[{"slug":"adguard","title":"AdGuard","hex":"68BC71"},{"slug":"homeassistant","title":"Home Assistant","hex":"18BCF2"},{"slug":"pihole","title":"Pi-hole","hex":"96060C"}]`)},
+		"icons/adguard.svg": {Data: []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`)},
+	}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	fake := func(cfg integrations.Config) integrations.Integration { return fakeIntegration{cfg} }
 	plain := func(cfg integrations.Config) integrations.Integration { return plainIntegration{cfg} }
 	registry := integrations.Registry{"adguard": plain, "homeassistant": fake}
 	manager := collector.New(st, registry, logger)
+	manager.SetIcons(icons.Load(web))
 	ctx, cancel := context.WithCancel(context.Background())
 	if err := manager.Start(ctx); err != nil {
 		t.Fatal(err)
@@ -878,6 +884,103 @@ func TestNUTConnectionRules(t *testing.T) {
 	if strings.Contains(dashboard, "nut://") || strings.Contains(dashboard, "192.0.2.3") || strings.Contains(dashboard, "sai-simulado") {
 		t.Fatalf("el panel muestra la dirección NUT: %s", dashboard)
 	}
+}
+
+func TestDashboardDefaultIcon(t *testing.T) {
+	c, _ := newServer(t)
+	c.want(200, "POST", "/api/setup", creds())
+	c.want(201, "POST", "/api/admin/connections", adguardConn("correcta"))
+	body := waitDashboard(t, newClient(t, c.base), `"status":"ok"`)
+	if !strings.Contains(body, `"icon":{"slug":"adguard","title":"AdGuard","hex":"68BC71"}`) {
+		t.Fatalf("el bloque debe llevar el icono de su tipo: %s", body)
+	}
+}
+
+func TestConnectionIconChange(t *testing.T) {
+	c, _ := newServer(t)
+	c.want(200, "POST", "/api/setup", creds())
+	m := adguardConn("correcta")
+	m["icon"] = "pihole"
+	created := c.want(201, "POST", "/api/admin/connections", m)
+	if !strings.Contains(created, `"icon":"pihole"`) {
+		t.Fatal(created)
+	}
+	var conn struct{ ID string }
+	if err := json.Unmarshal([]byte(created), &conn); err != nil {
+		t.Fatal(err)
+	}
+	if body := waitDashboard(t, newClient(t, c.base), `"slug":"pihole"`); strings.Contains(body, `"slug":"adguard"`) {
+		t.Fatalf("debe mostrarse el icono elegido: %s", body)
+	}
+	m["icon"] = "none"
+	delete(m, "secret")
+	c.want(200, "PUT", "/api/admin/connections/"+conn.ID, m)
+	waitDashboard(t, newClient(t, c.base), `"icon":null`)
+	m["icon"] = ""
+	c.want(200, "PUT", "/api/admin/connections/"+conn.ID, m)
+	waitDashboard(t, newClient(t, c.base), `"slug":"adguard"`)
+}
+
+func TestConnectionInvalidIcon(t *testing.T) {
+	c, _ := newServer(t)
+	c.want(200, "POST", "/api/setup", creds())
+	for _, bad := range []string{"no-existe", "../index", "NONE", strings.Repeat("a", 200)} {
+		m := adguardConn("correcta")
+		m["icon"] = bad
+		if got := c.want(400, "POST", "/api/admin/connections", m); !strings.Contains(got, "invalid_icon") {
+			t.Fatalf("%s: %s", bad, got)
+		}
+	}
+}
+
+func TestEveryTypeHasDefaultIcon(t *testing.T) {
+	for typ := range connectionTypes {
+		if icons.Defaults[typ] == "" {
+			t.Errorf("el tipo %s no tiene icono por defecto", typ)
+		}
+	}
+}
+
+func TestIconsCached(t *testing.T) {
+	c, _ := newServer(t)
+	res, err := c.http.Get(c.base + "/icons/adguard.svg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if res.StatusCode != 200 || res.Header.Get("Cache-Control") != "public, max-age=604800" {
+		t.Fatalf("estado %d, caché %q", res.StatusCode, res.Header.Get("Cache-Control"))
+	}
+}
+
+func TestEditKeepsVanishedIcon(t *testing.T) {
+	c, st := newServer(t)
+	c.want(200, "POST", "/api/setup", creds())
+	m := adguardConn("correcta")
+	created := c.want(201, "POST", "/api/admin/connections", m)
+	var conn struct{ ID string }
+	if err := json.Unmarshal([]byte(created), &conn); err != nil {
+		t.Fatal(err)
+	}
+	// Un icono elegido con una versión anterior de simple-icons que ya no está en el índice.
+	saved, err := st.GetConnection(context.Background(), conn.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	saved.Icon = "retirado"
+	if _, err := st.UpdateConnection(context.Background(), saved, nil); err != nil {
+		t.Fatal(err)
+	}
+	m["icon"] = "retirado"
+	m["name"] = "Otro nombre"
+	delete(m, "secret")
+	if got := c.want(200, "PUT", "/api/admin/connections/"+conn.ID, m); !strings.Contains(got, `"name":"Otro nombre"`) {
+		t.Fatal(got)
+	}
+	waitDashboard(t, newClient(t, c.base), `"icon":null`)
+	// Otro icono que no existe sigue sin admitirse.
+	m["icon"] = "tampoco-existe"
+	c.want(400, "PUT", "/api/admin/connections/"+conn.ID, m)
 }
 
 func TestAvailabilityConnectionRules(t *testing.T) {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type ConnectionState, type ConnectionType, type DashboardState } from "./api";
-import { Horizon, LanguageSwitch, Tower } from "./chrome";
+import { BrandIcon, Horizon, LanguageSwitch, Tower } from "./chrome";
 import { useI18n, type I18n, type Language } from "./i18n";
 import { adguardWidget } from "./widgets/adguard";
 import { availabilityWidget } from "./widgets/availability";
@@ -389,13 +389,17 @@ export function Service({ connection }: { connection: ConnectionState }) {
               aria-label={t("service.open", { name: connection.name })}
               title={connection.link}
             >
+              <BrandIcon icon={connection.icon} />
               {connection.name}
               <svg viewBox="0 0 16 16" aria-hidden="true">
                 <path d="M6 3H3v10h10v-3M9 3h4v4M13 3 7.5 8.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
               </svg>
             </a>
           ) : (
-            connection.name
+            <span className="service-name">
+              <BrandIcon icon={connection.icon} />
+              {connection.name}
+            </span>
           )}
         </h2>
         <StateLabel tone={state.tone}>{state.label}</StateLabel>
