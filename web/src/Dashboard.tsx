@@ -4,6 +4,7 @@ import { api, type ConnectionState, type ConnectionType, type DashboardState } f
 import { BrandIcon, Horizon, LanguageSwitch, Tower } from "./chrome";
 import { useI18n, type I18n, type Language } from "./i18n";
 import { adguardWidget } from "./widgets/adguard";
+import { availabilityWidget } from "./widgets/availability";
 import { nutWidget } from "./widgets/nut";
 import { opnsenseWidget } from "./widgets/opnsense";
 import { portainerWidget } from "./widgets/portainer";
@@ -19,6 +20,7 @@ const RETRY_MS = 5000;
 
 const WIDGETS: Partial<Record<ConnectionType, unknown>> = {
   adguard: adguardWidget,
+  availability: availabilityWidget,
   homeassistant: homeAssistantWidget,
   nut: nutWidget,
   opnsense: opnsenseWidget,

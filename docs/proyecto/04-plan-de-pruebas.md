@@ -57,6 +57,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestConnectionTest` | Exige sesión, no guarda nada, reutiliza la credencial solo con la misma URL y rechaza tipos sin integración | RF-13, RF-14 |
 | `TestQNAPConnectionRules` | QNAP exige `snmp://`, las dos claves a la vez y de al menos 8 caracteres; las guarda juntas y sin devolverlas, las conserva si llegan vacías, desactiva TLS y no publica la dirección como enlace | RF-102, RF-14, RF-25 |
 | `TestNUTConnectionRules` | SAI (NUT) exige `nut://` y un nombre de SAI válido; se crea sin credencial ni usuario, no guarda un secreto aunque llegue, cambia de dirección sin pedirlo, desactiva TLS y no publica la dirección ni el SAI | RF-105, RF-14 |
+| `TestAvailabilityConnectionRules` | Disponibilidad exige `tcp://host:puerto` o `http(s)://` sin credenciales ni consulta; se crea sin credencial ni usuario, guarda «No verificar TLS» solo con `https://` y no publica la dirección | RF-114, RF-116 |
 | `TestChannelsNeverExposeSecrets` | Ninguna respuesta de canales, pruebas, registro ni ajustes incluye el token, el tópico ni la URL del webhook; una edición con secretos en blanco los conserva y la prueba los usa; el primer canal fija el idioma | RF-108, RF-111 |
 | `TestChannelValidation` | Rechaza nombres vacíos o largos, tipos desconocidos, URL sin `http(s)`, tokens y chat ID de Telegram mal formados y tópicos con espacios; acepta ntfy sin servidor y un `@canal` | RF-108 |
 | `TestTestChannelUsesStoredSecret` | La prueba sin guardar usa el secreto guardado si llega en blanco, informa del error del canal y queda en el registro | RF-108, RF-111 |
@@ -88,6 +89,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestReopenKeepsData` | Los datos persisten al reabrir | RNF-05 |
 | `TestOptionsArePersisted` | Las opciones se guardan | RF-32 |
 | `TestLinkFallsBackToConnectionURL` | Sin enlace propio se usa la URL de conexión | RF-25 |
+| `TestAvailabilityLinkHidesAddress` | La dirección de una conexión de disponibilidad, también la `http(s)://`, nunca es su enlace; el enlace propio, sí | RF-116, RF-25 |
 | `TestEntitiesArePersisted` | La selección de entidades se guarda y se puede vaciar | RF-51 |
 | `TestNewConnectionsFillThreeColumns` | Una conexión nueva se coloca sola en la primera página, sin solapes | RF-22 |
 | `TestPanelSaveAndCascade` | Guarda páginas en orden; eliminar una conexión quita sus bloques | RF-22, RF-23 |
@@ -235,6 +237,20 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestNUTErrors` | Clasifica SAI desconocido, ninguno o varios sin indicar, acceso denegado, driver desconectado, datos caducados, respuesta ajena, lista sin fin, falta de respuesta y servidor apagado | RF-21, RF-104, RF-105 |
 | `TestTarget` (nut) | Acepta `nut://host[:puerto][/sai]` y rechaza otros esquemas, credenciales, puertos, rutas y nombres de SAI con espacios o saltos de línea | RF-105 |
 | `TestParseLine` | Separa las palabras de una línea de NUT y desescapa `\"` y `\\` | RF-103 |
+| `TestState` (nut) | Mismo color y etiqueta que el bloque: batería baja, con batería, cambiar batería, sobrecarga, con red y desconocido; cada clave está en los textos de ambos idiomas | RF-113, RF-104 |
+
+### `internal/integrations/availability`
+
+| Prueba | Verifica | Requisitos |
+|---|---|---|
+| `TestCollectTCP` | Por TCP conecta, cierra y da la latencia, sin código HTTP | RF-114 |
+| `TestCollectHTTP` | Por HTTP hace solo `GET`, da 200 y, ante un 301, no sigue la redirección y cuenta como respuesta | RF-114, RF-115, RNF-02 |
+| `TestCollectHTTPError` | Un 503 devuelve datos con su código y el estado ámbar | RF-115 |
+| `TestAvailabilityErrors` | Clasifica puerto cerrado (TCP y HTTP), plazo agotado, certificado autofirmado y su excepción de TLS, y una dirección no válida | RF-115, RF-21 |
+| `TestAvailabilityDataHidesTarget` | Los datos no incluyen el host, el puerto, la ruta ni el esquema | RF-116 |
+| `TestTarget` (availability) | Acepta `tcp://host:puerto` (también IPv6) y `http(s)://`; rechaza TCP sin puerto o con ruta, credenciales, consultas, fragmentos y otros esquemas | RF-114, RF-116 |
+| `TestState` (availability) | Mismo color y etiqueta que el bloque: TCP, HTTP 200 y 302 en verde; 503 y 401 en ámbar con su código; cada clave está en los textos de ambos idiomas | RF-113, RF-115 |
+
 ### `internal/notify`
 
 | Prueba | Verifica | Requisitos |
@@ -286,7 +302,6 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestStateLabelsBothLanguages` | Los textos de estado compartidos tienen las mismas claves en español e inglés | RF-113, RF-110 |
 
 ## Pruebas E2E
-| `TestState` (nut) | Mismo color y etiqueta que el bloque: batería baja, con batería, cambiar batería, sobrecarga, con red y desconocido; cada clave está en los textos de ambos idiomas | RF-113, RF-104 |
 
 | ID | Escenario | Requisitos |
 |---|---|---|
@@ -339,6 +354,9 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-46 | Avisos en inglés | RF-110 |
 | E2E-47 | Un canal de Telegram con el token rechazado: error en la prueba y en «Últimos envíos», que lo conserva al borrar el canal | RF-111 |
 | E2E-42 | SAI en el panel: carga, «Cargando», autonomía, modelo y versión; con batería, batería baja, cambiar batería, driver sin datos, caída y recuperación; sin nombre del SAI, serie ni dirección en la API pública | RF-20, RF-21, RF-103, RF-104, RF-105 |
+| E2E-48 | Alta de dos equipos por disponibilidad, uno por TCP y otro por HTTP: sin campo de clave, TCP sin puerto rechazado y conexión correcta | RF-10, RF-114 |
+| E2E-49 | Equipos en el panel: «Responde», latencia y pie «TCP» o «HTTP 200»; HTTP 503 en ámbar sin afectar al otro, caída en rojo de los dos y recuperación; sin dirección, puerto, esquema ni ruta en la API pública | RF-20, RF-21, RF-114, RF-115, RF-116 |
+
 Los servicios simulados reproducen las rutas y la forma de respuesta usadas. El receptor de avisos simulado (`e2e/fake-notify.mjs`) hace de API de bots de Telegram, gracias a `TALAIA_TELEGRAM_API`, de servidor ntfy y de webhook, y guarda cada mensaje. El QNAP simulado es un agente SNMPv3 (`net-snmp`) con AES, porque el OpenSSL de Node no trae DES; ver DEC-43. Las discrepancias con el servicio real las cubren las verificaciones manuales.
 
 ## Pruebas del instalador
@@ -381,8 +399,11 @@ El workflow también prueba todo cuando no puede calcular la lista: en un push q
 
 | Fecha | Versión de Talaia | Servicio | Resultado |
 |---|---|---|---|
+| 2026-11-20 | Iconos en los bloques (`785c1d5`, binario de la rama) | Panel real del cliente con 8 servicios (SAI por NUT, AdGuard Home, QNAP, Proxmox VE, OPNsense, Portainer y otros), con Talaia actualizado en su Proxmox VE con el instalador y `--binary` | Correcto según la captura del cliente: cada bloque lleva a la izquierda del nombre el icono de su tipo, con el color de la marca (la batería propia en el SAI, el escudo de AdGuard, el logotipo de QNAP, el de Proxmox y el de OPNsense), alineado con el nombre y su enlace, y la atalaya sin iconos. El logotipo de QNAP es una palabra ancha y a 18 px se lee mal, aunque se reconoce. No se ha visto en la captura el cambio de icono, «Sin icono», el modo oscuro ni el móvil, que cubren E2E-50 y E2E-51 |
+| 2026-11-20 | Hito 17 (`v0.4.1-2-g30dd9b1-dirty`, binario de la rama) | Switch TP-Link TL-SG108PE v5 real del cliente, dado de alta como `tcp://` al puerto 80 de su web, con Talaia actualizado en su Proxmox VE con el instalador y `--binary` | Correcto según la captura del cliente: bloque en verde «Responde», latencia de 4 ms y «TCP» en el pie, junto al resto de servicios del panel. El nombre enlaza con el enlace propio que puso el cliente. Solo se ha probado un switch por TCP: no se han visto el modo HTTP, el ámbar por un código de error, el rojo de un switch desconectado ni su aviso, ni se ha revisado a mano la API pública, que cubren `TestAvailabilityDataHidesTarget`, `TestAvailabilityLinkHidesAddress`, E2E-14 y E2E-49 |
 | 2026-11-20 | Hito 16 (`v0.3.1-dirty`, binario de la rama) | Bot de Telegram real del cliente en un chat privado, con Talaia actualizado en su Proxmox VE con el instalador y `--binary`, y su AdGuard Home real | Correcto según tres capturas del cliente: alta del canal con el token tecleado por el cliente; «Enviar prueba» recibida; con la protección de AdGuard desactivada, «🟠 Talaia · Necesita atención / Adguard: Protección desactivada» a las 10:05, unos 2 minutos después (retardo por defecto); al reactivarla, «🟢 Talaia · Vuelve a estar en orden / Adguard: Protección activa» a las 10:08; «Últimos envíos» con las cuatro entradas. La primera prueba dio «el servidor no responde a tiempo» (más de 10 s) pero Telegram la entregó igualmente: llegaron dos mensajes de prueba. En Safari, los desplegables de la sección se veían más bajos que los demás campos; corregido después. No se han probado ntfy ni webhook reales, un grupo de Telegram, un aviso en rojo ni varios servicios a la vez, que cubren las pruebas de `internal/notify` y E2E-43 a E2E-47 |
 | 2026-11-19 | Hito 15 (`7d5a8d6`) | upsd 2.8.1 real del cliente, en otro nodo de su Proxmox, dado de alta como `nut://` sin indicar el SAI, con Talaia actualizado en su Proxmox VE con el instalador y `--binary` | Correcto según la captura del cliente: estado verde «Con red», batería 100 %, autonomía en minutos, modelo y «NUT 2.8.1» en el pie, y atalaya con los 7 servicios en orden. Toma el único SAI del servidor sin indicarlo. No se ha visto «Cargando» porque el SAI estaba cargado (`OL`), ni se han provocado un corte de luz u otros avisos, ni revisado a mano la API pública, que cubren `TestNUTDataHidesPrivate`, E2E-14 y E2E-42. La primera actualización falló sin cambiar nada porque `ssh` sin `-t` no deja confirmar; con `ssh -t` fue bien |
+| 2026-11-20 | Hito 17, antes de programar | Ninguno: los switches TP-Link TL-SG108PE v5 del cliente (Easy Smart) no tienen API ni SNMP | No hubo exploración con `explorar-api`, porque no hay API que leer: la única fuente de datos sería la interfaz web con la contraseña de administrador por HTTP sin cifrar, que el cliente descarta (DEC-54). La prueba solo abre una conexión TCP o lee un código HTTP, y su comportamiento lo fijan RFC 9110 y Go, contrastados abajo. Que los switches respondan en el puerto 80 queda para la verificación real |
 | 2026-11-19 | Hito 15, antes de programar | upsd 2.8.1 (NETVER 1.3) real del cliente, en otro nodo de su Proxmox, consultado por TCP desde el LXC de Talaia, con nombres, serie, puertos y direcciones ocultos | El host de Proxmox donde corre Talaia no tiene `upsd`: solo `upsmon`, cliente de otro nodo que tiene el SAI por USB. Desde el LXC, `VER`, `LIST UPS`, `LIST VAR` y `LIST CMD` responden sin `LOGIN`. Un SAI con `ups.status` «OL», `battery.charge` 100, `battery.runtime` en segundos, `battery.charge.low`, `ups.model` y `device.model`, `ups.load` y `ups.realpower.nominal`. Un SAI inexistente da `ERR UNKNOWN-UPS` y una variable inexistente, `ERR VAR-NOT-SUPPORTED`. Por eso no se piden credenciales; ver DEC-47 |
 | 2026-11-02 | Hito 2 | AdGuard Home v0.107.79 real en local, con DNS y reglas de bloqueo reales | Correcto: credenciales erróneas, datos, protección desactivada, caída y recuperación, y actualización en vivo durante más de 35 s |
 | 2026-11-02 | Hito 2 | Validación del cliente | Correcto: catálogo de servicios y opción de ocultar el top de dominios |
@@ -447,10 +468,12 @@ El workflow también prueba todo cuando no puede calcular la lista: en un push q
 - QNAP: MIB que descarga el propio NAS (QTS-MIB y NAS-MIB 2.0), para OID, tipos y estados de pools, discos y ventiladores. Para la API web descartada, `python-qnapstats` y la documentación de los plugins de QNAP de Linuxfabrik, que exigen el grupo «administrators».
 - Telegram: documentación de la Bot API, `sendMessage`, para la ruta, `chat_id` y el texto sin `parse_mode`. ntfy: documentación de publicación, en JSON a la raíz del servidor (`topic`, `title`, `message`, `priority` y `tags`) y con `Authorization: Bearer`.
 - NUT: guía de desarrollo de Network UPS Tools, «Network protocol information», para las órdenes, las respuestas y los errores; y las páginas de `upsd.conf` y `upsd.users`, que confirman que leer no exige usuario y que `LISTEN` decide en qué direcciones escucha.
+- Disponibilidad: RFC 9110 (semántica de HTTP), apartado 15, para las clases de código 2xx y 3xx; y la documentación de `net.Dialer` y `net/http` de Go para los plazos y la clasificación de errores. Los TL-SG108PE v5 (TP-Link Easy Smart) no tienen API ni SNMP: solo su interfaz web por HTTP, que exige la contraseña de administrador y no se usa.
 - WGDashboard: código de la v4.3.4, en `src/dashboard.py` y `src/modules/WireguardConfiguration.py`, para rutas, autenticación, registro de accesos y cálculo de los peers conectados.
 
 **Aún sin verificar:**
-- **Iconos de los bloques en una instalación real:** hasta la prueba del cliente en su Proxmox VE, solo se han visto en Chromium con la E2E. Tampoco se ha probado en Safari ni Firefox la máscara CSS con la que se pintan.
+- **Iconos de los bloques en otros navegadores:** la máscara CSS con la que se pintan solo se ha probado en Chromium (E2E) y en el navegador del cliente con su panel real; no en Safari ni Firefox de forma expresa.
+- **Disponibilidad real, casos no probados:** un switch TP-Link TL-SG108PE v5 real responde por TCP (2026-11-20), pero no se han probado con equipos reales el modo HTTP o HTTPS, un código de error, un equipo caído y su aviso, IPv6 ni un equipo lento. Solo se han probado con el simulador y los servidores de prueba de Go.
 - **Avisos reales por webhook:** solo se han probado con el receptor simulado. Telegram y ntfy.sh, solo con avisos en ámbar y verde de un servicio cada vez: no se han probado un grupo o un canal de Telegram, un servidor ntfy propio, un aviso en rojo real, varios servicios a la vez ni un envío «Sin confirmar».
 - **SAI real por NUT, casos no probados:** batería baja durante un corte (el corte con batería sí, el 2026-11-20), batería cargándose («Cargando»), aviso de cambiar batería, sobrecarga, driver desconectado, varios SAI en un servidor y SAI de otros fabricantes. Solo se han probado con el simulador.
 - **QNAP real, casos no probados:** aviso o fallo SMART, RAID degradado o reconstruyéndose, pool en aviso, ventilador averiado, volumen lleno y QTS clásico (no hero). Los textos de estado de RAID y volumen distintos de «Ready» no están documentados; solo se han probado con el simulador.
@@ -531,6 +554,9 @@ Los requisitos pendientes se probarán en su hito.
 | RF-111 | `TestLogKeepsLatest50`, `TestSendErrorCodes`, `TestRetryThenLog`, `TestRejectedIsNotRetried`, `TestSendTimeoutIsLonger`, `TestSlowReplyIsUnconfirmed`, `TestTimeoutBeforeSendingIsRetried`, `TestUnconfirmedIsNotRetried`, `TestUnreadableChannelSecret`, E2E-47 |
 | RF-112 | `TestRestartDoesNotRepeat`, `TestNotifiedToneCascade` |
 | RF-113 | `TestState` (cada integración), `TestSnapshotState`, `TestPendingSnapshotState`, E2E-44 y todas las E2E de colores de bloque |
+| RF-114 | `TestCollectTCP`, `TestCollectHTTP`, `TestTarget` (availability), `TestAvailabilityConnectionRules`, E2E-48, E2E-49 |
+| RF-115 | `TestCollectHTTP`, `TestCollectHTTPError`, `TestAvailabilityErrors`, `TestState` (availability), E2E-49 |
+| RF-116 | `TestAvailabilityDataHidesTarget`, `TestTarget` (availability), `TestAvailabilityConnectionRules`, `TestAvailabilityLinkHidesAddress`, E2E-49 |
 | RF-61 | INS-04, INS-05, INS-06, INS-11, INS-12 |
 | RF-62 | `TestSetupRequiresTokenWhenConfigured`, `TestSetupTokenAttemptsAreLimited`, `TestEmptySetupTokenNeverMatches`, E2E-29, INS-02 |
 | RNF-01 | Por diseño: el modelo de datos no tiene tablas de métricas |

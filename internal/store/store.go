@@ -401,8 +401,9 @@ func (c Connection) Link() string {
 	if c.LinkURL != "" {
 		return c.LinkURL
 	}
-	// Una dirección snmp:// no se abre en el navegador.
-	if !strings.HasPrefix(c.BaseURL, "http://") && !strings.HasPrefix(c.BaseURL, "https://") {
+	// Una dirección snmp:// no se abre en el navegador, y la de un equipo
+	// vigilado por disponibilidad no se publica: solo su enlace propio.
+	if c.Type == "availability" || !strings.HasPrefix(c.BaseURL, "http://") && !strings.HasPrefix(c.BaseURL, "https://") {
 		return ""
 	}
 	return c.BaseURL

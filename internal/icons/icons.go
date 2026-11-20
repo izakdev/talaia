@@ -19,6 +19,7 @@ type Icon struct {
 // Defaults es el icono de cada tipo de conexión, el mismo que el catálogo.
 var Defaults = map[string]string{
 	"adguard":       "adguard",
+	"availability":  "talaia-availability",
 	"homeassistant": "homeassistant",
 	"nut":           "talaia-nut",
 	"opnsense":      "opnsense",

@@ -23,6 +23,7 @@ flowchart LR
     WG[WGDashboard]
     QN[QNAP]
     NU[Servidor NUT del SAI]
+    EQ[Equipos de red, p. ej. switches]
     CH[Telegram, ntfy o webhook]
 
     B -->|HTTP y SSE| A
@@ -39,6 +40,7 @@ flowchart LR
     C -->|solo lectura| WG
     C -->|SNMPv3, solo lectura| QN
     C -->|protocolo de NUT, solo lectura| NU
+    C -->|TCP o HTTP, sin credenciales| EQ
     C -->|cambios de estado| N
     N --> S
     N -->|avisos, sin direcciones ni secretos| CH
@@ -82,11 +84,12 @@ Los motivos detallados están en [Decisiones](05-decisiones.md).
 | `internal/integrations/wgdashboard` | Integración con WGDashboard |
 | `internal/integrations/qnap` | Integración con QNAP por SNMPv3 |
 | `internal/integrations/nut` | Integración con un SAI a través de su servidor NUT (`upsd`), con un cliente propio del protocolo de red de NUT |
+| `internal/integrations/availability` | Disponibilidad de un equipo de red por TCP o HTTP, sin credenciales |
 | `web` | Frontend; `web/embed.go` lo incluye en el binario y `web/states.go`, los textos de estado |
 | `web/src/i18n/states.json` | Textos de estado de los servicios en español e inglés, compartidos por el panel y los avisos |
 | `web/src/widgets` | Contenido y pie del bloque de cada integración |
 | `web/src/IconPicker.tsx` | Buscador de iconos del formulario de conexión |
-| `web/scripts/icons.mjs` y `web/icons` | Copia los iconos de `simple-icons` y los propios (`talaia-nut`) a `dist/icons/`, con su índice |
+| `web/scripts/icons.mjs` y `web/icons` | Copia los iconos de `simple-icons` y los propios (`talaia-nut` y `talaia-availability`, que el buscador nombra como su tipo) a `dist/icons/`, con su índice |
 | `web/src/PanelEditor.tsx` | Editor de páginas y bloques |
 | `web/src/Settings.tsx` | Tema, acento, acceso y contraseña |
 | `web/src/Notifications.tsx` | Ajustes de avisos, canales y últimos envíos |
@@ -290,6 +293,22 @@ Proxmox filtra `/cluster/resources` según los permisos. Una lista sin nodos se 
 | Enlace | Una dirección `nut://` no se publica como enlace: se puede poner como enlace propio la de PeaNUT u otra interfaz |
 | Datos públicos | Banderas de estado, carga, autonomía, modelo y versión de NUT. No incluyen el nombre del SAI en NUT, su descripción, el número de serie, el driver ni la dirección |
 
+### Disponibilidad
+
+| Aspecto | Detalle |
+|---|---|
+| Uso | Equipos sin API ni SNMP, como los switches TP-Link Easy Smart. Una conexión y un bloque por equipo; ver DEC-54 |
+| Dirección | `tcp://host:puerto`, con el puerto obligatorio y sin ruta, o `http(s)://host[/ruta]`. Sin usuario, consulta ni fragmento; si no, `invalid_availability_url` |
+| Prueba TCP | Abre la conexión al puerto y la cierra sin enviar nada |
+| Prueba HTTP | Un `GET` con el cliente de las integraciones, sin proxy y sin seguir redirecciones. Solo se lee el código; el cuerpo no se lee. «No verificar TLS» solo se guarda en `https://` |
+| Sin ICMP | Un ping necesita sockets ICMP, que en un LXC sin privilegios exigen ampliar `net.ipv4.ping_group_range`; ver DEC-55 |
+| Credenciales | Ninguna. El tipo no pide usuario ni secreto y guarda un secreto vacío, como NUT |
+| Latencia | Desde el inicio hasta la conexión TCP o hasta recibir las cabeceras HTTP, en milisegundos y redondeada hacia arriba (mínimo 1) |
+| Estado | Verde con TCP o un código 2xx o 3xx; ámbar con otro código (`availability.state.httpError`); un fallo de conexión, de plazo o de TLS es un error de la consulta y sale en rojo |
+| Límites | 10 s para toda la prueba |
+| Enlace | La dirección nunca se publica como enlace, tampoco la `http(s)://`: solo el enlace propio, si se pone |
+| Datos públicos | Tipo de prueba (`tcp` o `http`), latencia y código HTTP. No incluyen el host, el puerto ni la URL |
+
 ## API HTTP
 
 Las respuestas son JSON. Las escrituras exigen `Content-Type: application/json` y rechazan otro origen en la cabecera `Origin`.
@@ -429,10 +448,10 @@ erDiagram
 | Avisos | Solo el nombre de la conexión, su etiqueta de estado y, en el webhook, el tipo y los colores; nunca URL, IP, usuarios ni credenciales. El cliente es el de las integraciones (sin proxy ni redirecciones), con 30 s de espera y lee 64 KiB de respuesta como máximo, que nunca se guardan |
 | Clave de cifrado | `secret.key` con permisos `600`; Talaia no arranca si son más abiertos |
 | Archivos | Al crearlos, directorio de datos `700` y base de datos `600` |
-| Salida a servicios | Sin proxy, sin seguir redirecciones, 10 s de espera por petición y respuestas de 32 MiB como máximo. Por SNMP, 3 s por petición y un reintento. Por NUT, 5 s para conectar y 10 s por consulta |
+| Salida a servicios | Sin proxy, sin seguir redirecciones, 10 s de espera por petición y respuestas de 32 MiB como máximo. Por SNMP, 3 s por petición y un reintento. Por NUT, 5 s para conectar y 10 s por consulta. Por disponibilidad, 10 s por prueba |
 | TLS | Verificación activa por defecto, con excepción explícita por conexión |
 | API pública | Sin usuarios ni credenciales. Incluye el enlace al servicio: la URL de conexión o la dirección propia configurada |
-| Enlaces | Solo `http` y `https`, sin credenciales; se abren con `noopener` y `noreferrer`. Una dirección `snmp://` o `nut://` nunca se publica como enlace |
+| Enlaces | Solo `http` y `https`, sin credenciales; se abren con `noopener` y `noreferrer`. Una dirección `snmp://` o `nut://`, y la de una conexión de disponibilidad, nunca se publica como enlace |
 | Navegador | Sin `unsafe-inline`: el editor evita el `<style>` que `react-draggable` insertaría. CSP `default-src 'self'`, `frame-ancestors 'none'`, `nosniff` y `Referrer-Policy: same-origin` |
 | CSRF | Cookie `SameSite=Lax`, comprobación de `Origin` y JSON obligatorio |
 | Tamaño de petición | 64 KiB como máximo |

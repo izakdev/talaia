@@ -58,6 +58,9 @@ export function IconPicker({ type, value, onChange }: { type: ConnectionType; va
   // La primera opción es siempre «Sin icono».
   const options: (BrandIconData | null)[] = [null, ...results];
 
+  // Los iconos propios (talaia-<tipo>) se nombran como su tipo, en el idioma de la página.
+  const label = (icon: BrandIconData) =>
+    icon.slug.startsWith("talaia-") ? t(`type.${icon.slug.slice("talaia-".length) as ConnectionType}`) : icon.title;
   const choose = (icon: BrandIconData | null) => {
     onChange(icon ? (icon.slug === defaultIcon(type).slug ? "" : icon.slug) : NONE);
     setOpen(false);
@@ -94,7 +97,7 @@ export function IconPicker({ type, value, onChange }: { type: ConnectionType; va
           }}
         >
           <BrandIcon icon={current} />
-          <span id={`${id}-value`}>{current ? current.title : custom && index.isPending ? "…" : t("form.icon.none")}</span>
+          <span id={`${id}-value`}>{current ? label(current) : custom && index.isPending ? "…" : t("form.icon.none")}</span>
         </button>
         {value !== "" && (
           <button type="button" className="quiet" onClick={() => onChange("")}>
@@ -133,7 +136,7 @@ export function IconPicker({ type, value, onChange }: { type: ConnectionType; va
                 onClick={() => choose(icon)}
               >
                 {icon ? <BrandIcon icon={icon} /> : <span className="brand-icon icon-blank" aria-hidden="true" />}
-                <span>{icon ? icon.title : t("form.icon.none")}</span>
+                <span>{icon ? label(icon) : t("form.icon.none")}</span>
               </li>
             ))}
           </ul>

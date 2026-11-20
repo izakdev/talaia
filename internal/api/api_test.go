@@ -982,3 +982,42 @@ func TestEditKeepsVanishedIcon(t *testing.T) {
 	m["icon"] = "tampoco-existe"
 	c.want(400, "PUT", "/api/admin/connections/"+conn.ID, m)
 }
+
+func TestAvailabilityConnectionRules(t *testing.T) {
+	c, st := newServer(t)
+	c.want(200, "POST", "/api/setup", creds())
+	conn := func(base string) map[string]any {
+		return map[string]any{
+			"name": "Switch", "type": "availability", "base_url": base, "interval_seconds": 30,
+			"tls_skip_verify": true, "username": "nadie",
+		}
+	}
+	for _, base := range []string{
+		"tcp://192.0.2.40", "tcp://192.0.2.40:80/ruta", "tcp://usuario@192.0.2.40:80", "ftp://192.0.2.40",
+		"http://usuario:clave@192.0.2.40", "https://192.0.2.40/?a=1", "192.0.2.40:80",
+	} {
+		if got := c.want(400, "POST", "/api/admin/connections", conn(base)); !strings.Contains(got, "invalid_availability_url") {
+			t.Fatalf("%s: %s", base, got)
+		}
+	}
+	// Sin credenciales; el TLS solo se guarda para https.
+	for base, tls := range map[string]bool{"tcp://192.0.2.40:80/": false, "http://192.0.2.41": false, "https://switch-privado.simulado:8443/login": true} {
+		body := c.want(201, "POST", "/api/admin/connections", conn(base))
+		var out connectionOut
+		if err := json.Unmarshal([]byte(body), &out); err != nil {
+			t.Fatal(err)
+		}
+		if out.TLSSkipVerify != tls || out.Username != "" {
+			t.Fatalf("%s: %s", base, body)
+		}
+		if got, err := st.ConnectionSecret(t.Context(), out.ID); err != nil || got != "" {
+			t.Fatalf("secreto guardado = %q, %v", got, err)
+		}
+	}
+	dashboard := c.want(200, "GET", "/api/dashboard", nil)
+	for _, leak := range []string{"tcp://", "192.0.2.4", "switch-privado", "8443", "/login"} {
+		if strings.Contains(dashboard, leak) {
+			t.Fatalf("el panel muestra %s: %s", leak, dashboard)
+		}
+	}
+}

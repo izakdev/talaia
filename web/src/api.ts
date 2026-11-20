@@ -1,4 +1,4 @@
-export type ConnectionType = "proxmox" | "homeassistant" | "adguard" | "opnsense" | "portainer" | "qnap" | "nut" | "wgdashboard";
+export type ConnectionType = "proxmox" | "homeassistant" | "adguard" | "opnsense" | "portainer" | "qnap" | "nut" | "wgdashboard" | "availability";
 
 export interface AppState {
   setup_required: boolean;
@@ -257,6 +257,13 @@ export interface QNAPData {
 // Banderas de ups.status que publica Talaia.
 export type NUTFlag =
   | "OL" | "OB" | "LB" | "HB" | "RB" | "CHRG" | "DISCHRG" | "BYPASS" | "CAL" | "OFF" | "OVER" | "TRIM" | "BOOST" | "FSD";
+
+// Un equipo que responde por TCP o HTTP; sin su dirección.
+export interface AvailabilityData {
+  check: "tcp" | "http";
+  latency_ms: number;
+  http_status?: number;
+}
 
 export interface NUTData {
   version: string;

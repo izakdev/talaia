@@ -9,6 +9,7 @@ const out = join(web, "dist", "icons");
 
 // Iconos que simple-icons no tiene: título y color de cada uno.
 const own = {
+  "talaia-availability": { title: "Disponibilidad", hex: "0EA5E9" },
   "talaia-nut": { title: "Network UPS Tools", hex: "16A34A" },
 };
 

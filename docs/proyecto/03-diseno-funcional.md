@@ -166,12 +166,13 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 |---|---|---|
 | Nombre | Todos | Obligatorio, hasta 80 caracteres |
 | Icono | Todos | El de su tipo por defecto. Se cambia con un buscador de los logotipos de `simple-icons`; también «Sin icono» y «Restablecer»; ver [Icono de la conexión](#icono-de-la-conexión) |
-| URL | Todos salvo QNAP y SAI (NUT) | `http` o `https`, sin credenciales, parámetros ni fragmento |
+| URL | Todos salvo QNAP, SAI (NUT) y Disponibilidad | `http` o `https`, sin credenciales, parámetros ni fragmento |
 | Dirección SNMP | QNAP | `snmp://host` o `snmp://host:puerto`, sin ruta ni credenciales; puerto 161 por defecto |
 | Dirección del servidor NUT | SAI (NUT) | `nut://host`, `nut://host:puerto` o `nut://host/sai`, sin credenciales; puerto 3493 por defecto. El nombre del SAI solo admite letras, cifras, `.`, `_` y `-` |
+| Dirección del equipo | Disponibilidad | `tcp://host:puerto`, con el puerto obligatorio y sin ruta, o `http(s)://host[:puerto][/ruta]`; sin credenciales, parámetros ni fragmento. Si no, «La dirección debe tener la forma tcp://host:puerto, http://host o https://host.» |
 | Usuario | AdGuard; QNAP (usuario SNMPv3) | Obligatorio |
 | Clave de API | OPNsense | Obligatoria, sin espacios. Admite pegar la línea `key=…` del archivo |
-| Credencial | Todos salvo SAI (NUT) | Obligatoria al crear y al cambiar la URL; en otro caso, vacía conserva la actual. Hasta 4096 bytes |
+| Credencial | Todos salvo SAI (NUT) y Disponibilidad | Obligatoria al crear y al cambiar la URL; en otro caso, vacía conserva la actual. Hasta 4096 bytes |
 | Clave de cifrado | QNAP | Se escribe a la vez que la de autenticación, con las mismas reglas; las dos con al menos 8 caracteres |
 | Protocolo de cifrado | QNAP | CBC-DES por defecto, o AES |
 | Refresco | Todos | De 5 a 3600 segundos, 30 por defecto |
@@ -180,7 +181,7 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 | Entidades en el panel | Home Assistant | Ninguna por defecto, hasta 200 |
 | Mostrar resumen | Home Assistant | Activado por defecto |
 | Enlace para abrir el servicio | Todos | Opcional, `http` o `https`, sin credenciales. Vacío, usa la URL de conexión |
-| No verificar TLS | Todos salvo QNAP y SAI (NUT) | Desactivado por defecto |
+| No verificar TLS | Todos salvo QNAP y SAI (NUT) | Desactivado por defecto. En Disponibilidad solo se guarda con `https://` |
 | Avisar de sus cambios | Todos | Activado por defecto. Desactivado, la conexión sigue en el panel, pero no envía avisos; ver [Notificaciones](#notificaciones) |
 
 | Credencial | Formato |
@@ -193,6 +194,7 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 | WGDashboard | Clave de API |
 | QNAP | Clave de autenticación de SNMPv3 (HMAC-SHA), más la clave de cifrado en su propio campo |
 | SAI (NUT) | Ninguna: el formulario no muestra el campo y avisa de que NUT no pide usuario ni contraseña para leer; ver DEC-47 |
+| Disponibilidad | Ninguna: el formulario no muestra el campo y avisa de que solo comprueba que el equipo responde |
 
 **Probar conexión:** consulta el servicio una vez con los datos del formulario, sin guardar nada. En Home Assistant, avisa si no hay CPU, memoria ni disco disponibles. En OPNsense, avisa si faltan datos por los privilegios del usuario. Si se cambia algún dato de conexión, el resultado anterior desaparece. Al editar, puede usar la credencial guardada si la URL no ha cambiado.
 
@@ -382,6 +384,16 @@ Si hay varios problemas, la etiqueta es la del primero de la tabla. Umbrales: CP
 Si hay varios, la etiqueta es la del primero de la tabla: un SAI con red y la batería gastada da «Cambiar batería».
 
 **Datos de un bloque de SAI (NUT):** carga de la batería en %, con «Cargando» si NUT lo indica; autonomía estimada, en minutos o en horas y minutos; y el modelo y la versión de NUT en el pie. Si el SAI no da la carga o la autonomía, no se muestran. No se muestran el nombre del SAI en NUT, su número de serie ni la dirección del servidor. Sin enlace propio, el nombre del bloque no enlaza, porque la dirección es `nut://`.
+
+**Estados de un bloque de Disponibilidad:** cada equipo es una conexión con su propio bloque y sus propios avisos (DEC-54).
+
+| Estado | Cuándo | Indicador |
+|---|---|---|
+| Responde | Conecta por TCP, o el HTTP devuelve un código 2xx o 3xx (una redirección no se sigue) | Círculo verde |
+| Responde con HTTP … | El HTTP devuelve otro código, por ejemplo 503: el equipo está vivo, pero con error | Triángulo ámbar |
+| Con fallos | No conecta, agota los 10 s o falla el TLS | Cuadrado rojo, mensaje de error y último dato atenuado |
+
+**Datos de un bloque de Disponibilidad:** la latencia en milisegundos y, en el pie, «TCP» o «HTTP» con su código. No se muestran el host, el puerto ni la URL. Sin enlace propio, el nombre del bloque no enlaza, aunque la dirección sea `http(s)://`.
 
 ## Mensajes de error de los servicios
 

@@ -29,6 +29,7 @@ import (
 	"github.com/izakdev/talaia/internal/icons"
 	"github.com/izakdev/talaia/internal/integrations"
 	"github.com/izakdev/talaia/internal/integrations/adguard"
+	"github.com/izakdev/talaia/internal/integrations/availability"
 	"github.com/izakdev/talaia/internal/integrations/homeassistant"
 	"github.com/izakdev/talaia/internal/integrations/nut"
 	"github.com/izakdev/talaia/internal/integrations/opnsense"
@@ -411,12 +412,13 @@ var connectionTypes = map[string]struct {
 	needsUsername bool
 	options       []string
 	hasEntities   bool
-	// noSecret: el servicio se lee sin credenciales (NUT).
+	// noSecret: el servicio se lee sin credenciales (NUT y disponibilidad).
 	noSecret bool
 }{
 	"proxmox":       {options: []string{proxmox.OptionShowGuests}},
 	"homeassistant": {hasEntities: true, options: []string{homeassistant.OptionShowSummary}},
 	"adguard":       {needsUsername: true, options: []string{adguard.OptionShowTopDomains}},
+	"availability":  {noSecret: true},
 	"nut":           {noSecret: true},
 	"opnsense":      {needsUsername: true, options: []string{opnsense.OptionShowWireGuard}},
 	"portainer":     {},
@@ -498,6 +500,16 @@ func validateConnection(in *connectionIn) string {
 			return "invalid_snmp_url"
 		}
 		in.TLSSkipVerify = false
+	} else if in.Type == "availability" {
+		// tcp://host:puerto o http(s)://…; el TLS solo tiene sentido en https.
+		in.BaseURL = strings.TrimRight(strings.TrimSpace(in.BaseURL), "/")
+		check, _, err := availability.Target(in.BaseURL)
+		if err != nil {
+			return "invalid_availability_url"
+		}
+		if check == availability.CheckTCP || strings.HasPrefix(in.BaseURL, "http://") {
+			in.TLSSkipVerify = false
+		}
 	} else if in.Type == "nut" {
 		// NUT se consulta por su protocolo: nut://host[:puerto][/sai], sin TLS.
 		in.BaseURL = strings.TrimRight(strings.TrimSpace(in.BaseURL), "/")
