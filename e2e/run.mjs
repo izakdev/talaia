@@ -16,6 +16,7 @@ import { fakeWGDashboard, WGDASHBOARD_KEY } from "./fake-wgdashboard.mjs";
 import { fakeProxmox, TOKEN } from "./fake-proxmox.mjs";
 import { fakeQNAP, QNAP_AUTH, QNAP_PRIV, QNAP_USER } from "./fake-qnap.mjs";
 import { fakeNUT, NUT_SERIAL, NUT_UPS } from "./fake-nut.mjs";
+import { AVAILABILITY_PATH, fakeAvailability } from "./fake-availability.mjs";
 import { BAD_TELEGRAM_TOKEN, fakeNotify, NTFY_TOKEN, NTFY_TOPIC, TELEGRAM_TOKEN, WEBHOOK_PATH } from "./fake-notify.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -31,6 +32,7 @@ const portainer = fakePortainer(13004);
 const wgdashboard = fakeWGDashboard(13005);
 const qnap = fakeQNAP(13006); // UDP
 const nut = fakeNUT(13007); // TCP, protocolo de NUT
+const device = fakeAvailability(13008); // HTTP y TCP, sin credenciales
 const notifier = fakeNotify(13010); // Telegram, ntfy y webhook
 const dataDir = mkdtempSync(join(tmpdir(), "talaia-e2e-"));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -208,7 +210,7 @@ const scenarios = [
   ["E2E-04", "Catálogo de servicios: búsqueda y navegación", async () => {
     await page.getByRole("link", { name: "Añadir conexión" }).click();
     await page.getByRole("heading", { name: "Elige un servicio" }).waitFor();
-    assert.equal(await page.locator(".catalog button").count(), 8);
+    assert.equal(await page.locator(".catalog button").count(), 9);
     await shot(page, "04-catalogo");
     const search = page.getByLabel("Buscar servicio");
     await search.fill("maquinas");
@@ -1034,6 +1036,68 @@ const scenarios = [
     await state.getByText("Con red").waitFor({ timeout: 30000 });
     await toAdmin();
   }],
+  ["E2E-48", "Alta de dos equipos por disponibilidad, por TCP y por HTTP", async () => {
+    const add = async (name, address) => {
+      await page.goto(`${BASE}/admin/connections/new`);
+      await page.getByRole("button", { name: /Disponibilidad/ }).click();
+      await page.getByLabel("Nombre", { exact: true }).fill(name);
+      await page.getByLabel(/^Dirección del equipo/).fill(address);
+      await page.locator("dialog input[type=number]").fill("5");
+      await page.getByText("No pide usuario ni contraseña").waitFor();
+      assert.equal(await page.locator("dialog input[type=password]").count(), 0);
+    };
+    // Por TCP el puerto es obligatorio.
+    await add("Switch salón", "tcp://127.0.0.1");
+    await page.getByRole("button", { name: "Probar conexión" }).click();
+    await page.getByRole("alert").getByText("tcp://host:puerto").waitFor();
+    await page.getByLabel(/^Dirección del equipo/).fill(`tcp://${device.host}`);
+    await page.getByRole("button", { name: "Probar conexión" }).click();
+    await page.locator("dialog p[role=status]").getByText("Conexión correcta").waitFor();
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await row("Switch salón").getByText("Funciona").waitFor();
+    await add("Switch oficina", `http://${device.host}${AVAILABILITY_PATH}`);
+    await page.getByRole("button", { name: "Probar conexión" }).click();
+    await page.locator("dialog p[role=status]").getByText("Conexión correcta").waitFor();
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await row("Switch oficina").getByText("Funciona").waitFor();
+  }],
+  ["E2E-49", "Equipos en el panel: latencia, error HTTP, caída y sin direcciones", async () => {
+    await toDashboard();
+    const tcp = page.locator(".service", { hasText: "Switch salón" });
+    const http = page.locator(".service", { hasText: "Switch oficina" });
+    const tone = (block, name) => block.evaluate((el, n) => el.classList.contains(`tone-${n}`), name);
+    await tcp.locator(".service-state").getByText("Responde", { exact: true }).waitFor();
+    await http.locator(".service-state").getByText("Responde", { exact: true }).waitFor();
+    assert.match(await tcp.innerText(), /Latencia\s+\d+ ms/);
+    assert.match(await tcp.innerText(), /TCP/);
+    assert.match(await http.innerText(), /HTTP 200/);
+    assert.ok(await tone(http, "good"));
+    await shot(http, "27-panel-disponibilidad");
+    const leaks = await publicDashboard();
+    for (const leak of [device.host, "13008", "tcp://", AVAILABILITY_PATH]) {
+      assert.equal(leaks.includes(leak), false, leak);
+    }
+    // Un código que no es 2xx ni 3xx: el equipo está vivo pero da error.
+    device.state.status = 503;
+    await http.locator(".service-state").getByText("Responde con HTTP 503").waitFor();
+    assert.ok(await tone(http, "warn"));
+    assert.ok(await tone(tcp, "good"));
+    device.state.status = 200;
+    await device.stop();
+    await tcp.getByText("No se puede conectar con el servicio").waitFor({ timeout: 30000 });
+    await http.getByText("No se puede conectar con el servicio").waitFor({ timeout: 30000 });
+    assert.ok(await tone(tcp, "bad"));
+    await device.start();
+    await tcp.locator(".service-state").getByText("Responde", { exact: true }).waitFor({ timeout: 30000 });
+    await http.locator(".service-state").getByText("Responde", { exact: true }).waitFor({ timeout: 30000 });
+    // Se quitan para no cambiar el resto del recorrido ni las portadas.
+    await toAdmin();
+    for (const name of ["Switch salón", "Switch oficina"]) {
+      await row(name).getByRole("button", { name: "Eliminar" }).click();
+      await row(name).getByRole("button", { name: "Eliminar" }).click();
+      await row(name).waitFor({ state: "detached" });
+    }
+  }],
   ["E2E-43", "Alta de canales de Telegram, ntfy y webhook con mensaje de prueba", async () => {
     await toSettings();
     await notifications.getByText("Todavía no hay canales").waitFor();
@@ -1321,7 +1385,7 @@ const scenarios = [
   }],
   ["E2E-14", "La API pública no expone configuración ni credenciales", async () => {
     const body = await publicDashboard();
-    for (const leak of [USER, PASSWORD, TOKEN, HA_TOKEN, OPN_KEY, OPN_SECRET, "localhost:13002", "192.0.2.11", "192.0.2.50", "cortafuegos.simulado", "proceso-simulado", "pppoe1", PORTAINER_TOKEN, "192.0.2.60", "docker.simulado", "instancia-simulada", WGDASHBOARD_KEY, "clave-privada-simulada", "clave-publica-simulada", "10.66.0", "51666", "wg-simulado", "vpn.simulado", "192.0.2.53", QNAP_USER, QNAP_AUTH, QNAP_PRIV, "snmp://", NUT_UPS, NUT_SERIAL, "nut://", "127.0.0.1:13007", "base_url", "link_url", "secret", "privacy_secret", TELEGRAM_TOKEN, NTFY_TOPIC, NTFY_TOKEN, WEBHOOK_PATH, "chat_id", "-1001234"]) {
+    for (const leak of [USER, PASSWORD, TOKEN, HA_TOKEN, OPN_KEY, OPN_SECRET, "localhost:13002", "192.0.2.11", "192.0.2.50", "cortafuegos.simulado", "proceso-simulado", "pppoe1", PORTAINER_TOKEN, "192.0.2.60", "docker.simulado", "instancia-simulada", WGDASHBOARD_KEY, "clave-privada-simulada", "clave-publica-simulada", "10.66.0", "51666", "wg-simulado", "vpn.simulado", "192.0.2.53", QNAP_USER, QNAP_AUTH, QNAP_PRIV, "snmp://", NUT_UPS, NUT_SERIAL, "nut://", "127.0.0.1:13007", device.host, "tcp://", AVAILABILITY_PATH, "base_url", "link_url", "secret", "privacy_secret", TELEGRAM_TOKEN, NTFY_TOPIC, NTFY_TOKEN, WEBHOOK_PATH, "chat_id", "-1001234"]) {
       assert.equal(body.includes(leak), false, leak);
     }
     const headers = (await fetch(BASE)).headers;
@@ -1343,6 +1407,7 @@ try {
   await wgdashboard.start();
   await qnap.start();
   await nut.start();
+  await device.start();
   await notifier.start();
   await waitForServer();
   for (const [id, title, run] of scenarios) {
@@ -1366,6 +1431,7 @@ try {
   await wgdashboard.stop().catch(() => {});
   await qnap.stop().catch(() => {});
   await nut.stop().catch(() => {});
+  await device.stop().catch(() => {});
   await notifier.stop().catch(() => {});
   rmSync(dataDir, { recursive: true, force: true });
 }

@@ -4,7 +4,7 @@ Talaia es un panel para ver de un vistazo el estado de los servicios de tu labor
 
 *[English version](../user/user-manual.md).*
 
-> **Versión de este manual:** `v0.4.1`. Muestran datos AdGuard Home, Proxmox VE, Home Assistant, OPNsense, Portainer, WGDashboard, QNAP y un SAI a través de NUT, y avisan por Telegram, ntfy o un webhook cuando un servicio cambia de estado. Consulta las [limitaciones actuales](#limitaciones-actuales).
+> **Versión de este manual:** `v0.4.1`. Muestran datos AdGuard Home, Proxmox VE, Home Assistant, OPNsense, Portainer, WGDashboard, QNAP y un SAI a través de NUT, comprueban si responden otros equipos de red, y avisan por Telegram, ntfy o un webhook cuando un servicio cambia de estado. Consulta las [limitaciones actuales](#limitaciones-actuales).
 
 ## Índice
 
@@ -481,6 +481,34 @@ El bloque muestra la carga de la batería, con **Cargando** si se está cargando
 
 Si el servidor responde pero no recibe datos del SAI, el bloque se pone en rojo con el mensaje **El servidor NUT no recibe datos del SAI**: revisa el cable USB y el driver en el equipo que lo tiene conectado.
 
+### Disponibilidad
+
+Para equipos que no tienen API ni SNMP, como los switches TP-Link de la gama Easy Smart (TL-SG108PE y similares), Talaia solo comprueba si **responden**. No pide usuario ni contraseña, no entra en su web y no cambia nada. Crea **una conexión por equipo**: cada uno tiene su bloque y sus avisos.
+
+| Campo | Qué poner |
+|---|---|
+| Dirección del equipo | `tcp://` con la dirección y el puerto, por ejemplo `tcp://switch.local:80`: Talaia abre la conexión y la cierra. O una dirección `http://` o `https://`, por ejemplo `http://switch.local`: Talaia pide esa página y solo mira el código de respuesta |
+| Enlace para abrir el servicio | Opcional, por ejemplo la web del switch. Sin él, el nombre del bloque no enlaza a ningún sitio, ni siquiera con una dirección `http://` |
+| No verificar el certificado TLS | Solo tiene efecto con `https://` y un certificado autofirmado |
+
+Los switches Easy Smart tienen su web en el puerto 80, así que basta con `tcp://` y la dirección del switch seguida de `:80`. Con `http://` también se comprueba que la web contesta, pero si la página que indicas pide contraseña con un código 401, el bloque sale en ámbar: usa la página principal o `tcp://`.
+
+El formulario no tiene campo de contraseña. Si al probar la conexión ves **No se puede conectar con el servicio**, revisa la dirección y el puerto, y que el equipo de Talaia llegue a esa red.
+
+![Bloque de disponibilidad](img/27-panel-disponibilidad.png)
+
+El bloque muestra la **latencia**, lo que tarda el equipo en aceptar la conexión o en contestar, y en el pie si la prueba es **TCP** o **HTTP** con su código. No muestra la dirección, el puerto ni la URL.
+
+**Estado del equipo:**
+
+| Indicador | Significado |
+|---|---|
+| Círculo verde: **Responde** | Acepta la conexión TCP, o la web contesta con un código 2xx o 3xx (las redirecciones no se siguen) |
+| Triángulo ámbar: **Responde con HTTP …** | La web contesta, pero con un error, por ejemplo 503: el equipo está encendido, pero algo falla |
+| Cuadrado rojo: **Con fallos** | No responde en 10 segundos, rechaza la conexión o el certificado TLS no es válido |
+
+Talaia no hace ping: en el contenedor sin privilegios que crea el instalador, hacerlo exigiría cambiar su configuración de red. Un equipo sin ningún puerto TCP abierto no se puede vigilar.
+
 ## Editar y eliminar conexiones
 
 **Editar:** pulsa **Editar** en la conexión. Deja la credencial vacía para conservar la actual. Si cambias la URL, tendrás que volver a escribirla: así evitas enviarla por error a otro servidor.
@@ -646,6 +674,7 @@ Telegram y ntfy.sh necesitan que el equipo de Talaia tenga salida a Internet. Si
 | Una entidad aparece como **No encontrada** | Ya no existe en Home Assistant o ha cambiado de identificador. Edita la conexión y actualiza la selección |
 | Home Assistant tarda mucho o da error de tiempo de espera | En instalaciones muy grandes, sube el refresco, por ejemplo a 60 segundos |
 | QNAP no responde a tiempo | Comprueba que SNMP esté activado con la versión SNMP V3, que el protocolo de cifrado coincida y que el firewall deje pasar UDP 161 |
+| Un equipo de disponibilidad sale en ámbar con HTTP 401 o 404 | La página indicada pide contraseña o no existe. Usa la página principal o una dirección `tcp://` con el puerto de su web |
 | El SAI no conecta | Comprueba la línea `LISTEN` de `upsd.conf` en el equipo que tiene el SAI y que el firewall deje pasar TCP 3493 |
 | Un aviso dice «el canal rechaza el token o la clave» | Revisa el token del bot de Telegram o el de ntfy. Si lo has revocado en @BotFather, escribe el nuevo |
 | Un aviso dice «el canal ha rechazado el mensaje» | En Telegram, revisa el chat ID y que hayas escrito antes al bot o que el bot siga en el grupo. En ntfy, revisa el tópico y si tu servidor permite publicar en él |
@@ -661,6 +690,7 @@ Telegram y ntfy.sh necesitan que el equipo de Talaia tenga salida a Internet. Si
 - Los bloques de Portainer y WGDashboard, y el WireGuard de OPNsense, no detallan cada contenedor ni cada peer: solo dan recuentos.
 - El bloque de QNAP usa los umbrales de temperatura de QTS por defecto, no los tuyos, y no distingue qué volumen es de un disco USB.
 - El bloque del SAI muestra un solo SAI, sin tensiones ni consumo, y la conexión con NUT no va cifrada; no viaja ninguna contraseña.
+- La disponibilidad comprueba un equipo por conexión, solo por TCP o HTTP, sin ping, y solo cuenta como respuesta un código HTTP 2xx o 3xx.
 - Las notificaciones avisan de cambios de color, sin recordatorios: un cambio de etiqueta dentro del mismo color no avisa, y todos los canales activos reciben todos los avisos.
 
 El estado de cada punto está en [Estado y cambios](../proyecto/06-estado-y-cambios.md).

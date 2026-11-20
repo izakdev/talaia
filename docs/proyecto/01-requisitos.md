@@ -18,6 +18,7 @@ Talaia es un dashboard autoalojado para ver de un vistazo el estado de los servi
 - **Ampliación:** NAS QNAP (QTS y QuTS hero) por SNMPv3, a petición del cliente, en el hito 14.
 - **Ampliación:** SAI a través de un servidor NUT (`upsd`), a petición del cliente, en el hito 15.
 - **Ampliación:** avisos por Telegram, ntfy o webhook cuando un servicio cambia de color, en el hito 16. Siguen excluidas las acciones sobre los servicios.
+- **Ampliación:** disponibilidad de cualquier equipo de red por TCP o HTTP, sin credenciales, para los switches sin API ni SNMP del cliente, en el hito 17. Sin ICMP.
 
 ## Estados
 
@@ -133,6 +134,14 @@ Verificado con un Home Assistant real en local y con la instalación del cliente
 | RF-103 | Muestra si el SAI tiene red, la carga de la batería (y si se está cargando), la autonomía estimada, el modelo y la versión de NUT | 15 | Implementado |
 | RF-104 | Marca en verde «Con red»; en ámbar «Con batería», «Cambiar batería» y «Sobrecarga»; y en rojo «Batería baja» y el servidor sin respuesta o sin datos del SAI | 15 | Implementado |
 | RF-105 | Lee del servidor NUT por su protocolo de red sin usuario ni contraseña, solo con órdenes de consulta, elige el único SAI del servidor si no se indica otro, y no publica el nombre del SAI en NUT, su número de serie, el driver ni la dirección | 15 | Implementado |
+
+### Disponibilidad
+
+| ID | Requisito | Hito | Estado |
+|---|---|---|---|
+| RF-114 | Comprueba si un equipo responde, con una conexión y un bloque por equipo: por TCP abre la conexión al puerto indicado y la cierra, y por HTTP o HTTPS hace un `GET` sin seguir las redirecciones. Muestra la latencia y el tipo de prueba | 17 | Implementado |
+| RF-115 | Marca en verde «Responde» si conecta por TCP o el HTTP devuelve un código 2xx o 3xx; en ámbar «Responde con HTTP …» con otro código; y en rojo el equipo que no responde, agota el plazo o falla el TLS | 17 | Implementado |
+| RF-116 | No pide credenciales ni envía datos al equipo, y no publica su dirección, su puerto ni su URL: solo el estado, la latencia, el tipo de prueba y el código HTTP | 17 | Implementado |
 
 ### Notificaciones
 
