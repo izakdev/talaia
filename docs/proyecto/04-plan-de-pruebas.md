@@ -5,7 +5,7 @@
 | Nivel | Herramienta | Comando | Se ejecuta |
 |---|---|---|---|
 | Unitarias y de integración | `go test` con detector de carreras | `make test` | CI, en cada cambio |
-| Extremo a extremo (E2E) | Playwright y Chromium contra el binario real y un AdGuard simulado | `make e2e` | CI, en cada cambio |
+| Extremo a extremo (E2E) | Playwright y Chromium contra el binario real, los servicios simulados y un receptor de avisos simulado | `make e2e` | CI, en cada cambio |
 | Compilación | `tsc`, Vite y `go build` | `make build` | CI, en cada cambio |
 | Instalador | `shellcheck` y Bash con systemd real en Docker | `make test-installer`, como root | CI, en cada cambio |
 | Documentación | `scripts/check_docs.py` | `make docs-check` | CI, en cada cambio |
@@ -48,6 +48,13 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestConnectionTest` | Exige sesión, no guarda nada, reutiliza la credencial solo con la misma URL y rechaza tipos sin integración | RF-13, RF-14 |
 | `TestQNAPConnectionRules` | QNAP exige `snmp://`, las dos claves a la vez y de al menos 8 caracteres; las guarda juntas y sin devolverlas, las conserva si llegan vacías, desactiva TLS y no publica la dirección como enlace | RF-102, RF-14, RF-25 |
 | `TestNUTConnectionRules` | SAI (NUT) exige `nut://` y un nombre de SAI válido; se crea sin credencial ni usuario, no guarda un secreto aunque llegue, cambia de dirección sin pedirlo, desactiva TLS y no publica la dirección ni el SAI | RF-105, RF-14 |
+| `TestChannelsNeverExposeSecrets` | Ninguna respuesta de canales, pruebas, registro ni ajustes incluye el token, el tópico ni la URL del webhook; una edición con secretos en blanco los conserva y la prueba los usa; el primer canal fija el idioma | RF-108, RF-111 |
+| `TestChannelValidation` | Rechaza nombres vacíos o largos, tipos desconocidos, URL sin `http(s)`, tokens y chat ID de Telegram mal formados y tópicos con espacios; acepta ntfy sin servidor y un `@canal` | RF-108 |
+| `TestTestChannelUsesStoredSecret` | La prueba sin guardar usa el secreto guardado si llega en blanco, informa del error del canal y queda en el registro | RF-108, RF-111 |
+| `TestNotifySettingsValidation` | Rechaza idiomas y retardos fuera de la lista | RF-107, RF-110 |
+| `TestConnectionNotifyRoundTrip` | Una conexión avisa por defecto y se puede silenciar | RF-109 |
+| `TestNotifyRoutesRequireAuth` | Las rutas de notificaciones exigen sesión | RF-108 |
+| `TestNtfyServerChangeRequiresSecrets` | Cambiar el servidor de ntfy, al editar o al probar, exige volver a escribir el tópico y el token guardado; los guardados no llegan al servidor nuevo, y el mismo servidor con barra final no cuenta como cambio | RF-108 |
 
 ### `internal/auth`
 
@@ -75,9 +82,16 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestEntitiesArePersisted` | La selección de entidades se guarda y se puede vaciar | RF-51 |
 | `TestNewConnectionsFillThreeColumns` | Una conexión nueva se coloca sola en la primera página, sin solapes | RF-22 |
 | `TestPanelSaveAndCascade` | Guarda páginas en orden; eliminar una conexión quita sus bloques | RF-22, RF-23 |
-| `TestSettingsDefaultsAndSave` | Valores por defecto y guardado de los ajustes | RF-07, RF-24 |
+| `TestSettingsDefaultsAndSave` | Valores por defecto y guardado de los ajustes, también los de avisos | RF-07, RF-24, RF-107 |
 | `TestPasswordChangeAndReset` | El cambio revoca las demás sesiones y la recuperación, todas | RF-08 |
 | `TestMigratesExistingDatabase` | Una base de datos anterior migra, conserva sus conexiones y las coloca en el panel | RNF-05, RF-22 |
+| `TestChannelSecretEncrypted` | El secreto de un canal no está en claro y se recupera | RF-108, RNF-04 |
+| `TestUpdateChannelKeepsSecret` | Editar sin secreto lo conserva; con secreto, lo cambia; borrar elimina el canal | RF-108 |
+| `TestNotifiedToneCascade` | El color avisado se guarda y se borra con la conexión | RF-112 |
+| `TestDeleteNotifiedTone` | El color avisado se puede olvidar | RF-106 |
+| `TestLogKeepsLatest50` | El registro guarda los 50 envíos más recientes, del último al primero | RF-111 |
+| `TestSettingsNotifyDefaults` | Sin idioma de avisos y 2 minutos por defecto; el primer canal fija el idioma una sola vez | RF-107, RF-110 |
+| `TestConnectionNotifyDefaultTrue` | Una conexión, también las anteriores a la migración, avisa salvo que se silencie | RF-109 |
 
 ### `internal/collector`
 
@@ -91,6 +105,8 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestChangingEntitiesDropsOldData` | Cambiar la selección descarta los datos anteriores | RF-51 |
 | `TestRemoveAndUnsupported` | Eliminar detiene la conexión; un tipo sin integración no aparece | RF-10, RNF-07 |
 | `TestSubscribersAreNotified` | Los suscriptores reciben los cambios | RF-20 |
+| `TestSnapshotState` | Con error, el estado es rojo «Con fallos» aunque haya un dato anterior; con datos, el de la integración | RF-113, RF-21 |
+| `TestPendingSnapshotState` | Sin datos, el estado es neutro «Consultando…» | RF-113 |
 
 ### `internal/integrations/adguard`
 
@@ -101,6 +117,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestErrors` | Clasifica credenciales erróneas y respuestas ajenas a AdGuard | RF-21 |
 | `TestConnectionFailures` | Clasifica servicio caído y TLS no válido; admite la excepción de TLS | RF-21 |
 | `TestRedirectIsNotFollowed` | No sigue redirecciones, para no enviar credenciales a otro destino | RNF-03 |
+| `TestState` (adguard) | Mismo color y etiqueta que el bloque: DNS parado, protección activa y desactivada; cada clave está en los textos de ambos idiomas | RF-113 |
 
 ### `internal/integrations/proxmox`
 
@@ -114,6 +131,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestErrors` | Token incorrecto, token sin permisos y respuestas ajenas a Proxmox. También en AdGuard | RF-21 |
 | `TestSelfSignedCertificate` | Clasifica un certificado autofirmado como TLS | RF-21 |
 | `TestHTTPSAgainstPlainHTTP` | Clasifica una URL `https` contra un servidor HTTP como TLS | RF-21 |
+| `TestState` (proxmox) | Mismo color y etiqueta que el bloque: sin quórum, nodos caídos con sus cifras, clúster y nodo suelto; cada clave está en los textos de ambos idiomas | RF-113 |
 
 ### `internal/integrations/homeassistant`
 
@@ -128,6 +146,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestSystemIsOptional` | Sin Supervisor o sin permisos, el servicio sigue funcionando y lo indica | RF-53 |
 | `TestSummary` | Cuenta por dominio, excluye grupos, puertas y garajes, y no publica personas, cerraduras ni alarmas | RF-54 |
 | `TestErrors` | Token incorrecto y respuestas ajenas a Home Assistant. También en AdGuard y Proxmox | RF-21 |
+| `TestState` (homeassistant) | Mismo color y etiqueta que el bloque: arrancando, recuperación, modo seguro, entidades sin datos con su número y en marcha; cada clave está en los textos de ambos idiomas | RF-113 |
 
 ### `internal/integrations/opnsense`
 
@@ -144,6 +163,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestCollectWireGuard` | Agrupa los peers por instancia, cuenta solo los `online` como conectados, suma el tráfico y no publica claves, endpoints, IP, puertos ni nombres de peers | RF-74, RNF-02 |
 | `TestWireGuardWithoutPrivilege` | Sin el privilegio, omite WireGuard y avisa | RF-74, RF-73 |
 | `TestWireGuardEmptyAndForeign` | Sin instancias devuelve una lista vacía, y una respuesta ajena es un fallo | RF-74 |
+| `TestState` (opnsense) | Mismo color y etiqueta que el bloque: sin gateways, caído, degradado, WireGuard caído, sin monitorizar y en línea; cada clave está en los textos de ambos idiomas | RF-113, RF-71 |
 
 ### `internal/integrations/portainer`
 
@@ -154,6 +174,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestPortainerDataHidesInfrastructure` | No publica URL, claves ni identificador de la instancia | RF-81, RNF-02 |
 | `TestPortainerErrors` | Clasifica el token rechazado y las respuestas ajenas | RF-21, RF-81 |
 | `TestNoEnvironments` | Sin entornos devuelve una lista vacía | RF-80 |
+| `TestState` (portainer) | Mismo color y etiqueta que el bloque: sin entornos, entorno caído, contenedores con problemas y en línea; cada clave está en los textos de ambos idiomas | RF-113 |
 
 ### `internal/integrations/wgdashboard`
 
@@ -163,6 +184,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestWGDashboardDataHidesInfrastructure` | No publica claves, direcciones, puerto, reglas ni ajustes de los peers | RF-91, RNF-02 |
 | `TestWGDashboardErrors` | Clasifica la clave rechazada, las respuestas ajenas y las que WGDashboard marca sin éxito | RF-21, RF-91 |
 | `TestNoTunnels` | Sin túneles devuelve una lista vacía | RF-90 |
+| `TestState` (wgdashboard) | Mismo color y etiqueta que el bloque: sin túneles, túnel parado y activos; cada clave está en los textos de ambos idiomas | RF-113 |
 
 ### `internal/integrations/qnap`
 
@@ -175,6 +197,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestQNAPDataHidesInfrastructure` | No publica claves, usuario, dirección, nombre del equipo, modelos, números de serie ni nombres de volúmenes, ni recorre esas columnas | RF-102, RNF-02 |
 | `TestQNAPErrors` | Clasifica la firma, el usuario y el cifrado rechazados, la falta de respuesta, la red inalcanzable y un agente que no es un QNAP | RF-21, RF-102 |
 | `TestTarget` | Acepta `snmp://host[:puerto]` y rechaza otros esquemas, rutas, credenciales y puertos no válidos | RF-102 |
+| `TestState` (qnap) | Mismo color y etiqueta que el bloque: cada problema en su orden de gravedad, temperaturas, volumen al 90 %, sin discos y sin temperatura; cada clave está en los textos de ambos idiomas | RF-113, RF-101 |
 
 ### `internal/integrations/nut`
 
@@ -188,7 +211,54 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestNUTErrors` | Clasifica SAI desconocido, ninguno o varios sin indicar, acceso denegado, driver desconectado, datos caducados, respuesta ajena, lista sin fin, falta de respuesta y servidor apagado | RF-21, RF-104, RF-105 |
 | `TestTarget` (nut) | Acepta `nut://host[:puerto][/sai]` y rechaza otros esquemas, credenciales, puertos, rutas y nombres de SAI con espacios o saltos de línea | RF-105 |
 | `TestParseLine` | Separa las palabras de una línea de NUT y desescapa `\"` y `\\` | RF-103 |
+### `internal/notify`
+
+| Prueba | Verifica | Requisitos |
+|---|---|---|
+| `TestComposeGroupsProblemsAndRecoveries` | El texto exacto del aviso: problemas del más grave al menos grave y luego las vueltas a verde, con el emoji del peor color | RF-110, RF-107 |
+| `TestComposeWarnOnly` | Solo ámbar: 🟠 | RF-110 |
+| `TestComposeEnglish` | El aviso en inglés | RF-110 |
+| `TestComposeOnlyRecoveries` | Solo vueltas a verde: 🟢 | RF-106, RF-110 |
+| `TestComposeTest` | El mensaje de prueba en los dos idiomas | RF-108 |
+| `TestComposeSanitizesNames` | Un nombre con saltos de línea o de más de 80 caracteres no rompe el mensaje | RF-110 |
+| `TestLabelParams` | Las etiquetas con cifras; idioma o clave desconocidos | RF-110 |
+| `TestTelegramRequest` | Telegram recibe `chat_id` y el texto plano, sin `parse_mode` | RF-108 |
+| `TestNtfyJSON` | ntfy recibe tópico, título, mensaje, prioridad y etiqueta según el peor color, y el token solo si existe | RF-108 |
+| `TestNtfyDefaultServer` | Sin servidor, ntfy.sh | RF-108 |
+| `TestWebhookBody` | El JSON del webhook, sin el identificador interno de la conexión, y la lista vacía en la prueba | RF-108, RF-110 |
+| `TestSendErrorCodes` | 401 y 403, otros 4xx, 429, 5xx, redirección y servidor caído dan su código | RF-111 |
+| `TestSendErrorsHideURL` | El error no incluye la URL del webhook ni el token del bot | RF-108, RF-111 |
+| `TestRetryable` | Se reintentan los fallos de red, de tiempo, 5xx y 429; no los rechazos | RF-111 |
+| `TestNewSenderRejectsBadSecret` | Un secreto incompleto o un tipo desconocido no crea el emisor | RF-108 |
+| `TestNotifiesAfterDelay` | Avisa al cumplirse el retardo y no antes, una sola vez, y lo anota | RF-106, RF-107, RF-111 |
+| `TestFlapDoesNotNotify` | Un parpadeo reinicia el plazo | RF-107 |
+| `TestColorChangeRestartsCandidate` | Pasar de ámbar a rojo durante el plazo lo reinicia | RF-107 |
+| `TestMutedSkipped` | Un estado neutro ni avisa ni reinicia el plazo ni cambia el color avisado | RF-106 |
+| `TestGroupsSimultaneous` | Dos cambios del mismo ciclo van en un mensaje, el más grave primero | RF-107 |
+| `TestGroupsNearlySimultaneous` | Dos cambios vistos con 25 s de diferencia van en un mensaje y no se repiten | RF-107 |
+| `TestGroupWindowIsLimited` | Un cambio que acaba de empezar no se adelanta más de lo permitido | RF-107 |
+| `TestSendsToEveryEnabledChannel` | Cada canal activo recibe el aviso en el idioma elegido; uno desactivado, no | RF-108, RF-110 |
+| `TestRecovery` | La vuelta a verde se avisa con el color anterior | RF-106 |
+| `TestSilencedUpdatesTone` | Una conexión silenciada no avisa ni deja un aviso atrasado al reactivarla | RF-109 |
+| `TestNoChannelsUpdatesTone` | Sin canales no se envía ni se anota nada, y el primer canal no recibe problemas antiguos | RF-106 |
+| `TestNotOnPanelIgnoredAndForgotten` | Un servicio fuera del panel no avisa y se olvida su color | RF-106 |
+| `TestFirstStateAssumesGood` | Un servicio nuevo en rojo avisa; en verde, no | RF-106 |
+| `TestRestartDoesNotRepeat` | Un notificador nuevo sobre la misma base de datos no repite el aviso | RF-112 |
+| `TestRetryThenLog` | Dos fallos y un acierto dan una entrada «Enviado» con 3 intentos | RF-111 |
+| `TestRejectedIsNotRetried` | Un rechazo se anota sin reintentar | RF-111 |
+| `TestRetrySkipsDeletedChannel` | Un canal borrado entre intentos no se reintenta | RF-108 |
+| `TestUnreadableChannelSecret` | Un secreto ilegible da `secret_unreadable` en su canal y no frena a los demás | RF-111 |
+| `TestSlowChannelDoesNotBlockOthers` | Un canal colgado no retrasa la revisión ni a los demás canales | RF-106 |
+| `TestSendTest` | La prueba envía un solo intento en el idioma elegido y queda en el registro | RF-108, RF-111 |
+
+### `web`
+
+| Prueba | Verifica | Requisitos |
+|---|---|---|
+| `TestStateLabelsBothLanguages` | Los textos de estado compartidos tienen las mismas claves en español e inglés | RF-113, RF-110 |
+
 ## Pruebas E2E
+| `TestState` (nut) | Mismo color y etiqueta que el bloque: batería baja, con batería, cambiar batería, sobrecarga, con red y desconocido; cada clave está en los textos de ambos idiomas | RF-113, RF-104 |
 
 | ID | Escenario | Requisitos |
 |---|---|---|
@@ -233,8 +303,13 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-39 | Alta de QNAP por SNMPv3: dirección no válida, usuario rechazado, cifrado AES y sin casilla de TLS | RF-10, RF-102 |
 | E2E-40 | QNAP en el panel: cifras, discos, volúmenes y temperaturas; aviso SMART, volumen casi lleno, almacenamiento degradado, caída y recuperación; sin claves, dirección, nombres ni modelos en la API pública | RF-20, RF-21, RF-100, RF-101, RF-102 |
 | E2E-41 | Alta de un SAI por NUT: sin campo de clave ni de TLS, dirección no válida, varios SAI sin indicar cuál y conexión correcta con el nombre | RF-10, RF-105 |
+| E2E-43 | Alta de canales de Telegram, ntfy y webhook con mensaje de prueba: el primero fija el idioma, y ni la administración ni el panel devuelven los secretos | RF-108, RF-111 |
+| E2E-44 | Avisos agrupados con las etiquetas del panel (AdGuard sin protección y túnel parado en un solo mensaje por canal, con un minuto de retardo) y vuelta a la normalidad | RF-106, RF-107, RF-110, RF-113 |
+| E2E-45 | Una conexión silenciada no avisa, ni al volver a activarla | RF-109 |
+| E2E-46 | Avisos en inglés | RF-110 |
+| E2E-47 | Un canal de Telegram con el token rechazado: error en la prueba y en «Últimos envíos», que lo conserva al borrar el canal | RF-111 |
 | E2E-42 | SAI en el panel: carga, «Cargando», autonomía, modelo y versión; con batería, batería baja, cambiar batería, driver sin datos, caída y recuperación; sin nombre del SAI, serie ni dirección en la API pública | RF-20, RF-21, RF-103, RF-104, RF-105 |
-Los servicios simulados reproducen las rutas y la forma de respuesta usadas. El QNAP simulado es un agente SNMPv3 (`net-snmp`) con AES, porque el OpenSSL de Node no trae DES; ver DEC-43. Las discrepancias con el servicio real las cubren las verificaciones manuales.
+Los servicios simulados reproducen las rutas y la forma de respuesta usadas. El receptor de avisos simulado (`e2e/fake-notify.mjs`) hace de API de bots de Telegram, gracias a `TALAIA_TELEGRAM_API`, de servidor ntfy y de webhook, y guarda cada mensaje. El QNAP simulado es un agente SNMPv3 (`net-snmp`) con AES, porque el OpenSSL de Node no trae DES; ver DEC-43. Las discrepancias con el servicio real las cubren las verificaciones manuales.
 
 ## Pruebas del instalador
 
@@ -259,6 +334,7 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. El 
 
 | Fecha | Versión de Talaia | Servicio | Resultado |
 |---|---|---|---|
+| 2026-11-20 | Hito 16 (`v0.3.1-dirty`, binario de la rama) | Bot de Telegram real del cliente en un chat privado, con Talaia actualizado en su Proxmox VE con el instalador y `--binary`, y su AdGuard Home real | Correcto según tres capturas del cliente: alta del canal con el token tecleado por el cliente; «Enviar prueba» recibida; con la protección de AdGuard desactivada, «🟠 Talaia · Necesita atención / Adguard: Protección desactivada» a las 10:05, unos 2 minutos después (retardo por defecto); al reactivarla, «🟢 Talaia · Vuelve a estar en orden / Adguard: Protección activa» a las 10:08; «Últimos envíos» con las cuatro entradas. La primera prueba dio «el servidor no responde a tiempo» (más de 10 s) pero Telegram la entregó igualmente: llegaron dos mensajes de prueba. En Safari, los desplegables de la sección se veían más bajos que los demás campos; corregido después. No se han probado ntfy ni webhook reales, un grupo de Telegram, un aviso en rojo ni varios servicios a la vez, que cubren las pruebas de `internal/notify` y E2E-43 a E2E-47 |
 | 2026-11-19 | Hito 15 (`7d5a8d6`) | upsd 2.8.1 real del cliente, en otro nodo de su Proxmox, dado de alta como `nut://` sin indicar el SAI, con Talaia actualizado en su Proxmox VE con el instalador y `--binary` | Correcto según la captura del cliente: estado verde «Con red», batería 100 %, autonomía en minutos, modelo y «NUT 2.8.1» en el pie, y atalaya con los 7 servicios en orden. Toma el único SAI del servidor sin indicarlo. No se ha visto «Cargando» porque el SAI estaba cargado (`OL`), ni se han provocado un corte de luz u otros avisos, ni revisado a mano la API pública, que cubren `TestNUTDataHidesPrivate`, E2E-14 y E2E-42. La primera actualización falló sin cambiar nada porque `ssh` sin `-t` no deja confirmar; con `ssh -t` fue bien |
 | 2026-11-19 | Hito 15, antes de programar | upsd 2.8.1 (NETVER 1.3) real del cliente, en otro nodo de su Proxmox, consultado por TCP desde el LXC de Talaia, con nombres, serie, puertos y direcciones ocultos | El host de Proxmox donde corre Talaia no tiene `upsd`: solo `upsmon`, cliente de otro nodo que tiene el SAI por USB. Desde el LXC, `VER`, `LIST UPS`, `LIST VAR` y `LIST CMD` responden sin `LOGIN`. Un SAI con `ups.status` «OL», `battery.charge` 100, `battery.runtime` en segundos, `battery.charge.low`, `ups.model` y `device.model`, `ups.load` y `ups.realpower.nominal`. Un SAI inexistente da `ERR UNKNOWN-UPS` y una variable inexistente, `ERR VAR-NOT-SUPPORTED`. Por eso no se piden credenciales; ver DEC-47 |
 | 2026-11-02 | Hito 2 | AdGuard Home v0.107.79 real en local, con DNS y reglas de bloqueo reales | Correcto: credenciales erróneas, datos, protección desactivada, caída y recuperación, y actualización en vivo durante más de 35 s |
@@ -316,10 +392,12 @@ Los servicios simulados reproducen las rutas y la forma de respuesta usadas. El 
 - OPNsense: referencia de la API para rutas y métodos. El formato de las respuestas no está documentado: se ha tomado del servicio real.
 - OPNsense WireGuard: código de `opnsense/core` 26.7, en `Wireguard/Api/ServiceController.php`, `scripts/wireguard/wg_show.py` y `Wireguard/ACL/ACL.xml`, para la forma de los registros, el estado de los peers y los privilegios.
 - QNAP: MIB que descarga el propio NAS (QTS-MIB y NAS-MIB 2.0), para OID, tipos y estados de pools, discos y ventiladores. Para la API web descartada, `python-qnapstats` y la documentación de los plugins de QNAP de Linuxfabrik, que exigen el grupo «administrators».
+- Telegram: documentación de la Bot API, `sendMessage`, para la ruta, `chat_id` y el texto sin `parse_mode`. ntfy: documentación de publicación, en JSON a la raíz del servidor (`topic`, `title`, `message`, `priority` y `tags`) y con `Authorization: Bearer`.
 - NUT: guía de desarrollo de Network UPS Tools, «Network protocol information», para las órdenes, las respuestas y los errores; y las páginas de `upsd.conf` y `upsd.users`, que confirman que leer no exige usuario y que `LISTEN` decide en qué direcciones escucha.
 - WGDashboard: código de la v4.3.4, en `src/dashboard.py` y `src/modules/WireguardConfiguration.py`, para rutas, autenticación, registro de accesos y cálculo de los peers conectados.
 
 **Aún sin verificar:**
+- **Avisos reales por ntfy y webhook:** solo se han probado con el receptor simulado. Telegram solo en un chat privado: no se han probado un grupo o un canal, un aviso en rojo real ni varios servicios a la vez.
 - **SAI real por NUT, casos no probados:** corte de luz (con batería y batería baja), batería cargándose («Cargando»), aviso de cambiar batería, sobrecarga, driver desconectado, varios SAI en un servidor y SAI de otros fabricantes. Solo se han probado con el simulador.
 - **QNAP real, casos no probados:** aviso o fallo SMART, RAID degradado o reconstruyéndose, pool en aviso, ventilador averiado, volumen lleno y QTS clásico (no hero). Los textos de estado de RAID y volumen distintos de «Ready» no están documentados; solo se han probado con el simulador.
 - **WireGuard de OPNsense real, casos no probados:** instancia caída, peers sin contacto reciente y varias instancias. Solo se han probado con el simulador. Tampoco se ha revisado la API pública con este servicio, aunque la cubren `TestCollectWireGuard` y E2E-36.
@@ -390,12 +468,20 @@ Los requisitos pendientes se probarán en su hito.
 | RF-103 | `TestCollect`, `TestCollectMinimal`, `TestParseLine`, E2E-42 |
 | RF-104 | `TestNUTErrors`, E2E-42 |
 | RF-105 | `TestNUTDataHidesPrivate`, `TestNUTSendsOnlyReadCommands`, `TestCollectPicksOnlyUPS`, `TestNUTErrors`, `TestTarget` (nut), `TestNUTConnectionRules`, E2E-41, E2E-42 |
+| RF-106 | `TestNotifiesAfterDelay`, `TestRecovery`, `TestMutedSkipped`, `TestNotOnPanelIgnoredAndForgotten`, `TestFirstStateAssumesGood`, `TestNoChannelsUpdatesTone`, `TestSlowChannelDoesNotBlockOthers`, E2E-44 |
+| RF-107 | `TestNotifiesAfterDelay`, `TestFlapDoesNotNotify`, `TestColorChangeRestartsCandidate`, `TestGroupsSimultaneous`, `TestGroupsNearlySimultaneous`, `TestGroupWindowIsLimited`, `TestNotifySettingsValidation`, E2E-44 |
+| RF-108 | `TestNtfyServerChangeRequiresSecrets`, `TestTelegramRequest`, `TestNtfyJSON`, `TestWebhookBody`, `TestChannelsNeverExposeSecrets`, `TestChannelValidation`, `TestChannelSecretEncrypted`, `TestSendErrorsHideURL`, `TestSendTest`, E2E-43 |
+| RF-109 | `TestSilencedUpdatesTone`, `TestConnectionNotifyRoundTrip`, `TestConnectionNotifyDefaultTrue`, E2E-45 |
+| RF-110 | `TestComposeGroupsProblemsAndRecoveries`, `TestComposeEnglish`, `TestComposeSanitizesNames`, `TestLabelParams`, `TestStateLabelsBothLanguages`, E2E-44, E2E-46 |
+| RF-111 | `TestLogKeepsLatest50`, `TestSendErrorCodes`, `TestRetryThenLog`, `TestRejectedIsNotRetried`, `TestUnreadableChannelSecret`, E2E-47 |
+| RF-112 | `TestRestartDoesNotRepeat`, `TestNotifiedToneCascade` |
+| RF-113 | `TestState` (cada integración), `TestSnapshotState`, `TestPendingSnapshotState`, E2E-44 y todas las E2E de colores de bloque |
 | RF-61 | INS-04, INS-05, INS-06, INS-11, INS-12 |
 | RF-62 | `TestSetupRequiresTokenWhenConfigured`, `TestSetupTokenAttemptsAreLimited`, `TestEmptySetupTokenNeverMatches`, E2E-29, INS-02 |
 | RNF-01 | Por diseño: el modelo de datos no tiene tablas de métricas |
 | RNF-02 | `TestCollect` y `TestClusterAggregates` usan solo lecturas; por diseño, el cliente HTTP solo ofrece `GetJSON` y el de QNAP solo GET y walk de SNMP |
 | RNF-03 | `TestDashboardIsPublicAndHidesConfiguration`, `TestCollectsAndPassesDecryptedSecret`, `TestRedirectIsNotFollowed`, E2E-14 |
-| RNF-04 | `TestSealOpen`, `TestKeyIsStableAndProtected`, `TestConnectionSecretIsEncryptedAndKept` |
+| RNF-04 | `TestSealOpen`, `TestKeyIsStableAndProtected`, `TestConnectionSecretIsEncryptedAndKept`, `TestChannelSecretEncrypted` |
 | RNF-05 | `TestReopenKeepsData`, `TestMigratesExistingDatabase`; el binario se compila con `CGO_ENABLED=0` |
 | RNF-06 | Medición manual en reposo, ver [Estado y cambios](06-estado-y-cambios.md#consumo-medido) |
 | RNF-07 | `TestRemoveAndUnsupported`; el recolector solo depende de `integrations.Registry` |

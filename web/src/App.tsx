@@ -359,6 +359,7 @@ function Connections({ navigate }: { navigate: (path: string) => void }) {
                 <span>{t("connections.every", { n: connection.interval_seconds })}</span>
                 <ConnectionHealth state={states.data?.connections.find((state) => state.id === connection.id)} />
                 {connection.tls_skip_verify && <span className="warn">{t("connections.tlsOff")}</span>}
+                {!connection.notify && <span>{t("connections.silenced")}</span>}
               </div>
               <div className="connection-actions">
                 {confirming === connection.id ? (
@@ -437,6 +438,7 @@ function ConnectionDialog({
   const [options, setOptions] = useState<Record<string, boolean>>(connection?.options ?? entry.defaultOptions);
   const [entities, setEntities] = useState<string[]>(connection?.entities ?? []);
   const [link, setLink] = useState(connection?.link_url ?? "");
+  const [notify, setNotify] = useState(connection?.notify ?? true);
 
   useEffect(() => {
     dialog.current?.showModal();
@@ -460,6 +462,7 @@ function ConnectionDialog({
     options,
     entities,
     link_url: link,
+    notify,
     ...(secret ? { secret } : {}),
     ...(snmp && privacySecret ? { privacy_secret: privacySecret } : {}),
   });
@@ -614,6 +617,13 @@ function ConnectionDialog({
             </span>
           </label>
         )}
+        <label className="check">
+          <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
+          <span>
+            {t("form.notify")}
+            <small>{t("form.notifyHint")}</small>
+          </span>
+        </label>
         {save.isError && <p role="alert" className="error">{errorText(code(save.error))}</p>}
         {test.isError && <p role="alert" className="error">{errorText(code(test.error))}</p>}
         {test.data && (

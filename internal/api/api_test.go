@@ -23,6 +23,7 @@ import (
 
 	"github.com/izakdev/talaia/internal/collector"
 	"github.com/izakdev/talaia/internal/integrations"
+	"github.com/izakdev/talaia/internal/notify"
 	"github.com/izakdev/talaia/internal/secrets"
 	"github.com/izakdev/talaia/internal/store"
 )
@@ -86,7 +87,7 @@ func newServer(t *testing.T) (*client, *store.Store) {
 	if err := manager.Start(ctx); err != nil {
 		t.Fatal(err)
 	}
-	srv, err := New(st, manager, registry, logger, "test", web)
+	srv, err := New(st, manager, notify.New(st, manager, logger), registry, logger, "test", web)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -702,7 +703,7 @@ func newServerWithSetupToken(t *testing.T, token string) (*client, string) {
 	if err := manager.Start(ctx); err != nil {
 		t.Fatal(err)
 	}
-	srv, err := New(st, manager, integrations.Registry{}, logger, "test", fstest.MapFS{})
+	srv, err := New(st, manager, notify.New(st, manager, logger), integrations.Registry{}, logger, "test", fstest.MapFS{})
 	if err != nil {
 		t.Fatal(err)
 	}

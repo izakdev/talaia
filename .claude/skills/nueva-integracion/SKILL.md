@@ -31,6 +31,7 @@ Pregunta al usuario las decisiones de producto que no se deducen: qué mostrar, 
   - `TestCollect…`: lee una respuesta con la forma real.
   - `Test<X>DataHides…`: serializa `Data` y comprueba que no aparece ninguna clave, IP, puerto ni nombre de la respuesta.
   - `Test<X>Errors`: clave rechazada, respuesta ajena y fallo del servicio.
+- `internal/integrations/<x>/state.go`: `func (d Data) State() integrations.State`, la única regla del color (`good`, `warn`, `bad` o `muted`) y de la clave de su etiqueta, con sus parámetros si lleva cifras. La usan el panel, la cabecera y los avisos (DEC-48). Su prueba `TestState` en `state_test.go`, con `statetest.Run` y un caso por rama, comprueba también que cada clave está en `states.json`.
 - Registro en `cmd/talaia/main.go` (`integrations.Registry{…}`) y en `internal/api/api.go` (`connectionTypes`: `needsUsername`, `options`, `hasEntities`).
 - Opción nueva en una integración existente: constante `Option…` en el paquete, añadida a `options` en `api.go`. Si el dato opcional da `403`, se omite y se marca `limited` (nota «Faltan algunos datos»), no es un fallo.
 
@@ -38,9 +39,10 @@ Pregunta al usuario las decisiones de producto que no se deducen: qué mostrar, 
 
 - `web/src/api.ts`: el tipo en `ConnectionType` y la interfaz `<X>Data`.
 - `web/src/catalog.ts`: la entrada con `icon` de `simple-icons`, `urlPlaceholder` (`http://<x>.local:puerto`), `hasEntities`, `options` y `defaultOptions`.
-- `web/src/widgets/<x>.tsx`: un `Widget<XData>` con `state` (tono `good`, `warn`, `bad` o `muted` y su etiqueta), `Body` y `footer` (nombre y versión). Reutiliza `formatBytes` y las clases existentes (`figures compact`, `ha-section`, `ha-entities gateways`, `service-foot`, `no-data`).
+- `web/src/widgets/<x>.tsx`: un `Widget<XData>` con `Body` y `footer` (nombre y versión); el estado lo calcula el servidor. Reutiliza `formatBytes` y las clases existentes (`figures compact`, `ha-section`, `ha-entities gateways`, `service-foot`, `no-data`).
 - `web/src/Dashboard.tsx`: importa y registra el widget.
-- `web/src/i18n.tsx`: todas las claves en español y en inglés (`catalog.desc.<x>`, `form.secret.<x>`, `form.secretHint.<x>`, `type.<x>` y las del widget; para opciones, `form.option.<opción>` y `.hint`).
+- `web/src/i18n/states.json`: las etiquetas de estado (`<x>.…`) en español y en inglés; sirven para el bloque y para los avisos.
+- `web/src/i18n.tsx`: el resto de las claves en español y en inglés (`catalog.desc.<x>`, `form.secret.<x>`, `form.secretHint.<x>`, `type.<x>` y las del widget; para opciones, `form.option.<opción>` y `.hint`).
 
 ## 3. Simulador y E2E
 

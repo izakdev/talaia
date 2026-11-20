@@ -117,7 +117,8 @@ func (s *Server) saveSettings(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	if !slices.Contains(themes, in.Theme) || !slices.Contains(accents, in.Accent) {
+	if !slices.Contains(themes, in.Theme) || !slices.Contains(accents, in.Accent) ||
+		!slices.Contains(notifyLangs, in.NotifyLanguage) || !slices.Contains(notifyDelays, in.NotifyDelaySeconds) {
 		writeError(w, http.StatusBadRequest, "invalid_settings")
 		return
 	}

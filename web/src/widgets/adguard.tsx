@@ -61,12 +61,6 @@ function TopDomains({ title, domains }: { title: string; domains: DomainCount[] 
 }
 
 export const adguardWidget: Widget<AdGuardData> = {
-  state: (data, t) => {
-    if (!data.running) return { tone: "bad", label: t("adguard.dnsStopped") };
-    return data.protection_enabled
-      ? { tone: "good", label: t("adguard.protectionOn") }
-      : { tone: "warn", label: t("adguard.protectionOff") };
-  },
   Body: AdGuard,
   footer: (data) => (data.version ? `AdGuard Home ${data.version}` : ""),
 };

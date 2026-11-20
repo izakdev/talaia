@@ -17,6 +17,7 @@ Talaia es un dashboard autoalojado para ver de un vistazo el estado de los servi
 - **Aparcado:** Grafana, a petición del cliente, porque no lo usa de momento.
 - **Ampliación:** NAS QNAP (QTS y QuTS hero) por SNMPv3, a petición del cliente, en el hito 14.
 - **Ampliación:** SAI a través de un servidor NUT (`upsd`), a petición del cliente, en el hito 15.
+- **Ampliación:** avisos por Telegram, ntfy o webhook cuando un servicio cambia de color, en el hito 16. Siguen excluidas las acciones sobre los servicios.
 
 ## Estados
 
@@ -133,6 +134,19 @@ Verificado con un Home Assistant real en local y con la instalación del cliente
 | RF-104 | Marca en verde «Con red»; en ámbar «Con batería», «Cambiar batería» y «Sobrecarga»; y en rojo «Batería baja» y el servidor sin respuesta o sin datos del SAI | 15 | Implementado |
 | RF-105 | Lee del servidor NUT por su protocolo de red sin usuario ni contraseña, solo con órdenes de consulta, elige el único SAI del servidor si no se indica otro, y no publica el nombre del SAI en NUT, su número de serie, el driver ni la dirección | 15 | Implementado |
 
+### Notificaciones
+
+| ID | Requisito | Hito | Estado |
+|---|---|---|---|
+| RF-106 | Avisa por los canales activos cuando un servicio del panel pasa a ámbar o a rojo y cuando vuelve a verde, sin ningún navegador abierto. Los cambios dentro del mismo color y los estados neutros («Consultando…», «Sin túneles») no avisan | 16 | Implementado |
+| RF-107 | Solo avisa si el cambio dura el tiempo elegido (sin espera, 1, 2, 5, 10 o 15 minutos; 2 por defecto). Los cambios que coinciden van en un solo mensaje | 16 | Implementado |
+| RF-108 | Canales de Telegram (bot), ntfy (ntfy.sh o servidor propio) y webhook JSON, uno o varios a la vez, con el botón «Enviar prueba». El token, el tópico y la URL se guardan cifrados y nunca salen del servidor | 16 | Implementado |
+| RF-109 | Cada conexión puede dejar de avisar sin dejar de verse en el panel. Al volver a activarla no llega un aviso atrasado | 16 | Implementado |
+| RF-110 | El aviso lleva el nombre de cada servicio y su estado tal como sale en el panel, en español o en inglés, sin URL, IP, credenciales ni nombres internos | 16 | Implementado |
+| RF-111 | La administración muestra los 50 últimos envíos con su resultado y, si fallan, el motivo, sin direcciones ni respuestas del servicio | 16 | Implementado |
+| RF-112 | Un reinicio de Talaia no repite avisos ya enviados | 16 | Implementado |
+| RF-113 | Talaia calcula el color y el estado de cada servicio en el servidor: el panel y los avisos usan la misma regla | 16 | Implementado |
+
 ### Instalación
 
 | ID | Requisito | Hito | Estado |
@@ -149,7 +163,7 @@ Verificado con un Home Assistant real en local y con la instalación del cliente
 | RNF-02 | Las integraciones son de solo lectura | 2 | Implementado |
 | RNF-03 | El navegador nunca contacta con los servicios ni recibe sus tokens: el backend actúa de intermediario | 2 | Implementado |
 | RNF-04 | Las credenciales se guardan cifradas, con la clave fuera de la base de datos | 1 | Implementado |
-| RNF-05 | Autónomo: un binario con SQLite embebida y sin dependencias externas ni de Internet en ejecución | 1 | Implementado |
+| RNF-05 | Autónomo: un binario con SQLite embebida y sin dependencias externas ni de Internet en ejecución. Los avisos opcionales por Telegram o ntfy.sh necesitan salida a Internet; el resto sigue funcionando sin ella | 1 | Implementado |
 | RNF-06 | Funciona en un LXC de 1 vCPU, 512 MB de RAM y 4 GB de disco | 6 | Implementado |
 | RNF-07 | Añadir una integración no exige cambiar el núcleo de recolección | 2 | Implementado |
 | RNF-08 | Accesibilidad básica: teclado, foco visible, estados no solo por color y respeto a la reducción de movimiento | 1 | Parcial: aplicado en el diseño, sin auditoría formal |

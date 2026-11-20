@@ -34,7 +34,7 @@ type Entity struct {
 // Data es la información pública de un Home Assistant.
 type Data struct {
 	Version  string   `json:"version"`
-	State    string   `json:"state"`
+	RunState string   `json:"state"`
 	SafeMode bool     `json:"safe_mode"`
 	Recovery bool     `json:"recovery_mode"`
 	Entities []Entity `json:"entities"`
@@ -139,7 +139,7 @@ func (c *client) Collect(ctx context.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	data := Data{Version: config.Version, State: config.State, SafeMode: config.SafeMode, Recovery: config.Recovery, Entities: []Entity{}}
+	data := Data{Version: config.Version, RunState: config.State, SafeMode: config.SafeMode, Recovery: config.Recovery, Entities: []Entity{}}
 	// CPU, memoria y disco son opcionales: sin Supervisor, el resto sigue funcionando.
 	if system, err := c.system(ctx); err == nil {
 		data.System = system

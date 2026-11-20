@@ -118,7 +118,7 @@ func collect(t *testing.T, ts *httptest.Server, entities ...string) Data {
 func TestStatusWithoutEntitiesSkipsStates(t *testing.T) {
 	// Sin selección no se pide /api/states: con el cuerpo no válido fallaría.
 	d := collect(t, server(t, configBody, "<html>"))
-	if d.Version != "2026.2.3" || d.State != "RUNNING" || d.SafeMode || len(d.Entities) != 0 {
+	if d.Version != "2026.2.3" || d.RunState != "RUNNING" || d.SafeMode || len(d.Entities) != 0 {
 		t.Fatalf("estado: %+v", d)
 	}
 }
@@ -155,7 +155,7 @@ func TestMissingEntityIsReported(t *testing.T) {
 
 func TestStartingAndDegradedModes(t *testing.T) {
 	d := collect(t, server(t, `{"version":"1","state":"NOT_RUNNING","safe_mode":true,"recovery_mode":true}`, statesBody))
-	if d.State != "NOT_RUNNING" || !d.SafeMode || !d.Recovery {
+	if d.RunState != "NOT_RUNNING" || !d.SafeMode || !d.Recovery {
 		t.Fatalf("estado: %+v", d)
 	}
 }

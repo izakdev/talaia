@@ -1,22 +1,6 @@
-import type { NUTData, NUTFlag } from "../api";
+import type { NUTData } from "../api";
 import { useI18n, type Translate } from "../i18n";
-import type { Tone, Widget } from "./types";
-
-type Key = Parameters<Translate>[0];
-
-// El primer estado de la lista da la etiqueta; el orden es el de gravedad.
-const STATES: [NUTFlag, Tone, Key][] = [
-  ["LB", "bad", "nut.state.lowBattery"],
-  ["OB", "warn", "nut.state.onBattery"],
-  ["RB", "warn", "nut.state.replaceBattery"],
-  ["OVER", "warn", "nut.state.overload"],
-  ["OL", "good", "nut.state.online"],
-];
-
-function state(data: NUTData, t: Translate): { tone: Tone; label: string } {
-  const hit = STATES.find(([flag]) => data.status.includes(flag));
-  return hit ? { tone: hit[1], label: t(hit[2]) } : { tone: "muted", label: t("nut.state.unknown") };
-}
+import type { Widget } from "./types";
 
 // La autonomía viene en segundos: «40 min» o «1 h 5 min».
 export function formatRuntime(seconds: number, t: Translate): string {
@@ -51,7 +35,6 @@ function NUT({ data }: { data: NUTData }) {
 }
 
 export const nutWidget: Widget<NUTData> = {
-  state,
   Body: NUT,
   footer: (data) => [data.model, data.version ? `NUT ${data.version}` : "NUT"].filter(Boolean).join(" · "),
 };

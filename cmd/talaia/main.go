@@ -27,6 +27,7 @@ import (
 	"github.com/izakdev/talaia/internal/integrations/proxmox"
 	"github.com/izakdev/talaia/internal/integrations/qnap"
 	"github.com/izakdev/talaia/internal/integrations/wgdashboard"
+	"github.com/izakdev/talaia/internal/notify"
 	"github.com/izakdev/talaia/internal/secrets"
 	"github.com/izakdev/talaia/internal/store"
 	"github.com/izakdev/talaia/web"
@@ -121,7 +122,8 @@ func run(log *slog.Logger) error {
 
 	registry := integrations.Registry{"adguard": adguard.New, "homeassistant": homeassistant.New, "opnsense": opnsense.New, "portainer": portainer.New, "nut": nut.New, "proxmox": proxmox.New, "qnap": qnap.New, "wgdashboard": wgdashboard.New}
 	manager := collector.New(st, registry, log)
-	server, err := api.New(st, manager, registry, log, version, web.Dist())
+	notifier := notify.New(st, manager, log)
+	server, err := api.New(st, manager, notifier, registry, log, version, web.Dist())
 	if err != nil {
 		return err
 	}
@@ -141,6 +143,9 @@ func run(log *slog.Logger) error {
 	}
 	// Se espera a los recolectores antes de cerrar la base de datos.
 	defer manager.Wait()
+	notifier.Start(ctx)
+	// Y a los avisos en curso, que escriben en el registro.
+	defer notifier.Wait()
 	defer stop()
 	httpServer.BaseContext = func(net.Listener) context.Context { return ctx }
 	go func() {

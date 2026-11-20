@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, type AppSettings } from "./api";
 import { useI18n } from "./i18n";
+import Notifications from "./Notifications";
 
 const THEMES = ["auto", "light", "dark"] as const;
 const ACCENTS = ["amber", "teal", "lime", "coral", "pink"] as const;
@@ -17,6 +18,7 @@ export default function Settings() {
         <h1>{t("settings.title")}</h1>
       </div>
       {settings.data && <GeneralSettings initial={settings.data} />}
+      <Notifications />
       <PasswordForm />
     </main>
   );
@@ -27,7 +29,9 @@ function GeneralSettings({ initial }: { initial: AppSettings }) {
   const client = useQueryClient();
   const [form, setForm] = useState(initial);
   const save = useMutation({
-    mutationFn: () => api.saveSettings(form),
+    // Se parte de los ajustes actuales para no pisar los de los avisos.
+    mutationFn: async () =>
+      api.saveSettings({ ...(await api.settings()), theme: form.theme, accent: form.accent, require_login: form.require_login }),
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["state"] });
       await client.invalidateQueries({ queryKey: ["settings"] });

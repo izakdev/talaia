@@ -32,15 +32,16 @@ const (
 // Snapshot es el estado público de una conexión: sin usuario ni credenciales. Link es
 // la dirección para abrir el servicio, que el administrador puede sustituir.
 type Snapshot struct {
-	ID            string     `json:"id"`
-	Name          string     `json:"name"`
-	Type          string     `json:"type"`
-	Link          string     `json:"link"`
-	Status        string     `json:"status"`
-	Error         string     `json:"error,omitempty"`
-	Data          any        `json:"data"`
-	CheckedAt     *time.Time `json:"checked_at"`
-	LastSuccessAt *time.Time `json:"last_success_at"`
+	ID            string             `json:"id"`
+	Name          string             `json:"name"`
+	Type          string             `json:"type"`
+	Link          string             `json:"link"`
+	Status        string             `json:"status"`
+	Error         string             `json:"error,omitempty"`
+	State         integrations.State `json:"state"`
+	Data          any                `json:"data"`
+	CheckedAt     *time.Time         `json:"checked_at"`
+	LastSuccessAt *time.Time         `json:"last_success_at"`
 }
 
 type item struct {
@@ -135,7 +136,7 @@ func (m *Manager) start(c store.Connection) {
 		return
 	}
 	target := strings.Join(append([]string{c.BaseURL, c.Username, string(options)}, c.Entities...), "\x00")
-	snapshot := Snapshot{ID: c.ID, Name: c.Name, Type: c.Type, Link: c.Link(), Status: StatusPending}
+	snapshot := pendingSnapshot(c)
 	if old, ok := m.items[c.ID]; ok {
 		old.cancel()
 		if old.target == target {
@@ -211,6 +212,7 @@ func (m *Manager) record(id string, generation int, data any, code string) bool 
 	} else {
 		s.Status, s.Error, s.Data, s.LastSuccessAt = StatusOK, "", data, &now
 	}
+	s.State = stateOf(s.Status, s.Data)
 	m.notifyLocked()
 	return before != s.Status+s.Error
 }
@@ -263,4 +265,19 @@ func (m *Manager) notifyLocked() {
 		default:
 		}
 	}
+}
+
+func pendingSnapshot(c store.Connection) Snapshot {
+	return Snapshot{ID: c.ID, Name: c.Name, Type: c.Type, Link: c.Link(), Status: StatusPending, State: stateOf(StatusPending, nil)}
+}
+
+// stateOf calcula el color de un servicio: el mismo para su bloque, la cabecera y los avisos.
+func stateOf(status string, data any) integrations.State {
+	if status == StatusError {
+		return integrations.State{Tone: integrations.ToneBad, Key: "status.noResponse"}
+	}
+	if s, ok := data.(integrations.Stater); ok && status == StatusOK {
+		return s.State()
+	}
+	return integrations.State{Tone: integrations.ToneMuted, Key: "status.checking"}
 }
