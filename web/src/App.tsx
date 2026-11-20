@@ -4,6 +4,7 @@ import { api, ApiError, type Connection, type ConnectionInput, type ConnectionTy
 import { CATALOG, catalogEntry } from "./catalog";
 import { Horizon, IntegrationIcon, LanguageSwitch } from "./chrome";
 import EntityPicker, { normalize } from "./EntityPicker";
+import { IconPicker } from "./IconPicker";
 import Dashboard from "./Dashboard";
 import { useI18n } from "./i18n";
 import Settings from "./Settings";
@@ -439,6 +440,7 @@ function ConnectionDialog({
   const [entities, setEntities] = useState<string[]>(connection?.entities ?? []);
   const [link, setLink] = useState(connection?.link_url ?? "");
   const [notify, setNotify] = useState(connection?.notify ?? true);
+  const [icon, setIcon] = useState(connection?.icon ?? "");
 
   useEffect(() => {
     dialog.current?.showModal();
@@ -463,6 +465,7 @@ function ConnectionDialog({
     entities,
     link_url: link,
     notify,
+    icon,
     ...(secret ? { secret } : {}),
     ...(snmp && privacySecret ? { privacy_secret: privacySecret } : {}),
   });
@@ -505,6 +508,7 @@ function ConnectionDialog({
           {t("form.name")}
           <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required autoFocus />
         </label>
+        <IconPicker type={type} value={icon} onChange={setIcon} />
         <label>
           {t(snmp ? "form.url.qnap" : nut ? "form.url.nut" : "form.url")}
           <input

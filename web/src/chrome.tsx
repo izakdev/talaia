@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import type { BrandIconData } from "./api";
 import { useI18n } from "./i18n";
 
 export function IntegrationIcon({ icon }: { icon: { path: string; hex: string; title: string } }) {
@@ -6,6 +7,39 @@ export function IntegrationIcon({ icon }: { icon: { path: string; hex: string; t
     <svg className="integration-icon" viewBox="0 0 24 24" aria-hidden="true" fill={`#${icon.hex}`}>
       <path d={icon.path} />
     </svg>
+  );
+}
+
+/** Luminancia relativa de un color #RRGGBB, según WCAG. */
+function luminance(hex: string) {
+  const [r, g, b] = [0, 2, 4].map((i) => {
+    const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/**
+ * Indica si el color de la marca apenas se distingue del fondo de un bloque
+ * (contraste por debajo de 1,5 con --surface en cada tema): entonces se pinta con el color del texto.
+ */
+export function lowContrast(hex: string): { dark: boolean; light: boolean } {
+  const l = luminance(hex);
+  return { dark: l < 0.08, light: l > 0.65 };
+}
+
+/** Icono de /icons/, pintado como máscara con el color de su marca. */
+export function BrandIcon({ icon, className }: { icon: BrandIconData | null; className?: string }) {
+  if (!icon) return null;
+  const low = lowContrast(icon.hex);
+  const style = { "--icon-url": `url(/icons/${icon.slug}.svg)`, "--icon-color": `#${icon.hex}` } as CSSProperties;
+  return (
+    <span
+      className={["brand-icon", low.dark && "low-on-dark", low.light && "low-on-light", className].filter(Boolean).join(" ")}
+      style={style}
+      data-icon={icon.slug}
+      aria-hidden="true"
+    />
   );
 }
 

@@ -6,6 +6,8 @@ export type ConnectionOption = "show_top_domains" | "show_guests" | "show_summar
 export interface CatalogEntry {
   type: ConnectionType;
   icon: { path: string; hex: string; title: string };
+  // Nombre del mismo icono en /icons/, el que llevan sus bloques si no se elige otro.
+  iconSlug: string;
   urlPlaceholder: string;
   // Indica si se eligen entidades concretas para mostrarlas en el panel.
   hasEntities: boolean;
@@ -22,14 +24,14 @@ const nutIcon = {
 };
 
 export const CATALOG: CatalogEntry[] = [
-  { type: "adguard", icon: siAdguard, urlPlaceholder: "http://adguard.local:3000", hasEntities: false, options: ["show_top_domains"], defaultOptions: {} },
-  { type: "homeassistant", icon: siHomeassistant, urlPlaceholder: "http://homeassistant.local:8123", hasEntities: true, options: ["show_summary"], defaultOptions: { show_summary: true } },
-  { type: "proxmox", icon: siProxmox, urlPlaceholder: "https://proxmox.example:8006", hasEntities: false, options: ["show_guests"], defaultOptions: { show_guests: true } },
-  { type: "opnsense", icon: siOpnsense, urlPlaceholder: "https://opnsense.local", hasEntities: false, options: ["show_wireguard"], defaultOptions: {} },
-  { type: "portainer", icon: siPortainer, urlPlaceholder: "https://portainer.local:9443", hasEntities: false, options: [], defaultOptions: {} },
-  { type: "qnap", icon: siQnap, urlPlaceholder: "snmp://qnap.local", hasEntities: false, options: [], defaultOptions: {} },
-  { type: "nut", icon: nutIcon, urlPlaceholder: "nut://sai.local", hasEntities: false, options: [], defaultOptions: {} },
-  { type: "wgdashboard", icon: siWireguard, urlPlaceholder: "http://wgdashboard.local:10086", hasEntities: false, options: [], defaultOptions: {} },
+  { type: "adguard", iconSlug: "adguard", icon: siAdguard, urlPlaceholder: "http://adguard.local:3000", hasEntities: false, options: ["show_top_domains"], defaultOptions: {} },
+  { type: "homeassistant", iconSlug: "homeassistant", icon: siHomeassistant, urlPlaceholder: "http://homeassistant.local:8123", hasEntities: true, options: ["show_summary"], defaultOptions: { show_summary: true } },
+  { type: "proxmox", iconSlug: "proxmox", icon: siProxmox, urlPlaceholder: "https://proxmox.example:8006", hasEntities: false, options: ["show_guests"], defaultOptions: { show_guests: true } },
+  { type: "opnsense", iconSlug: "opnsense", icon: siOpnsense, urlPlaceholder: "https://opnsense.local", hasEntities: false, options: ["show_wireguard"], defaultOptions: {} },
+  { type: "portainer", iconSlug: "portainer", icon: siPortainer, urlPlaceholder: "https://portainer.local:9443", hasEntities: false, options: [], defaultOptions: {} },
+  { type: "qnap", iconSlug: "qnap", icon: siQnap, urlPlaceholder: "snmp://qnap.local", hasEntities: false, options: [], defaultOptions: {} },
+  { type: "nut", iconSlug: "talaia-nut", icon: nutIcon, urlPlaceholder: "nut://sai.local", hasEntities: false, options: [], defaultOptions: {} },
+  { type: "wgdashboard", iconSlug: "wireguard", icon: siWireguard, urlPlaceholder: "http://wgdashboard.local:10086", hasEntities: false, options: [], defaultOptions: {} },
 ];
 
 export function catalogEntry(type: ConnectionType): CatalogEntry {

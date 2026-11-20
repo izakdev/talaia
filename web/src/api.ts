@@ -90,6 +90,8 @@ export interface Connection {
   entities: string[] | null;
   link_url: string;
   notify: boolean;
+  // Vacío, el icono de su tipo; "none", sin icono; si no, el slug del icono.
+  icon: string;
   updated_at: string;
 }
 
@@ -106,6 +108,7 @@ export interface ConnectionInput {
   entities: string[];
   link_url: string;
   notify: boolean;
+  icon: string;
 }
 
 export interface EntityOption {
@@ -330,11 +333,19 @@ export interface ServiceState {
   params?: Record<string, string | number>;
 }
 
+/** Un icono de /icons/: lo que hace falta para pintarlo. */
+export interface BrandIconData {
+  slug: string;
+  title: string;
+  hex: string;
+}
+
 export interface ConnectionState {
   id: string;
   name: string;
   type: ConnectionType;
   link: string;
+  icon: BrandIconData | null;
   status: "pending" | "ok" | "error";
   error?: string;
   state: ServiceState;
