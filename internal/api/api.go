@@ -33,6 +33,7 @@ import (
 	"github.com/izakdev/talaia/internal/integrations/homeassistant"
 	"github.com/izakdev/talaia/internal/integrations/nut"
 	"github.com/izakdev/talaia/internal/integrations/opnsense"
+	"github.com/izakdev/talaia/internal/integrations/printer"
 	"github.com/izakdev/talaia/internal/integrations/proxmox"
 	"github.com/izakdev/talaia/internal/integrations/qnap"
 	"github.com/izakdev/talaia/internal/notify"
@@ -412,7 +413,7 @@ var connectionTypes = map[string]struct {
 	needsUsername bool
 	options       []string
 	hasEntities   bool
-	// noSecret: el servicio se lee sin credenciales (NUT y disponibilidad).
+	// noSecret: el servicio se lee sin credenciales (NUT, disponibilidad e impresora).
 	noSecret bool
 }{
 	"proxmox":       {options: []string{proxmox.OptionShowGuests}},
@@ -422,6 +423,7 @@ var connectionTypes = map[string]struct {
 	"nut":           {noSecret: true},
 	"opnsense":      {needsUsername: true, options: []string{opnsense.OptionShowWireGuard}},
 	"portainer":     {},
+	"printer":       {noSecret: true},
 	"qnap":          {needsUsername: true, options: []string{qnap.OptionPrivacyAES}},
 	"wgdashboard":   {},
 }
@@ -508,6 +510,15 @@ func validateConnection(in *connectionIn) string {
 			return "invalid_availability_url"
 		}
 		if check == availability.CheckTCP || strings.HasPrefix(in.BaseURL, "http://") {
+			in.TLSSkipVerify = false
+		}
+	} else if in.Type == "printer" {
+		// IPP: ipp://host[:puerto][/ruta] o ipps://…; el TLS solo tiene sentido en ipps.
+		in.BaseURL = strings.TrimRight(strings.TrimSpace(in.BaseURL), "/")
+		if _, _, err := printer.Target(in.BaseURL); err != nil {
+			return "invalid_printer_url"
+		}
+		if !strings.HasPrefix(in.BaseURL, "ipps://") {
 			in.TLSSkipVerify = false
 		}
 	} else if in.Type == "nut" {

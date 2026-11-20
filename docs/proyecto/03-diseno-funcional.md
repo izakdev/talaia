@@ -166,13 +166,14 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 |---|---|---|
 | Nombre | Todos | Obligatorio, hasta 80 caracteres |
 | Icono | Todos | El de su tipo por defecto. Se cambia con un buscador de los logotipos de `simple-icons`; también «Sin icono» y «Restablecer»; ver [Icono de la conexión](#icono-de-la-conexión) |
-| URL | Todos salvo QNAP, SAI (NUT) y Disponibilidad | `http` o `https`, sin credenciales, parámetros ni fragmento |
+| URL | Todos salvo QNAP, SAI (NUT), Disponibilidad e Impresora | `http` o `https`, sin credenciales, parámetros ni fragmento |
 | Dirección SNMP | QNAP | `snmp://host` o `snmp://host:puerto`, sin ruta ni credenciales; puerto 161 por defecto |
 | Dirección del servidor NUT | SAI (NUT) | `nut://host`, `nut://host:puerto` o `nut://host/sai`, sin credenciales; puerto 3493 por defecto. El nombre del SAI solo admite letras, cifras, `.`, `_` y `-` |
 | Dirección del equipo | Disponibilidad | `tcp://host:puerto`, con el puerto obligatorio y sin ruta, o `http(s)://host[:puerto][/ruta]`; sin credenciales, parámetros ni fragmento. Si no, «La dirección debe tener la forma tcp://host:puerto, http://host o https://host.» |
+| Dirección IPP de la impresora | Impresora | `ipp://host[:puerto][/ruta]` o `ipps://…`, sin credenciales, parámetros ni fragmento; puerto 631 y ruta `/ipp/print` por defecto. Si no, «La dirección debe tener la forma ipp://host, ipp://host:puerto/ruta o ipps://host.» |
 | Usuario | AdGuard; QNAP (usuario SNMPv3) | Obligatorio |
 | Clave de API | OPNsense | Obligatoria, sin espacios. Admite pegar la línea `key=…` del archivo |
-| Credencial | Todos salvo SAI (NUT) y Disponibilidad | Obligatoria al crear y al cambiar la URL; en otro caso, vacía conserva la actual. Hasta 4096 bytes |
+| Credencial | Todos salvo SAI (NUT), Disponibilidad e Impresora | Obligatoria al crear y al cambiar la URL; en otro caso, vacía conserva la actual. Hasta 4096 bytes |
 | Clave de cifrado | QNAP | Se escribe a la vez que la de autenticación, con las mismas reglas; las dos con al menos 8 caracteres |
 | Protocolo de cifrado | QNAP | CBC-DES por defecto, o AES |
 | Refresco | Todos | De 5 a 3600 segundos, 30 por defecto |
@@ -181,7 +182,7 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 | Entidades en el panel | Home Assistant | Ninguna por defecto, hasta 200 |
 | Mostrar resumen | Home Assistant | Activado por defecto |
 | Enlace para abrir el servicio | Todos | Opcional, `http` o `https`, sin credenciales. Vacío, usa la URL de conexión |
-| No verificar TLS | Todos salvo QNAP y SAI (NUT) | Desactivado por defecto. En Disponibilidad solo se guarda con `https://` |
+| No verificar TLS | Todos salvo QNAP y SAI (NUT) | Desactivado por defecto. En Disponibilidad solo se guarda con `https://`, y en Impresora, con `ipps://` |
 | Avisar de sus cambios | Todos | Activado por defecto. Desactivado, la conexión sigue en el panel, pero no envía avisos; ver [Notificaciones](#notificaciones) |
 
 | Credencial | Formato |
@@ -195,6 +196,7 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 | QNAP | Clave de autenticación de SNMPv3 (HMAC-SHA), más la clave de cifrado en su propio campo |
 | SAI (NUT) | Ninguna: el formulario no muestra el campo y avisa de que NUT no pide usuario ni contraseña para leer; ver DEC-47 |
 | Disponibilidad | Ninguna: el formulario no muestra el campo y avisa de que solo comprueba que el equipo responde |
+| Impresora | Ninguna: el formulario no muestra el campo y avisa de que IPP responde a la consulta de estado sin credenciales; ver DEC-57 |
 
 **Probar conexión:** consulta el servicio una vez con los datos del formulario, sin guardar nada. En Home Assistant, avisa si no hay CPU, memoria ni disco disponibles. En OPNsense, avisa si faltan datos por los privilegios del usuario. Si se cambia algún dato de conexión, el resultado anterior desaparece. Al editar, puede usar la credencial guardada si la URL no ha cambiado.
 
@@ -394,6 +396,30 @@ Si hay varios, la etiqueta es la del primero de la tabla: un SAI con red y la ba
 | Con fallos | No conecta, agota los 10 s o falla el TLS | Cuadrado rojo, mensaje de error y último dato atenuado |
 
 **Datos de un bloque de Disponibilidad:** la latencia en milisegundos y, en el pie, «TCP» o «HTTP» con su código. No se muestran el host, el puerto ni la URL. Sin enlace propio, el nombre del bloque no enlaza, aunque la dirección sea `http(s)://`.
+
+**Estados de un bloque de Impresora** (DEC-58):
+
+| Estado | Cuándo | Indicador |
+|---|---|---|
+| Atasco de papel | `media-jam` como error | Cuadrado rojo |
+| Tapa abierta | `door-open`, `cover-open` o `interlock-open` como error | Cuadrado rojo |
+| Sin papel | `media-empty` o `media-needed` como error | Cuadrado rojo |
+| Sin tóner | `toner-empty`, `marker-supply-empty` o `developer-empty` como error | Cuadrado rojo |
+| Caja de tóner residual llena | `marker-waste-full` como error | Cuadrado rojo |
+| Falta una bandeja | `input-tray-missing` u `output-tray-missing` como error | Cuadrado rojo |
+| Bandeja de salida llena | `output-area-full` como error | Cuadrado rojo |
+| Tambor agotado | `opc-life-over` como error | Cuadrado rojo |
+| Detenida | `printer-state` es «stopped» sin ninguno de los anteriores | Cuadrado rojo |
+| La etiqueta del motivo, en ámbar | Uno de los motivos anteriores como aviso (`-warning`), o tóner bajo, caja de tóner residual casi llena, tambor casi agotado, queda poco papel, bandeja de salida casi llena o fusor demasiado caliente | Triángulo ámbar |
+| Nivel bajo: negro (8 %) | Un consumible está en su nivel bajo o por debajo (el que da la impresora, o el 10 %); si son varios, el más gastado. Los cuatro colores de proceso se nombran; otro consumible, por su nombre | Triángulo ámbar |
+| Impresora con avisos | Un motivo desconocido | Triángulo ámbar |
+| Imprimiendo | `printer-state` es «processing» | Círculo verde |
+| Lista | En reposo, sin nada de lo anterior | Círculo verde |
+| Con fallos | No responde, agota los 10 s, rechaza la consulta o da una respuesta que no es IPP | Cuadrado rojo, mensaje de error y último dato atenuado |
+
+Si hay varios, la etiqueta es la del primero de la tabla. Un motivo sin sufijo cuenta como error (RFC 8011), pero los que no impiden imprimir siguen en ámbar. No cuentan los motivos `-report` ni el fusor calentándose al salir del reposo.
+
+**Datos de un bloque de Impresora:** una barra por consumible con su color (Negro, Cian, Magenta, Amarillo o su nombre) y su nivel en %, o «Sin dato» si la impresora no lo sabe; la cifra se ve en ámbar en su nivel bajo o por debajo. Debajo, «Avisos» con la etiqueta de cada motivo activo y «No acepta trabajos» si la impresora los rechaza. En el pie, el modelo y la versión del firmware. No se muestran el nombre de la impresora, su ubicación, su número de serie, el mensaje de su pantalla ni la dirección. Sin enlace propio, el nombre del bloque no enlaza, porque la dirección es `ipp://`. El tambor, la cinta de arrastre, la caja de tóner residual y el contador de páginas no se muestran: IPP no los da (DEC-57).
 
 ## Mensajes de error de los servicios
 

@@ -17,6 +17,7 @@ import { fakeProxmox, TOKEN } from "./fake-proxmox.mjs";
 import { fakeQNAP, QNAP_AUTH, QNAP_PRIV, QNAP_USER } from "./fake-qnap.mjs";
 import { fakeNUT, NUT_SERIAL, NUT_UPS } from "./fake-nut.mjs";
 import { AVAILABILITY_PATH, fakeAvailability } from "./fake-availability.mjs";
+import { fakePrinter, PRINTER_LOCATION, PRINTER_NAME, PRINTER_SERIAL } from "./fake-printer.mjs";
 import { BAD_TELEGRAM_TOKEN, fakeNotify, NTFY_TOKEN, NTFY_TOPIC, TELEGRAM_TOKEN, WEBHOOK_PATH } from "./fake-notify.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -33,6 +34,7 @@ const wgdashboard = fakeWGDashboard(13005);
 const qnap = fakeQNAP(13006); // UDP
 const nut = fakeNUT(13007); // TCP, protocolo de NUT
 const device = fakeAvailability(13008); // HTTP y TCP, sin credenciales
+const printer = fakePrinter(13009); // IPP sobre HTTP, sin credenciales
 const notifier = fakeNotify(13010); // Telegram, ntfy y webhook
 const dataDir = mkdtempSync(join(tmpdir(), "talaia-e2e-"));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -210,7 +212,7 @@ const scenarios = [
   ["E2E-04", "Catálogo de servicios: búsqueda y navegación", async () => {
     await page.getByRole("link", { name: "Añadir conexión" }).click();
     await page.getByRole("heading", { name: "Elige un servicio" }).waitFor();
-    assert.equal(await page.locator(".catalog button").count(), 9);
+    assert.equal(await page.locator(".catalog button").count(), 10);
     await shot(page, "04-catalogo");
     const search = page.getByLabel("Buscar servicio");
     await search.fill("maquinas");
@@ -1205,6 +1207,76 @@ const scenarios = [
       await row(name).waitFor({ state: "detached" });
     }
   }],
+  ["E2E-52", "Alta de una impresora por IPP, sin credenciales", async () => {
+    await page.goto(`${BASE}/admin/connections/new`);
+    await page.getByRole("button", { name: /Impresora/ }).click();
+    await page.getByLabel("Nombre", { exact: true }).fill("Impresora");
+    const address = page.getByLabel(/^Dirección IPP de la impresora/);
+    await address.fill(printer.url.replace("ipp://", "http://"));
+    await page.locator("dialog input[type=number]").fill("5");
+    // IPP no pide clave.
+    await page.getByText("IPP responde a la consulta de estado sin credenciales").waitFor();
+    assert.equal(await page.locator("dialog input[type=password]").count(), 0);
+    await page.getByRole("button", { name: "Probar conexión" }).click();
+    await page.getByRole("alert").getByText("ipp://host").waitFor();
+    await address.fill(printer.url);
+    const before = printer.state.requests;
+    await page.getByRole("button", { name: "Probar conexión" }).click();
+    await page.locator("dialog p[role=status]").getByText("Conexión correcta").waitFor();
+    assert.ok(printer.state.requests > before);
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await row("Impresora").getByText("Funciona").waitFor();
+  }],
+  ["E2E-53", "Impresora en el panel: tóneres, nivel bajo, atasco, tapa abierta y caída", async () => {
+    await toDashboard();
+    const block = page.locator(".service", { hasText: "Brother DCP-L3550CDW" });
+    const state = block.locator(".service-state");
+    const tone = (name) => block.evaluate((el, n) => el.classList.contains(`tone-${n}`), name);
+    await state.getByText("Lista", { exact: true }).waitFor();
+    assert.ok(await tone("good"));
+    // Sin enlace propio, el nombre no enlaza a la dirección ipp://.
+    assert.equal(await block.locator(".service-link").count(), 0);
+    const body = await block.innerText();
+    assert.match(body, /Negro\s*90 %/);
+    assert.match(body, /Cian\s*75 %/);
+    assert.match(body, /Magenta\s*60 %/);
+    assert.match(body, /Amarillo\s*45 %/);
+    assert.match(body, /Brother DCP-L3550CDW series · ZA2206202233:93D6/);
+    await shot(block, "30-panel-impresora");
+    const leaks = await publicDashboard();
+    for (const leak of [PRINTER_NAME, PRINTER_LOCATION, PRINTER_SERIAL, "Despacho", "urn:uuid", "Espera", "ipp://", printer.host]) {
+      assert.equal(leaks.includes(leak), false, leak);
+    }
+    // Un tóner en su nivel bajo o por debajo: ámbar.
+    printer.state.levels = [90, 75, 60, 8];
+    await state.getByText("Nivel bajo: amarillo (8 %)").waitFor();
+    assert.ok(await tone("warn"));
+    printer.state.levels = [90, 75, 60, 45];
+    printer.state.printerState = 4;
+    await state.getByText("Imprimiendo").waitFor();
+    assert.ok(await tone("good"));
+    // Un error que impide imprimir: rojo, con los demás avisos en la lista.
+    Object.assign(printer.state, { printerState: 5, reasons: ["media-jam-error", "toner-low-warning"] });
+    await state.getByText("Atasco de papel").waitFor();
+    assert.ok(await tone("bad"));
+    await block.locator(".printer-alerts").getByText("Tóner bajo").waitFor();
+    printer.state.reasons = ["cover-open"];
+    await state.getByText("Tapa abierta").waitFor();
+    printer.state.reasons = ["media-empty-error"];
+    await state.getByText("Sin papel").waitFor();
+    assert.ok(await tone("bad"));
+    Object.assign(printer.state, { printerState: 3, reasons: ["none"] });
+    await state.getByText("Lista", { exact: true }).waitFor();
+    await printer.stop();
+    await block.getByText("No se puede conectar con el servicio").waitFor({ timeout: 30000 });
+    await printer.start();
+    await state.getByText("Lista", { exact: true }).waitFor({ timeout: 30000 });
+    // Se quita para no cambiar el resto del recorrido ni las portadas.
+    await toAdmin();
+    await row("Impresora").getByRole("button", { name: "Eliminar" }).click();
+    await row("Impresora").getByRole("button", { name: "Eliminar" }).click();
+    await row("Impresora").waitFor({ state: "detached" });
+  }],
   ["E2E-43", "Alta de canales de Telegram, ntfy y webhook con mensaje de prueba", async () => {
     await toSettings();
     await notifications.getByText("Todavía no hay canales").waitFor();
@@ -1492,7 +1564,7 @@ const scenarios = [
   }],
   ["E2E-14", "La API pública no expone configuración ni credenciales", async () => {
     const body = await publicDashboard();
-    for (const leak of [USER, PASSWORD, TOKEN, HA_TOKEN, OPN_KEY, OPN_SECRET, "localhost:13002", "192.0.2.11", "192.0.2.50", "cortafuegos.simulado", "proceso-simulado", "pppoe1", PORTAINER_TOKEN, "192.0.2.60", "docker.simulado", "instancia-simulada", WGDASHBOARD_KEY, "clave-privada-simulada", "clave-publica-simulada", "10.66.0", "51666", "wg-simulado", "vpn.simulado", "192.0.2.53", QNAP_USER, QNAP_AUTH, QNAP_PRIV, "snmp://", NUT_UPS, NUT_SERIAL, "nut://", "127.0.0.1:13007", device.host, "tcp://", AVAILABILITY_PATH, "base_url", "link_url", "secret", "privacy_secret", TELEGRAM_TOKEN, NTFY_TOPIC, NTFY_TOKEN, WEBHOOK_PATH, "chat_id", "-1001234"]) {
+    for (const leak of [USER, PASSWORD, TOKEN, HA_TOKEN, OPN_KEY, OPN_SECRET, "localhost:13002", "192.0.2.11", "192.0.2.50", "cortafuegos.simulado", "proceso-simulado", "pppoe1", PORTAINER_TOKEN, "192.0.2.60", "docker.simulado", "instancia-simulada", WGDASHBOARD_KEY, "clave-privada-simulada", "clave-publica-simulada", "10.66.0", "51666", "wg-simulado", "vpn.simulado", "192.0.2.53", QNAP_USER, QNAP_AUTH, QNAP_PRIV, "snmp://", NUT_UPS, NUT_SERIAL, "nut://", "127.0.0.1:13007", device.host, "tcp://", AVAILABILITY_PATH, "ipp://", printer.host, PRINTER_NAME, PRINTER_LOCATION, PRINTER_SERIAL, "base_url", "link_url", "secret", "privacy_secret", TELEGRAM_TOKEN, NTFY_TOPIC, NTFY_TOKEN, WEBHOOK_PATH, "chat_id", "-1001234"]) {
       assert.equal(body.includes(leak), false, leak);
     }
     const headers = (await fetch(BASE)).headers;
@@ -1515,6 +1587,7 @@ try {
   await qnap.start();
   await nut.start();
   await device.start();
+  await printer.start();
   await notifier.start();
   await waitForServer();
   for (const [id, title, run] of scenarios) {
@@ -1539,6 +1612,7 @@ try {
   await qnap.stop().catch(() => {});
   await nut.stop().catch(() => {});
   await device.stop().catch(() => {});
+  await printer.stop().catch(() => {});
   await notifier.stop().catch(() => {});
   rmSync(dataDir, { recursive: true, force: true });
 }

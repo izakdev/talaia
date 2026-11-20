@@ -349,6 +349,10 @@ details > summary { cursor: pointer; list-style-position: outside; margin-left: 
 .meter-fill { display: block; height: 100%; border-radius: 2px; background: var(--focus); }
 .meter.high .meter-fill { background: var(--warn); }
 .meter.high .meter-label b { color: var(--warn); }
+.printer-markers { display: grid; gap: 0.5rem; }
+/* El color del tóner manda también en nivel bajo; el ámbar lo lleva la cifra. El borde separa el amarillo del fondo claro. */
+.meter .printer-fill { box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12); }
+.printer-alerts { margin: 0; padding-left: 1.125rem; font-size: 0.8125rem; color: var(--ink-soft); }
 .guests-wrap { margin: 0.25rem 0 0.75rem 1rem; overflow-x: auto; }
 .guests { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
 .guests th { text-align: left; font-weight: 550; color: var(--ink-soft); padding: 0.25rem 0.75rem 0.25rem 0; border-bottom: 1px solid var(--line); }

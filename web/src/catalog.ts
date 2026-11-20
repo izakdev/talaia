@@ -30,6 +30,13 @@ const availabilityIcon = {
   path: "M1 11h5.4l2.7-6.3a1 1 0 0 1 1.85.06L15 16.3l1.6-4.7a1 1 0 0 1 .95-.6H23v2h-4.73l-2.32 6.82a1 1 0 0 1-1.89.03L10 7.9l-2.08 4.9A1 1 0 0 1 7 13.4H1v-2.4Z",
 };
 
+// Una impresora con su hoja, con el mismo formato (24 × 24): cualquier marca con IPP.
+const printerIcon = {
+  title: "Impresora",
+  hex: "6366F1",
+  path: "M6 2h12v5H6V2Zm-3 6h18a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2v-4H5v4H3a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2Zm15 2.5a1 1 0 1 0 0 2 1 1 0 1 0 0-2ZM7 16h10v6H7v-6Z",
+};
+
 export const CATALOG: CatalogEntry[] = [
   { type: "adguard", iconSlug: "adguard", icon: siAdguard, urlPlaceholder: "http://adguard.local:3000", hasEntities: false, options: ["show_top_domains"], defaultOptions: {} },
   { type: "homeassistant", iconSlug: "homeassistant", icon: siHomeassistant, urlPlaceholder: "http://homeassistant.local:8123", hasEntities: true, options: ["show_summary"], defaultOptions: { show_summary: true } },
@@ -39,6 +46,7 @@ export const CATALOG: CatalogEntry[] = [
   { type: "qnap", iconSlug: "qnap", icon: siQnap, urlPlaceholder: "snmp://qnap.local", hasEntities: false, options: [], defaultOptions: {} },
   { type: "nut", iconSlug: "talaia-nut", icon: nutIcon, urlPlaceholder: "nut://sai.local", hasEntities: false, options: [], defaultOptions: {} },
   { type: "wgdashboard", iconSlug: "wireguard", icon: siWireguard, urlPlaceholder: "http://wgdashboard.local:10086", hasEntities: false, options: [], defaultOptions: {} },
+  { type: "printer", iconSlug: "talaia-printer", icon: printerIcon, urlPlaceholder: "ipp://impresora.local", hasEntities: false, options: [], defaultOptions: {} },
   { type: "availability", iconSlug: "talaia-availability", icon: availabilityIcon, urlPlaceholder: "tcp://switch.local:80", hasEntities: false, options: [], defaultOptions: {} },
 ];
 

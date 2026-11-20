@@ -37,6 +37,7 @@
 | QNAP | Discos con su salud SMART y su temperatura, volúmenes, CPU, RAM y temperaturas, por SNMPv3 |
 | SAI (NUT) | Si tiene red o tira de batería, carga de la batería y autonomía estimada, leídos de un servidor NUT (`upsd`) sin credenciales |
 | Disponibilidad | Si responde cualquier equipo de red, por TCP o HTTP, y su latencia, sin credenciales: para switches sin API ni SNMP |
+| Impresora | Estado, avisos y nivel de cada tóner o tinta con su color por IPP, sin credenciales: cualquier impresora AirPrint, Mopria o IPP Everywhere |
 
 ## Instalación rápida en Proxmox VE
 

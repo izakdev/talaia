@@ -510,6 +510,38 @@ The block shows the **latency**, how long the device takes to accept the connect
 
 Talaia doesn't ping: in the unprivileged container the installer creates, that would require changing its network settings. A device with no open TCP port can't be watched.
 
+### Printer
+
+Talaia reads the printer's status and supplies over **IPP**, the protocol computers and phones print with (AirPrint, Mopria and IPP Everywhere). It only asks for the status: it doesn't print, changes nothing and **needs no user or password**. It works with most network printers, such as Brother, HP, Canon or Epson, and with a printer shared through CUPS.
+
+IPP is usually on in the printer. On a Brother, check it in its web interface, under **Network** > **Network** > **Protocol**, with the **IPP** box ticked. The Talaia machine must reach the printer's **TCP 631** port.
+
+| Field | What to enter |
+|---|---|
+| Printer IPP address | `ipp://` and the printer address, for example `ipp://printer.local`. It uses port 631 and the `/ipp/print` path; if yours are different, add them: in CUPS, `ipp://server:631/printers/name`. Use `ipps://` if the printer has IPP over TLS |
+| Link to open the service | Optional, for example the printer's web interface. Without it, the block name links nowhere |
+| Don't verify the TLS certificate | Only has an effect with `ipps://` and a self-signed certificate, the usual one on printers |
+
+The form has no password field. If testing the connection shows **Can't connect to the service**, check the address and that IPP is on. If it shows **Unexpected response**, the path isn't your printer's IPP one.
+
+![Printer block](img/30-panel-impresora.png)
+
+The block shows a bar per toner or ink, with its colour and its level in %, or **Unknown** if the printer doesn't know it. The figure turns amber when the supply reaches its low level, the one the printer sets. Below, under **Alerts**, what the printer warns about, and **Not accepting jobs** if it refuses them. In the footer, the model and the firmware version. It doesn't show the printer name, its location, its serial number, the message on its display or its address.
+
+IPP doesn't give the **drum**, the **transfer belt**, the **waste toner box** or the **page counter**: the block doesn't show them, though it does show the printer's alerts about them, such as **Drum near end of life** or **Waste toner box almost full**.
+
+**Printer status:**
+
+| Indicator | Meaning |
+|---|---|
+| Green circle: **Ready** | Idle and without alerts |
+| Green circle: **Printing** | It is printing |
+| Amber triangle: **Low level: yellow (8 %)** | A toner or ink has reached its low level; if several have, the most used one |
+| Amber triangle: **Toner low**, **Paper low**, **Drum near end of life**… | The printer warns about something that doesn't stop it printing yet |
+| Red square: **Paper jam**, **Cover open**, **Out of paper**, **Out of toner**… | An error that stops it printing |
+| Red square: **Stopped** | The printer has stopped for another reason |
+| Red square: **Failing** | The printer doesn't respond: switched off, off the network or with IPP turned off |
+
 ## Editing and deleting connections
 
 **Edit:** click **Edit** on the connection. Leave the credential empty to keep the current one. If you change the URL, you'll have to enter it again: this prevents sending it to another server by mistake.
@@ -696,6 +728,7 @@ Telegram and ntfy.sh need the Talaia machine to have Internet access. If it does
 | Home Assistant is slow or times out | In very large installations, increase the refresh, for example to 60 seconds |
 | QNAP doesn't respond in time | Check that SNMP is enabled with version SNMP V3, that the privacy protocol matches and that the firewall lets UDP 161 through |
 | An availability device shows amber with HTTP 401 or 404 | The page you gave asks for a password or doesn't exist. Use the main page or a `tcp://` address with the port of its web interface |
+| The printer doesn't connect | Check that IPP is on in the printer and that the firewall lets TCP 631 through. With IPPS, the port may be another one, such as 443 |
 | The UPS doesn't connect | Check the `LISTEN` line of `upsd.conf` on the machine with the UPS and that the firewall lets TCP 3493 through |
 | An alert says "the channel rejects the token or key" | Check the Telegram bot token or the ntfy token. If you revoked it in @BotFather, enter the new one |
 | An alert says "the channel rejected the message" | In Telegram, check the chat ID and that you wrote to the bot first or that the bot is still in the group. In ntfy, check the topic and whether your server lets you publish to it |
@@ -712,6 +745,7 @@ Telegram and ntfy.sh need the Talaia machine to have Internet access. If it does
 - The QNAP block uses QTS's default temperature thresholds, not yours, and doesn't tell which volume is on a USB disk.
 - The UPS block shows a single UPS, without voltages or load, and the connection to NUT isn't encrypted; no password travels over it.
 - Availability checks one device per connection, only over TCP or HTTP, without ping, and only an HTTP 2xx or 3xx code counts as a response.
+- The printer block doesn't show the drum, the belt, the waste toner box or the page counter, because IPP doesn't give them, and with `ipp://` the query isn't encrypted; no password travels over it.
 - Notifications alert on colour changes, without reminders: a label change within the same colour doesn't alert, and every active channel receives every alert.
 
 The status of each item is in [Status and changes](../proyecto/06-estado-y-cambios.md), in Spanish.
