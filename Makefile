@@ -1,7 +1,7 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: build web test run clean e2e screenshots social-preview docs-check dist test-installer
+.PHONY: build web test run clean e2e screenshots social-preview docs-check dist test-installer test-ci
 
 build: web
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o bin/talaia ./cmd/talaia
@@ -27,7 +27,7 @@ dist: web
 	cd dist && (command -v sha256sum >/dev/null && sha256sum talaia-linux-* || shasum -a 256 talaia-linux-*) > SHA256SUMS
 
 test-installer:
-	shellcheck scripts/talaia-proxmox.sh scripts/test/*.sh scripts/test/stubs/*
+	shellcheck scripts/talaia-proxmox.sh scripts/ci-cambios.sh scripts/test/*.sh scripts/test/stubs/*
 	scripts/test/proxmox-integration.sh
 
 clean:
@@ -50,3 +50,7 @@ social-preview:
 
 docs-check:
 	python3 scripts/check_docs.py
+
+# Clasificación de cambios de la CI: qué cambios se saltan las pruebas completas.
+test-ci:
+	scripts/test/ci-cambios-test.sh

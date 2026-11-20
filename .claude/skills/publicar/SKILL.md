@@ -42,10 +42,14 @@ El cuerpo del PR lleva un resumen, las pruebas (`make docs-check`; sin cambios d
 
 ## 2. CI y fusión
 
+El PR de preparación y el de registro solo cambian documentación, así que la CI ejecuta solo el job `docs` (un minuto) y marca `test` e `installer` como saltados (DEC-52). Si alguno de los dos se ejecuta, es que el PR toca algo más que documentación: revísalo antes de seguir, porque en estos PR no debe haber código.
+
 ```sh
-gh pr checks N --watch --fail-fast    # en segundo plano
-gh pr merge N --merge                 # solo si pasa y el usuario lo aprobó
+gh pr checks N --watch --fail-fast --interval 30    # en segundo plano
+gh pr merge N --match-head-commit SHA --merge       # solo si pasa y el usuario lo aprobó
 ```
+
+Al fusionar, la CI de `main` también hace solo `docs`. No hace falta esperarla para etiquetar: `release.yml` compila, ejecuta `go test` y comprueba la versión del binario antes de publicar.
 
 ## 3. Etiqueta y publicación
 
