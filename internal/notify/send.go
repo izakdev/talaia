@@ -181,11 +181,26 @@ func ntfyLook(m Message) (priority int, tag string) {
 	return 2, "green_circle"
 }
 
+// ntfyContent separa el título del cuerpo. ntfy ya pone delante del título el
+// emoji de la etiqueta, así que el título va sin el suyo y el cuerpo no lo repite.
+func ntfyContent(m Message) (title, body string) {
+	title = m.Title
+	if _, rest, ok := strings.Cut(title, " "); ok {
+		title = rest
+	}
+	body = strings.TrimLeft(strings.TrimPrefix(m.Text, m.Title), ". \n")
+	if body == "" {
+		body = title
+	}
+	return title, body
+}
+
 func (n *ntfy) Send(ctx context.Context, m Message) error {
 	priority, tag := ntfyLook(m)
+	title, text := ntfyContent(m)
 	// Se publica en JSON para que el título admita tildes y emojis.
 	body, _ := json.Marshal(map[string]any{
-		"topic": n.topic, "title": m.Title, "message": m.Text, "priority": priority, "tags": []string{tag},
+		"topic": n.topic, "title": title, "message": text, "priority": priority, "tags": []string{tag},
 	})
 	header := http.Header{}
 	if n.token != "" {

@@ -532,6 +532,8 @@ AdGuard: Protection off
 VPN: Tunnel stopped
 ```
 
+In ntfy, the app puts the emoji in front of the title and the list of services goes below it.
+
 In the administration, open **Settings** and scroll down to **Notifications**.
 
 ![Notifications section in the settings](img/26-ajustes-notificaciones.png)

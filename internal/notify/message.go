@@ -24,12 +24,14 @@ var texts = map[string]map[string]string{
 	"es": {
 		"attention": "Talaia · Necesita atención",
 		"recovered": "Talaia · Vuelve a estar en orden",
-		"test":      "🔔 Talaia · Mensaje de prueba. Si lo ves, este canal funciona.",
+		"testTitle": "Talaia · Mensaje de prueba",
+		"testBody":  "Si lo ves, este canal funciona.",
 	},
 	"en": {
 		"attention": "Talaia · Needs attention",
 		"recovered": "Talaia · Back to normal",
-		"test":      "🔔 Talaia · Test message. If you can see it, this channel works.",
+		"testTitle": "Talaia · Test message",
+		"testBody":  "If you can see it, this channel works.",
 	},
 }
 
@@ -127,6 +129,7 @@ func Compose(lang string, changes []Change, now time.Time) Message {
 // ComposeTest crea el mensaje del botón «Enviar prueba».
 func ComposeTest(lang string, now time.Time) Message {
 	lang = language(lang)
-	text := texts[lang]["test"]
-	return Message{Event: EventTest, Language: lang, Title: text, Text: text, Worst: integrations.ToneGood, Changes: []Change{}, SentAt: now}
+	title := "🔔 " + texts[lang]["testTitle"]
+	text := title + ". " + texts[lang]["testBody"]
+	return Message{Event: EventTest, Language: lang, Title: title, Text: text, Worst: integrations.ToneGood, Changes: []Change{}, SentAt: now}
 }

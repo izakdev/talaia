@@ -1051,7 +1051,9 @@ const scenarios = [
     await saveChannel();
     await notifications.locator(".channels li", { hasText: "ntfy propio" }).getByRole("button", { name: "Enviar prueba" }).click();
     await notifications.locator(".channels li", { hasText: "ntfy propio" }).getByText("Mensaje de prueba enviado.").waitFor();
-    const ntfy = await notifier.waitFor("ntfy", (text) => text.includes("Mensaje de prueba"));
+    const ntfy = await notifier.waitFor("ntfy", (text) => text === "Si lo ves, este canal funciona.");
+    // ntfy pone el emoji de la etiqueta: el título va sin el suyo y el cuerpo no lo repite.
+    assert.equal(ntfy.body.title, "Talaia · Mensaje de prueba");
     assert.equal(ntfy.body.topic, NTFY_TOPIC);
     assert.equal(ntfy.auth, `Bearer ${NTFY_TOKEN}`);
     assert.deepEqual(ntfy.body.tags, ["bell"]);
@@ -1087,7 +1089,8 @@ const scenarios = [
     wgdashboard.state.stopped = true;
     const alert = await notifier.waitFor("telegram", (text) => text.includes("Necesita atención"), 100000);
     assert.equal(alert.text, ATTENTION);
-    await notifier.waitFor("ntfy", (text) => text === ATTENTION);
+    const ntfyAlert = await notifier.waitFor("ntfy", (text) => text === ATTENTION.split("\n").slice(1).join("\n"));
+    assert.equal(ntfyAlert.body.title, "Talaia · Necesita atención");
     const hook = await notifier.waitFor("webhook", (text) => text === ATTENTION);
     assert.deepEqual(
       hook.body.services.map((s) => [s.name, s.type, s.tone, s.previous, s.label]),
