@@ -91,6 +91,10 @@ Los motivos detallados están en [Decisiones](05-decisiones.md).
 | `web` | Frontend; `web/embed.go` lo incluye en el binario y `web/states.go`, los textos de estado |
 | `web/src/i18n/states.json` | Textos de estado de los servicios en español e inglés, compartidos por el panel y los avisos |
 | `web/src/widgets` | Contenido y pie del bloque de cada integración |
+| `web/src/Dashboard.tsx` | Panel: resumen de estados, accesos y bloques de la página |
+| `web/src/Lookout.tsx` | Carcasa del panel: columna lateral desde 1100 px de ventana, barra superior por debajo (DEC-59) |
+| `web/src/status.tsx` | Piezas compartidas del estado: forma de cada tono, etiqueta, antigüedad y tipos del resumen y los accesos |
+| `web/src/stack.ts` | Colocación de los bloques según el ancho real del área y la altura de su contenido |
 | `web/src/IconPicker.tsx` | Buscador de iconos del formulario de conexión |
 | `web/scripts/icons.mjs` y `web/icons` | Copia los iconos de `simple-icons` y los propios (`talaia-nut`, `talaia-availability` y `talaia-printer`, que el buscador nombra como su tipo) a `dist/icons/`, con su índice |
 | `web/src/PanelEditor.tsx` | Editor de páginas y bloques |

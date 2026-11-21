@@ -8,7 +8,7 @@
 
 [Leer en español](README.es.md)
 
-![Talaia dashboard: one tunnel is stopped, so the header and the VPN block turn amber](docs/img/portada-en.png)
+![Talaia dashboard: one tunnel is stopped, so the column's summary and the VPN block turn amber](docs/img/portada-en.png)
 
 > **Status:** `v0.6.0` released. Installing, updating and starting on boot in Proxmox VE are verified on a real server.
 
@@ -16,7 +16,8 @@
 
 ## Why Talaia
 
-- **Answers one question first.** The header sums up every service on every page: "All 6 services are fine", or "Needs attention: VPN" with a link to the block. The watchtower's light and each affected block turn amber or red.
+- **Answers one question first.** A side column sums up every service on every page: "All 12 services are fine", or "Needs attention" with each service, its reason and a link to its block. The lighthouse's light and each affected block turn amber or red.
+- **Works as a start page.** A dozen services fit on a wide screen without scrolling, and the same column has shortcuts to open each service without remembering its address.
 - **Read-only and safe to share.** Talaia only reads from your services. Credentials are stored encrypted and never leave the server; the public dashboard shows no URLs, IP addresses, keys or peer names.
 - **Tells you, even when you're not looking.** When a service turns amber or red, and when it's back to normal, Talaia sends an alert through Telegram, ntfy or a JSON webhook, with the same words as the dashboard.
 - **Live.** Blocks update on their own, without reloading. If a service fails, its block keeps the last data and says how old it is.

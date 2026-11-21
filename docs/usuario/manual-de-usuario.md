@@ -120,7 +120,14 @@ Cuando hay servicios, cada uno tiene su propio bloque, con el icono del servicio
 
 ![Panel con un servicio de AdGuard](img/07-panel.png)
 
-**De un vistazo:** junto al nombre de Talaia verás si todo va bien, por ejemplo «Los 6 servicios están en orden», y cuándo se actualizaron los datos por última vez. La versión de Talaia aparece al pie de la página. Si algún servicio tiene un aviso o falla, la cabecera lo dice y nombra cada servicio, aunque esté en otra página; pulsa un nombre para ir a su bloque. La luz de la atalaya también cambia: ámbar con avisos y roja con fallos. Esos bloques llevan además una franja del mismo color en su borde superior.
+**La columna de la izquierda:** el faro de Talaia vigila desde una columna fija, pensada para que el panel sea la página de inicio de tu navegador. De arriba abajo tiene:
+
+- **El resumen:** si todo va bien, por ejemplo «Los 12 servicios están en orden», y cuándo se actualizaron los datos por última vez. Si algún servicio tiene un aviso o falla, lo nombra con su motivo, aunque esté en otra página, por ejemplo «NAS: Volumen casi lleno», y te dice cuántos siguen en orden. Pulsa un nombre para ir a su bloque. La luz del faro también cambia: ámbar con avisos y roja con fallos. Esos bloques llevan además una franja del mismo color en su borde superior.
+- **Las páginas,** si tienes más de una.
+- **Los accesos:** un enlace a cada servicio del panel, con su icono y la forma de su estado, que lo abre en una pestaña nueva. Así no tienes que recordar sus direcciones.
+- **Al pie,** la administración, el idioma y la versión de Talaia.
+
+**Que quepa todo sin desplazarte:** en el [editor del panel](#organizar-el-panel), pon los bloques a un cuarto de fila. En una pantalla de unos 2000 px de ancho caben así cuatro por fila y una docena de servicios sin desplazarte. En una pantalla más estrecha, como la de un portátil, Talaia ensancha los bloques que quedarían demasiado estrechos y van tres por fila; la columna sigue a la vista. Con el teclado, lo primero es **Saltar a los servicios**, que lleva directamente a los bloques.
 
 **Estado de AdGuard:**
 
@@ -191,7 +198,7 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 
 Solo aparecen las entidades que elijas. Los sensores de potencia y energía van en **Consumos** y el resto en **Entidades**. Los consumos no se suman, para no contar dos veces un medidor general y sus enchufes: si quieres un total, crea un sensor agregado en Home Assistant y elígelo aquí.
 
-**Si un servicio falla,** la cabecera y la atalaya se ponen en rojo, y su bloque indica el motivo y mantiene atenuado el último dato conocido, junto con su antigüedad. Se recupera solo cuando el servicio vuelve.
+**Si un servicio falla,** el resumen y el faro se ponen en rojo, y su bloque indica el motivo y mantiene atenuado el último dato conocido, junto con su antigüedad. Se recupera solo cuando el servicio vuelve.
 
 ![Bloque de un servicio con fallos](img/09-panel-con-fallos.png)
 
@@ -664,7 +671,7 @@ Telegram y ntfy.sh necesitan que el equipo de Talaia tenga salida a Internet. Si
 
 - **Idioma:** Talaia usa el de tu navegador si es español y, si no, inglés. El botón **English** o **Español** lo cambia, se recuerda en ese navegador y se aplica a sus otras pestañas abiertas.
 - **Modo claro u oscuro:** por defecto sigue tu sistema. Puedes fijarlo en [Ajustes](#ajustes).
-- **Móvil:** la interfaz se adapta a pantallas pequeñas.
+- **Móvil:** la interfaz se adapta a pantallas pequeñas. En el panel, la columna se convierte en una barra arriba, con el resumen y los accesos en una fila que se desliza con el dedo; debajo van los bloques, uno tras otro.
 
 ![Panel en móvil y modo oscuro](img/10-movil-oscuro.png)
 

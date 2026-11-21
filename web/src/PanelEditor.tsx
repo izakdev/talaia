@@ -8,6 +8,7 @@ import { catalogEntry } from "./catalog";
 import { IntegrationIcon } from "./chrome";
 import { Service } from "./Dashboard";
 import { useI18n } from "./i18n";
+import { COLUMNS, WIDTHS } from "./stack";
 
 // react-draggable inserta un <style> la primera vez que se arrastra, y la política de
 // seguridad lo bloquea. Solo lo hace si no existe este elemento; su regla está en styles.css.
@@ -17,10 +18,7 @@ if (!document.getElementById("react-draggable-style-el")) {
   document.head.appendChild(marker);
 }
 
-const COLUMNS = 12;
-const MIN_WIDTH = 3;
-// Anchos que recorren los botones: un cuarto, un tercio, media fila, dos tercios y la fila.
-const WIDTHS = [3, 4, 6, 8, 12];
+const MIN_WIDTH = WIDTHS[0];
 const ROW_HEIGHT = 28;
 const MARGIN = 16;
 const MIN_HEIGHT = 2;
