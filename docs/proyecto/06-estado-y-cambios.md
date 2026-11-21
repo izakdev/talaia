@@ -22,8 +22,24 @@
 | 16 | Notificaciones por Telegram, ntfy o webhook cuando un servicio cambia de color | Terminado y verificado con el Telegram del cliente, publicado en `v0.4.0` |
 | 17 | Disponibilidad de equipos de red por TCP o HTTP, sin credenciales | Terminado y verificado con cuatro equipos del cliente (TCP, caída con sus avisos y HTTPS), publicado en `v0.5.0` |
 | 18 | Impresora por IPP: estado, avisos y nivel de los tóneres | Terminado y verificado con la impresora del cliente (en reposo, con sus cuatro tóneres, y con la tapa abierta en rojo), publicado en `v0.6.0` |
+| 19 | Panel con torre lateral: resumen con motivo, accesos y bloques más densos | Terminado; verificado en Safari con el panel real del cliente |
 
 ## Historial
+
+### Hito 19 (2026-11-21)
+
+**Cambiado:**
+- La cabecera alta del panel pasa a una columna lateral fija (DEC-59), con el faro, el resumen, las páginas, los accesos y, al pie, Administración, el idioma y la versión. Por debajo de 1100 px de ventana se pliega en una barra superior.
+- El resumen da el motivo de cada servicio que necesita atención («Equipos: 1 sin respuesta») y cuántos siguen en orden.
+- Bloques más densos: cabecera separada del cuerpo, cifras a 24 px, franja de aviso de 3 px y 1rem entre bloques. La vista previa del editor usa los mismos estilos.
+- La colocación se calcula con el ancho real del área de bloques: un bloque no baja de 340 px y, con menos de 700 px, todos van en una columna.
+- Las capturas de portada del README se hacen a 2000 × 1100 px con todos los bloques a un cuarto.
+
+**Añadido:**
+- Accesos: un enlace a cada servicio del panel con URL, en la columna o, en el móvil, en una fila que se desliza.
+- Enlace «Saltar a los servicios» para el teclado.
+
+**Verificado:** en Safari, con el panel real del cliente: los accesos y los nombres de los bloques abren su servicio. **Pendiente:** verlo en su monitor y en su portátil por separado, y en Firefox.
 
 ### `v0.6.0` (2026-11-21)
 

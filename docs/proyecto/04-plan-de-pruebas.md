@@ -336,7 +336,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-27 | Inicio de sesión opcional para ver el panel | RF-07 |
 | E2E-28 | Cambio y recuperación de contraseña | RF-08 |
 | E2E-29 | Primer arranque protegido con un código de instalación | RF-62 |
-| E2E-13 | Móvil y modo oscuro sin desbordamiento | RF-06 |
+| E2E-13 | Móvil y modo oscuro sin desbordamiento; en el panel, la barra con la fila de accesos, cada uno de al menos 44 px, que se desliza sin mover la página | RF-06, RF-120 |
 | E2E-14 | La API pública no expone configuración ni credenciales | RNF-03 |
 | E2E-23 | Enlace a cada servicio desde su bloque | RF-25 |
 | E2E-50 | Icono de cada bloque: el de su tipo (servido desde `/icons/`, sin iconos en la atalaya), otro elegido con el buscador («PI HOLE» encuentra Pi-hole; Esc cierra el buscador y no el formulario) y publicado en la API pública, sin icono y restablecido | RF-28 |
@@ -356,8 +356,8 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-34 | Alta de WGDashboard | RF-10, RF-91 |
 | E2E-35 | WGDashboard en el panel: túneles, peers y estados | RF-20, RF-90 |
 | E2E-36 | WireGuard en el bloque de OPNsense, opcional y sin nombres de peers; un nombre largo sin espacios no se parte en el móvil | RF-20, RF-73, RF-74 |
-| E2E-37 | La atalaya resume el peor estado y la antigüedad, lleva al bloque, y el pie da la versión | RF-26 |
-| E2E-38 | Bloques apilados por su altura real, panel a todo el ancho y editor sin cambios falsos | RF-27 |
+| E2E-37 | La columna resume el peor estado con el motivo de cada servicio (la etiqueta de su bloque) y la antigüedad, lleva al bloque, lleva el acceso al servicio, que abre el servicio en otra pestaña con un clic normal, y la versión, no muestra «Páginas» con una sola; «Saltar a los servicios» es lo primero del teclado; por debajo de 1100 px pasa a la barra y vuelve al ensanchar | RF-26, RF-120, RNF-08 |
+| E2E-38 | Bloques apilados por su altura real con 16 px entre ellos, área de bloques con todo el ancho que deja la columna y editor sin cambios falsos | RF-27 |
 | E2E-39 | Alta de QNAP por SNMPv3: dirección no válida, usuario rechazado, cifrado AES y sin casilla de TLS | RF-10, RF-102 |
 | E2E-40 | QNAP en el panel: cifras, discos, volúmenes y temperaturas; aviso SMART, volumen casi lleno, almacenamiento degradado, caída y recuperación; sin claves, dirección, nombres ni modelos en la API pública | RF-20, RF-21, RF-100, RF-101, RF-102 |
 | E2E-41 | Alta de un SAI por NUT: sin campo de clave ni de TLS, dirección no válida, varios SAI sin indicar cuál y conexión correcta con el nombre | RF-10, RF-105 |
@@ -371,6 +371,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-49 | Equipos en el panel: «Responde», latencia y pie «TCP» o «HTTP 200»; HTTP 503 en ámbar sin afectar al otro, caída en rojo de los dos y recuperación; sin dirección, puerto, esquema ni ruta en la API pública | RF-20, RF-21, RF-114, RF-115, RF-116 |
 | E2E-52 | Alta de una impresora por IPP: sin campo de clave, `http://` rechazado y conexión correcta, que llega a la impresora simulada | RF-10, RF-119 |
 | E2E-53 | Impresora en el panel: «Lista», cuatro tóneres con su color y nivel, modelo y firmware en el pie y sin enlace; amarillo bajo en ámbar, «Imprimiendo» en verde, atasco en rojo con «Tóner bajo» en los avisos, tapa abierta y sin papel en rojo, caída y recuperación; sin nombre, ubicación, serie, UUID, mensaje de pantalla ni dirección en la API pública | RF-20, RF-21, RF-117, RF-118, RF-119 |
+| E2E-54 | Panel completo con todos los servicios a un cuarto: a 2000 × 1100 px, cuatro por fila y sin desplazarse; a 1470 × 830 px, la columna a la vista, tres por fila, ninguno por debajo de 340 px y sin desbordamiento | RF-27, RF-120 |
 
 Los servicios simulados reproducen las rutas y la forma de respuesta usadas. El receptor de avisos simulado (`e2e/fake-notify.mjs`) hace de API de bots de Telegram, gracias a `TALAIA_TELEGRAM_API`, de servidor ntfy y de webhook, y guarda cada mensaje. La impresora simulada (`e2e/fake-printer.mjs`) solo responde a `Get-Printer-Attributes` por `POST` en `/ipp/print`, con la forma de la Brother real. El QNAP simulado es un agente SNMPv3 (`net-snmp`) con AES, porque el OpenSSL de Node no trae DES; ver DEC-43. Las discrepancias con el servicio real las cubren las verificaciones manuales.
 
@@ -414,6 +415,7 @@ El workflow también prueba todo cuando no puede calcular la lista: en un push q
 
 | Fecha | Versión de Talaia | Servicio | Resultado |
 |---|---|---|---|
+| 2026-11-22 | Hito 19 (`v0.6.0-4-g67071f0-dirty`, binario de la rama) | Panel real del cliente en Safari, con Talaia actualizado en su Proxmox VE con el instalador y `--binary` | Correcto según capturas del cliente: columna lateral con el resumen y los accesos. Los accesos de la columna y los nombres de los bloques abren su servicio en otra pestaña con un clic normal. Un primer intento falló porque Safari tenía bloqueadas las ventanas emergentes de ese sitio (Ajustes → Sitios web → Ventanas emergentes), lo que también impide abrir con un clic normal los enlaces a otra pestaña; con Cmd + clic sí abrían y la consola mostraba el clic en el enlace sin cancelar. |
 | 2026-11-21 | `v0.6.0` | Proxmox VE real del cliente, actualización con el instalador descargado de GitHub y sin `--binary`, desde el binario de prueba del hito 18 (`v0.5.0-6-g07b59ca-dirty`) | Correcto según la salida del instalador y una captura del panel. El instalador descargó la última versión para amd64, pidió confirmación, paró Talaia, hizo la copia de seguridad de la versión anterior dentro del contenedor, en `/var/lib/talaia/backups/`, e instaló `v0.6.0`. En la captura, el pie indica `Talaia v0.6.0` y los bloques visibles (WGDashboard, QNAP, OPNsense con WireGuard, Portainer, Proxmox VE, Home Assistant e Impresora) muestran datos actuales en verde; la impresora sigue en «Lista» con sus cuatro tóneres, el modelo y el firmware. La velocidad WAN sale «Midiendo…» justo tras el reinicio, como prevé DEC-31 |
 | 2026-11-21 | `v0.6.0` | Versión publicada por `release.yml` | Correcto: no preliminar y marcada como la última, con ambos binarios, sumas e instalador. Descargados desde `releases/latest/download`: sumas correctas, binarios ELF amd64 y arm64, los dos indican `v0.6.0` e incluyen el icono `talaia-printer` y la validación de la impresora (`invalid_printer_url`), y el instalador es igual al del repositorio. El PR de preparación pasó la CI solo con `docs`, con `test` e `installer` saltados (DEC-52) |
 | 2026-11-21 | Hito 18 (`v0.5.0-6-g07b59ca-dirty`, binario de la rama) | Brother DCP-L3550CDW real del cliente, dada de alta como `ipp://` sin puerto ni ruta, con Talaia actualizado en su Proxmox VE con el instalador y `--binary` | Correcto según la captura del cliente, en modo oscuro: bloque en verde «Lista» con el icono de la impresora, cuatro barras (Negro, Cian, Magenta y Amarillo) al 90 % con su color, la del negro con el color del texto para que se vea sobre el fondo oscuro, y «Brother DCP-L3550CDW series · ZA2206202233:93D6» en el pie, junto al resto de servicios del panel. El nombre enlaza con el enlace propio que puso el cliente. Con la tapa abierta, segunda captura: borde y estado en rojo «Tapa abierta», los tóneres sin cambios y «Avisos» con «Tapa abierta»; la Brother marca ese motivo como error (con `-error` o sin sufijo), como prevé DEC-58. No se han provocado sin papel, un atasco ni un tóner bajo, ni visto «Imprimiendo», ni revisado a mano la API pública, que cubren `TestState` (printer), `TestPrinterDataHidesIdentity`, E2E-14 y E2E-53 |
@@ -496,6 +498,7 @@ El workflow también prueba todo cuando no puede calcular la lista: en un push q
 - WGDashboard: código de la v4.3.4, en `src/dashboard.py` y `src/modules/WireguardConfiguration.py`, para rutas, autenticación, registro de accesos y cálculo de los peers conectados.
 
 **Aún sin verificar:**
+- **Panel con la columna lateral (hito 19):** probado con los simuladores a 2000 × 1100, 1470 × 830, 1280, 1000 y 375 px (E2E-13, E2E-37, E2E-38 y E2E-54) y en Safari con el panel real del cliente; falta verlo en su monitor de 27 pulgadas y en la pantalla del portátil por separado, y en Firefox.
 - **Impresora real, casos no probados:** con la Brother del cliente (2026-11-21) se han visto «Lista» con los cuatro tóneres y la tapa abierta en rojo. Los motivos reales de la Brother en un atasco, sin papel o con un tóner bajo, y si los marca como `-error`, `-warning` o sin sufijo, solo se han probado con el simulador, a partir de RFC 8011 y PWG 5100.9. Tampoco se han probado IPPS, una cola de CUPS ni impresoras de tinta.
 - **Iconos de los bloques en otros navegadores:** la máscara CSS con la que se pintan solo se ha probado en Chromium (E2E) y en el navegador del cliente con su panel real; no en Safari ni Firefox de forma expresa.
 - **Disponibilidad real, casos no probados:** IPv6, un equipo lento y el modo HTTP sin cifrar. Con equipos reales (2026-11-20) se han visto TCP, un equipo caído con su aviso en rojo y su vuelta a verde, y HTTPS con un código de error (403, en ámbar) y con 200 (en verde).
@@ -552,7 +555,7 @@ Los requisitos pendientes se probarán en su hito.
 | RF-22 | `TestPanelSaveAndValidation`, `TestUnplacedConnectionIsHidden`, `TestNewConnectionsFillThreeColumns`, `TestPanelSaveAndCascade`, E2E-24, E2E-25 |
 | RF-23 | `TestPanelSaveAndValidation`, `TestPanelSaveAndCascade`, E2E-25 |
 | RF-26 | E2E-25, E2E-37 |
-| RF-27 | `TestNewConnectionsFillThreeColumns`, E2E-24, E2E-38 |
+| RF-27 | `TestNewConnectionsFillThreeColumns`, E2E-24, E2E-38, E2E-54 |
 | RF-24 | `TestSettingsValidation`, `TestSettingsDefaultsAndSave`, E2E-26 |
 | RF-28 | `TestResolveDefault`, `TestResolveNone`, `TestResolveCustom`, `TestResolveUnknownStoredSlug`, `TestHas`, `TestLoadMissingIndex`, `TestLoadBrokenIndex`, `TestConnectionIconRoundTrip`, `TestMigrationKeepsDefaultIcon`, `TestDashboardDefaultIcon`, `TestConnectionIconChange`, `TestConnectionInvalidIcon`, `TestEveryTypeHasDefaultIcon`, `TestIconsCached`, `TestEditKeepsVanishedIcon`, `TestDefaultsMatchCatalog`, E2E-50, E2E-51 |
 | RF-60 | INS-01, INS-07, INS-08, INS-09, INS-10 |
@@ -585,6 +588,7 @@ Los requisitos pendientes se probarán en su hito.
 | RF-117 | `TestCollectReadsRealShape`, `TestReasons`, `TestParseIgnoresBadMarkers`, E2E-53 |
 | RF-118 | `TestState` (printer), `TestReasons`, `TestPrinterErrors`, E2E-53 |
 | RF-119 | `TestTarget` (printer), `TestCollectReadsRealShape`, `TestPrinterDataHidesIdentity`, `TestParseIgnoresBadMarkers`, `TestPrinterConnectionRules`, E2E-52, E2E-53 |
+| RF-120 | E2E-13, E2E-37, E2E-54 |
 | RF-61 | INS-04, INS-05, INS-06, INS-11, INS-12 |
 | RF-62 | `TestSetupRequiresTokenWhenConfigured`, `TestSetupTokenAttemptsAreLimited`, `TestEmptySetupTokenNeverMatches`, E2E-29, INS-02 |
 | RNF-01 | Por diseño: el modelo de datos no tiene tablas de métricas |
@@ -594,7 +598,7 @@ Los requisitos pendientes se probarán en su hito.
 | RNF-05 | `TestReopenKeepsData`, `TestMigratesExistingDatabase`; el binario se compila con `CGO_ENABLED=0` |
 | RNF-06 | Medición manual en reposo, ver [Estado y cambios](06-estado-y-cambios.md#consumo-medido) |
 | RNF-07 | `TestRemoveAndUnsupported`; el recolector solo depende de `integrations.Registry` |
-| RNF-08 | E2E-24 para los controles sin arrastrar; revisión de código y de capturas; sin auditoría formal |
+| RNF-08 | E2E-24 para los controles sin arrastrar; E2E-37 para el salto a los servicios; revisión de código y de capturas; sin auditoría formal |
 | RNF-09 | Versiones `v0.1.0-rc.1`, `v0.1.0` y `v0.2.0` publicadas por `release.yml`, con ambos binarios, sumas e instalador |
 | RNF-10 | Revisión del repositorio |
 | RNF-11 | `make docs-check` |

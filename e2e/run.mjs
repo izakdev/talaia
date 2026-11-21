@@ -84,17 +84,17 @@ async function setLanguage(target, lang) {
 async function coverShots() {
   if (!screenshotsDir) return;
   const dir = join(root, "docs/img");
-  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.setViewportSize({ width: 2000, height: 1100 });
   wgdashboard.state.stopped = true;
   await page.getByRole("link", { name: "View dashboard" }).click();
-  await page.getByText("Needs attention:").waitFor();
+  await page.locator(".watch").getByText("Needs attention").waitFor();
   await page.getByText(/Mbit\/s/).first().waitFor();
   await shot(page, "portada-en", dir);
   await page.getByRole("button", { name: "Español" }).click();
-  await page.getByText("Necesita atención:").waitFor();
+  await page.locator(".watch").getByText("Necesita atención").waitFor();
   await shot(page, "portada-es", dir);
   wgdashboard.state.stopped = false;
-  await page.getByText("Los 6 servicios están en orden").waitFor();
+  await page.getByText(/^Los \d+ servicios están en orden$/).waitFor();
   await page.getByRole("button", { name: "English" }).click();
   await page.getByRole("link", { name: "Administration" }).click();
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -278,7 +278,7 @@ const scenarios = [
   }],
   ["E2E-08", "Cambio de estado visible en vivo y sin recargar", async () => {
     adguard.state.protection = false;
-    await page.getByText("Protección desactivada").waitFor();
+    await page.getByText("Protección desactivada", { exact: true }).waitFor();
     adguard.state.protection = true;
     await page.getByText("Protección activa").waitFor();
   }],
@@ -291,29 +291,58 @@ const scenarios = [
     await adguard.start();
     await page.getByText("Protección activa").waitFor();
   }],
-  ["E2E-37", "La atalaya resume el peor estado y la antigüedad, lleva al bloque, y el pie da la versión", async () => {
-    const sky = page.locator(".lookout-sky");
-    await sky.getByText("El servicio está en orden").waitFor();
-    assert.equal(await sky.getAttribute("data-watch"), "good");
-    // Con todo en orden, la antigüedad va en la cabecera y el pie del bloque solo da la versión.
-    await sky.getByText(/^Actualizado /).waitFor();
+  ["E2E-37", "La columna resume el peor estado con su motivo, lleva al bloque, da la versión y deja saltar a los servicios", async () => {
+    const side = page.getByRole("navigation", { name: "Panel" });
+    const watch = side.locator(".watch");
+    await watch.getByText("El servicio está en orden").waitFor();
+    assert.equal(await side.getAttribute("data-watch"), "good");
+    // Con todo en orden, la antigüedad va en la columna y el pie del bloque solo da la versión.
+    await watch.getByText(/^Actualizado /).waitFor();
     // En CI el binario se compila sin versión y dice «dev».
-    assert.match(await page.locator(".lookout > footer").innerText(), /^Talaia \S+$/);
+    assert.match(await side.locator(".version").innerText(), /^Talaia \S+$/);
+    assert.equal(await page.locator(".lookout > footer").count(), 0);
     for (const foot of await page.locator(".service-foot").allInnerTexts()) assert.doesNotMatch(foot, /Actualizado/);
     assert.equal(await page.locator(".service.tone-good").count(), 1);
+    // El acceso al servicio está en la columna, con su enlace.
+    const access = side.getByRole("link", { name: "Abrir AdGuard principal en una pestaña nueva" });
+    assert.equal(await access.getAttribute("target"), "_blank");
+    // Un clic normal abre el servicio en otra pestaña (Safari lo descartaba dentro de la columna).
+    const href = await access.getAttribute("href");
+    const [tab] = await Promise.all([page.waitForEvent("popup"), access.click()]);
+    await tab.waitForLoadState("domcontentloaded");
+    assert.equal(tab.url(), new URL(href).href);
+    await tab.close();
+    // Con una sola página no hay lista de páginas.
+    assert.equal(await side.locator(".page-tabs").count(), 0);
     adguard.state.protection = false;
-    await sky.getByText("Necesita atención:").waitFor();
-    assert.equal(await sky.getAttribute("data-watch"), "warn");
-    assert.equal(await page.locator(".service.tone-warn").count(), 1);
+    await watch.getByText("Necesita atención").waitFor();
+    assert.equal(await side.getAttribute("data-watch"), "warn");
+    // El motivo es la misma etiqueta de estado que lleva el bloque.
+    const label = await page.locator(".service.tone-warn .service-head .service-state").innerText();
+    assert.equal((await watch.locator("li").innerText()).trim(), `AdGuard principal: ${label.trim()}`);
     adguard.state.protection = true;
     await adguard.stop();
-    await page.locator('.lookout-sky[data-watch="bad"]').waitFor();
+    await page.locator('.lookout-side[data-watch="bad"]').waitFor();
     assert.equal(await page.locator(".service.tone-bad").count(), 1);
-    await sky.getByRole("link", { name: "AdGuard principal" }).click();
+    await watch.getByRole("link", { name: "AdGuard principal" }).click();
     await page.waitForFunction(() => document.activeElement?.id?.startsWith("servicio-"));
     assert.match(await page.evaluate(() => document.activeElement.innerText), /AdGuard principal/);
     await adguard.start();
-    await sky.getByText("El servicio está en orden").waitFor();
+    await watch.getByText("El servicio está en orden").waitFor();
+    // Lo primero que alcanza el teclado es el salto a los servicios.
+    await page.reload();
+    await watch.getByText("El servicio está en orden").waitFor();
+    await page.keyboard.press("Tab");
+    assert.equal(await page.evaluate(() => document.activeElement.textContent), "Saltar a los servicios");
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => document.activeElement?.id === "servicios");
+    // En una ventana estrecha, la columna pasa a ser una barra arriba, y vuelve al ensanchar.
+    await page.setViewportSize({ width: 1000, height: 800 });
+    await page.locator(".lookout-bar").waitFor();
+    assert.equal(await page.getByRole("navigation", { name: "Panel" }).count(), 0);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await side.waitFor();
+    await page.locator(".panel-grid.measured").waitFor();
   }],
   ["E2E-10", "Conexión guardada con un servicio inaccesible", async () => {
     await toAdmin();
@@ -504,8 +533,9 @@ const scenarios = [
     const svg = await fetch(`${BASE}/icons/adguard.svg`);
     assert.equal(svg.status, 200);
     assert.match(await svg.text(), /^<svg[^>]*><path d="/);
-    // La atalaya de la cabecera no lleva iconos.
-    assert.equal(await page.locator(".lookout-sky .brand-icon").count(), 0);
+    // El resumen de la columna no lleva iconos; los accesos, sí.
+    assert.equal(await page.locator(".watch .brand-icon").count(), 0);
+    assert.equal(await page.locator('.access-list .brand-icon[data-icon="adguard"]').count(), 1);
 
     const choose = async (pick) => {
       await toAdmin();
@@ -706,15 +736,15 @@ const scenarios = [
     await page.reload();
     await page.locator(".panel-grid .service", { hasText: "AdGuard principal" }).waitFor();
     assert.equal(await page.locator(".panel-grid .service", { hasText: "Clúster de casa" }).count(), 0);
-    // Un servicio de otra página que falla se ve en la cabecera y su enlace lleva a esa página.
+    // Un servicio de otra página que falla se ve en la columna y su enlace lleva a esa página.
     await tabs.getByRole("link", { name: "Inicio" }).click();
     await adguard.stop();
-    const sky = page.locator(".lookout-sky");
-    await sky.getByRole("link", { name: "AdGuard principal" }).click();
+    await page.locator(".watch").getByRole("link", { name: "AdGuard principal" }).click();
     await page.locator(".panel-grid .service.tone-bad", { hasText: "AdGuard principal" }).waitFor();
     assert.match(page.url(), /\/p\//);
+    await page.waitForFunction(() => document.activeElement?.id?.startsWith("servicio-"));
     await adguard.start();
-    await page.locator('.lookout-sky[data-watch="good"]').waitFor();
+    await page.locator('.lookout-side[data-watch="good"]').waitFor();
 
     // Deja una única página con todo, para los escenarios siguientes.
     await page.getByRole("link", { name: "Administración" }).click();
@@ -1439,20 +1469,21 @@ const scenarios = [
       .waitForFunction(() => {
         const rect = (n) => [...document.querySelectorAll(".panel-cell")].find((el) => el.textContent.includes(n)).getBoundingClientRect();
         const [vpn, adguard] = [rect("VPN"), rect("AdGuard principal")];
-        return Math.abs(adguard.top - (vpn.bottom + 24)) <= 2;
+        return Math.abs(adguard.top - (vpn.bottom + 16)) <= 2;
       }, null, { timeout: 5000 })
       .then(() => true, () => false);
     const { vpn, adguard, home } = await stacked();
     assert.ok(settled, `AdGuard empieza en ${adguard.y}, VPN acaba en ${vpn.y + vpn.height}`);
     assert.ok(adguard.y < home.y + home.height, "AdGuard debe quedar al lado de Home Assistant, no debajo");
-    assert.ok((await page.locator(".lookout-main").boundingBox()).width > 1472, "el panel debe usar más de 92rem");
+    // La columna lateral ocupa 264 px; el resto es para los bloques.
+    assert.ok((await page.locator(".panel-grid").boundingBox()).width > 1600 - 264 - 96, "los bloques deben usar todo el ancho que deja la columna");
     // Si el bloque de arriba cambia de altura, el de debajo se recoloca sin solaparse.
     wgdashboard.state.empty = true;
     await page.getByText("Sin túneles").first().waitFor();
     await page.waitForFunction(() => {
       const [a, b] = ["VPN", "AdGuard principal"].map((n) =>
         [...document.querySelectorAll(".panel-cell")].find((el) => el.textContent.includes(n)).getBoundingClientRect());
-      return Math.abs(b.top - (a.bottom + 24)) <= 2;
+      return Math.abs(b.top - (a.bottom + 16)) <= 2;
     });
     wgdashboard.state.empty = false;
     await page.getByText("Túneles activos").first().waitFor();
@@ -1529,6 +1560,55 @@ const scenarios = [
     assert.equal(status, 200);
     await page.getByRole("link", { name: "Conexiones" }).click();
   }],
+  ["E2E-54", "El panel completo cabe sin scroll en el monitor y conserva la columna en el portátil", async () => {
+    // Doce servicios, a un cuarto de fila y por filas de cuatro, como en el uso real. Una conexión
+    // solo puede estar una vez en el panel: se completan con equipos por disponibilidad.
+    const placed = await page.evaluate(async (host) => {
+      const json = { "Content-Type": "application/json" };
+      let connections = await (await fetch("/api/admin/connections")).json();
+      for (let n = connections.length; n < 12; n++) {
+        await fetch("/api/admin/connections", {
+          method: "POST", headers: json,
+          body: JSON.stringify({ name: `Equipo ${n + 1}`, type: "availability", base_url: `tcp://${host}`, username: "", interval_seconds: 60, tls_skip_verify: false, options: {}, entities: [], link_url: "", notify: false, icon: "" }),
+        });
+      }
+      connections = await (await fetch("/api/admin/connections")).json();
+      const { pages } = await (await fetch("/api/admin/panel")).json();
+      pages[0].widgets = connections.map((c, i) => ({ id: `cuarto-${i}`, connection_id: c.id, x: (i % 4) * 3, y: Math.floor(i / 4) * 10, w: 3, h: 10 }));
+      const response = await fetch("/api/admin/panel", {
+        method: "PUT", headers: json, body: JSON.stringify({ pages: pages.slice(0, 1) }),
+      });
+      return { status: response.status, count: connections.length };
+    }, device.host);
+    assert.equal(placed.status, 200);
+    assert.equal(placed.count, 12);
+    const measured = () => page.waitForFunction((n) => document.querySelectorAll(".panel-grid.measured > .panel-cell").length === n, placed.count);
+    const lefts = () => page.locator(".panel-cell").evaluateAll((cells) => [...new Set(cells.map((c) => Math.round(c.getBoundingClientRect().left)))]);
+    await page.setViewportSize({ width: 2000, height: 1100 });
+    await page.getByRole("link", { name: "Ver el panel" }).click();
+    await measured();
+    // Las alturas se asientan cuando llegan los datos de todos los servicios.
+    await page.getByText("Protección activa").waitFor();
+    await sleep(500);
+    const monitor = await page.evaluate(() => ({ scroll: document.documentElement.scrollHeight, height: innerHeight }));
+    assert.ok(monitor.scroll <= monitor.height, `en el monitor el panel mide ${monitor.scroll} px de ${monitor.height}`);
+    assert.equal((await lefts()).length, 4, "cuatro bloques por fila en el monitor");
+    await page.setViewportSize({ width: 1470, height: 830 });
+    await page.getByRole("navigation", { name: "Panel" }).waitFor();
+    await page.waitForFunction(() => {
+      const lefts = new Set([...document.querySelectorAll(".panel-cell")].map((c) => Math.round(c.getBoundingClientRect().left)));
+      return lefts.size === 3;
+    });
+    const laptop = await page.evaluate(() => ({
+      overflow: document.documentElement.scrollWidth > innerWidth,
+      narrowest: Math.min(...[...document.querySelectorAll(".panel-cell")].map((c) => c.getBoundingClientRect().width)),
+    }));
+    assert.equal(laptop.overflow, false, "sin desbordamiento horizontal en el portátil");
+    assert.ok(laptop.narrowest >= 340, `el bloque más estrecho mide ${laptop.narrowest} px`);
+    // El panel se queda así para las capturas de portada.
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.getByRole("link", { name: "Administración" }).click();
+  }],
   ["E2E-12", "Cambio de idioma recordado y aplicado a las demás pestañas", async () => {
     await page.getByRole("button", { name: "English" }).click();
     await page.getByRole("heading", { name: "Connections", exact: true }).waitFor();
@@ -1559,6 +1639,16 @@ const scenarios = [
     }
     await phone.goto(BASE);
     await phone.getByText("Protección activa").waitFor();
+    // En el móvil, los accesos van en una fila que se desliza por sí sola, sin mover la página.
+    const row = phone.getByRole("navigation", { name: "Accesos" });
+    await row.waitFor();
+    const links = row.getByRole("link");
+    assert.ok((await links.count()) > 0);
+    for (const box of await links.evaluateAll((all) => all.map((a) => a.getBoundingClientRect().height))) assert.ok(box >= 44, `acceso de ${box} px`);
+    const fits = await row.evaluate((el) => el.scrollWidth <= el.clientWidth);
+    const many = await links.evaluateAll((all) => all.length > 4);
+    if (many) assert.equal(fits, false, "con más accesos de los que caben, la fila se desliza");
+    assert.equal(await phone.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, "la fila no desborda la página");
     await shot(phone, "10-movil-oscuro");
     await mobile.close();
   }],

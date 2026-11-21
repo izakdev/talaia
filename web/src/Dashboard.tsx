@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type ConnectionState, type ConnectionType, type DashboardState } from "./api";
-import { BrandIcon, Horizon, LanguageSwitch, Tower } from "./chrome";
-import { useI18n, type I18n, type Language } from "./i18n";
+import { BrandIcon, Horizon } from "./chrome";
+import { Lookout } from "./Lookout";
+import { relativeTime, StateLabel, useNow, type AccessItem, type Watched, type WatchState } from "./status";
+import { useI18n, type I18n } from "./i18n";
 import { adguardWidget } from "./widgets/adguard";
 import { availabilityWidget } from "./widgets/availability";
 import { nutWidget } from "./widgets/nut";
@@ -58,26 +60,6 @@ function useLiveDashboard() {
   return live;
 }
 
-function useNow(intervalMs: number) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), intervalMs);
-    return () => clearInterval(timer);
-  }, [intervalMs]);
-  return now;
-}
-
-function relativeTime(iso: string, now: number, lang: Language) {
-  const seconds = Math.round((new Date(iso).getTime() - now) / 1000);
-  const format = new Intl.RelativeTimeFormat(lang, { numeric: "auto" });
-  if (Math.abs(seconds) < 60) return format.format(Math.min(seconds, 0), "second");
-  const minutes = Math.round(seconds / 60);
-  if (Math.abs(minutes) < 60) return format.format(minutes, "minute");
-  const hours = Math.round(minutes / 60);
-  if (Math.abs(hours) < 24) return format.format(hours, "hour");
-  return format.format(Math.round(hours / 24), "day");
-}
-
 const SEVERITY: Record<Tone, number> = { muted: 0, good: 0, warn: 1, bad: 2 };
 
 /** Estado de un servicio: el mismo para su bloque y para el resumen de la cabecera. */
@@ -90,14 +72,8 @@ export function serviceAnchor(connectionId: string) {
   return `servicio-${connectionId}`;
 }
 
-interface Watched {
-  connection: ConnectionState;
-  pageId: string;
-  tone: Tone;
-}
-
 /** Peor estado de todos los servicios del panel, de cualquier página. */
-function watch(dashboard: DashboardState | undefined, t: I18n["t"]) {
+function watch(dashboard: DashboardState | undefined, t: I18n["t"]): WatchState {
   const states = new Map(dashboard?.connections.map((c) => [c.id, c]));
   const seen = new Set<string>();
   const watched: Watched[] = [];
@@ -106,7 +82,7 @@ function watch(dashboard: DashboardState | undefined, t: I18n["t"]) {
       const connection = states.get(widget.connection_id);
       if (!connection || seen.has(connection.id) || !WIDGETS[connection.type]) continue;
       seen.add(connection.id);
-      watched.push({ connection, pageId: page.id, tone: serviceState(connection, t).tone });
+      watched.push({ connection, pageId: page.id, ...serviceState(connection, t) });
     }
   }
   const worst = watched.reduce<Tone>((tone, item) => (SEVERITY[item.tone] > SEVERITY[tone] ? item.tone : tone), "good");
@@ -117,7 +93,7 @@ function watch(dashboard: DashboardState | undefined, t: I18n["t"]) {
   }, null);
   return {
     updated,
-    tone: checking ? ("muted" as Tone) : worst,
+    tone: checking ? "muted" : worst,
     total: watched.length,
     attention: watched
       .filter((item) => SEVERITY[item.tone] > 0)
@@ -125,55 +101,20 @@ function watch(dashboard: DashboardState | undefined, t: I18n["t"]) {
   };
 }
 
-function WatchSummary({
-  summary,
-  goTo,
-}: {
-  summary: ReturnType<typeof watch>;
-  goTo: (item: Watched) => void;
-}) {
-  const { t, lang } = useI18n();
-  if (summary.total === 0) return null;
-  if (summary.tone === "muted") return <p className="watch">{t("watch.checking")}</p>;
-  if (summary.attention.length === 0) {
-    return (
-      <p className="watch">
-        <StateLabel tone="good">
-          {summary.total === 1 ? t("watch.ok.one") : t("watch.ok.other", { count: summary.total })}
-        </StateLabel>
-      </p>
-    );
+/** Los servicios del panel con enlace, de todas las páginas, sin repetir y en el orden del panel. */
+function accessItems(dashboard: DashboardState | undefined, t: I18n["t"]): AccessItem[] {
+  const states = new Map(dashboard?.connections.map((c) => [c.id, c]));
+  const seen = new Set<string>();
+  const items: AccessItem[] = [];
+  for (const page of dashboard?.pages ?? []) {
+    for (const widget of [...page.widgets].sort((a, b) => a.y - b.y || a.x - b.x)) {
+      const connection = states.get(widget.connection_id);
+      if (!connection?.link || seen.has(connection.id) || !WIDGETS[connection.type]) continue;
+      seen.add(connection.id);
+      items.push({ id: connection.id, name: connection.name, link: connection.link, icon: connection.icon, tone: serviceState(connection, t).tone });
+    }
   }
-  const count = summary.attention.length;
-  // Intl.ListFormat da «A, B y C» o «A, B and C»; los nombres se intercalan como enlaces.
-  const parts = new Intl.ListFormat(lang, { type: "conjunction" }).formatToParts(
-    summary.attention.map((item) => item.connection.id),
-  );
-  const byId = new Map(summary.attention.map((item) => [item.connection.id, item]));
-  return (
-    <p className="watch">
-      <StateLabel tone={summary.tone}>
-        {count === 1 ? t("watch.attention.one") : t("watch.attention.other", { count })}
-      </StateLabel>{" "}
-      {parts.map((part, i) => {
-        const item = part.type === "element" ? byId.get(part.value) : undefined;
-        if (!item) return <span key={i}>{part.value}</span>;
-        return (
-          <a
-            key={i}
-            className={`watch-item ${item.tone}`}
-            href={`/p/${encodeURIComponent(item.pageId)}#${serviceAnchor(item.connection.id)}`}
-            onClick={(event) => {
-              event.preventDefault();
-              goTo(item);
-            }}
-          >
-            {item.connection.name}
-          </a>
-        );
-      })}
-    </p>
-  );
+  return items;
 }
 
 export default function Dashboard({
@@ -185,8 +126,7 @@ export default function Dashboard({
   navigate: (path: string) => void;
   version: string;
 }) {
-  const { t, lang } = useI18n();
-  const now = useNow(10000);
+  const { t } = useI18n();
   const live = useLiveDashboard();
   const dashboard = useQuery({ queryKey: ["dashboard"], queryFn: api.dashboard });
   const link = (to: string, label: string, className: string, current?: boolean) => (
@@ -220,59 +160,55 @@ export default function Dashboard({
   const summary = watch(dashboard.data, t);
   const goTo = (item: Watched) => {
     if (item.pageId !== page?.id) navigate(`/p/${encodeURIComponent(item.pageId)}`);
-    // Tras el cambio de página, el bloque ya está en el documento.
-    requestAnimationFrame(() => {
+    // Tras el cambio de página, el bloque se mide antes de verse: hasta entonces no puede recibir el foco.
+    const until = performance.now() + 2000;
+    const focusBlock = () => {
       const block = document.getElementById(serviceAnchor(item.connection.id));
-      block?.scrollIntoView({ block: "start" });
-      block?.focus({ preventScroll: true });
-    });
+      if (!block || block.checkVisibility?.({ visibilityProperty: true }) === false) {
+        if (performance.now() < until) requestAnimationFrame(focusBlock);
+        return;
+      }
+      block.scrollIntoView({ block: "start" });
+      block.focus({ preventScroll: true });
+    };
+    requestAnimationFrame(focusBlock);
   };
   return (
-    <div className="lookout">
-      <header className="lookout-sky" data-watch={summary.tone}>
-        {/* La clave repite el barrido de la luz cada vez que cambia el peor estado. */}
-        <Tower key={summary.tone} />
-        <div className="lookout-title">
-          <span className="wordmark">Talaia</span>
-          <WatchSummary summary={summary} goTo={goTo} />
-          {summary.updated && summary.tone !== "muted" && (
-            <span className="watch-age">{t("age.checked", { age: relativeTime(summary.updated, now, lang) })}</span>
-          )}
-        </div>
-        {link("/admin", t("dashboard.admin.short"), "quiet")}
-        <LanguageSwitch />
-      </header>
-      <main className="lookout-main">
-        {pages.length > 1 ? (
-          <nav className="page-tabs" aria-label={t("panel.pages")}>
-            {pages.map((p) =>
-              link(`/p/${encodeURIComponent(p.id)}`, p.name, p.id === page.id ? "page-tab current" : "page-tab", p.id === page.id),
-            )}
-          </nav>
-        ) : null}
-        <h1 className="visually-hidden">{page?.name ?? "Talaia"}</h1>
-        {!live && <p role="status" className="live-lost">{t("dashboard.live.lost")}</p>}
-        {dashboard.isPending && <p>{t("app.loading")}</p>}
-        {dashboard.isError && <p role="alert" className="error">{t("dashboard.unavailable")}</p>}
-        {page && page.widgets.length === 0 && <p className="lead">{t("dashboard.page.empty")}</p>}
-        <StackedPanel widgets={page?.widgets ?? []} states={states} />
-      </main>
-      <footer>Talaia {version}</footer>
-    </div>
+    <Lookout
+      summary={summary}
+      goTo={goTo}
+      pages={pages}
+      currentPageId={page?.id}
+      access={accessItems(dashboard.data, t)}
+      navigate={navigate}
+      version={version}
+    >
+      <h1 className="visually-hidden">{page?.name ?? "Talaia"}</h1>
+      {!live && <p role="status" className="live-lost">{t("dashboard.live.lost")}</p>}
+      {dashboard.isPending && <p>{t("app.loading")}</p>}
+      {dashboard.isError && <p role="alert" className="error">{t("dashboard.unavailable")}</p>}
+      {page && page.widgets.length === 0 && <p className="lead">{t("dashboard.page.empty")}</p>}
+      <StackedPanel widgets={page?.widgets ?? []} states={states} />
+    </Lookout>
   );
 }
 
-// Espacio entre bloques, en px: 1.5rem.
-const GAP = 24;
+// Espacio entre bloques, en px: 1rem.
+const GAP = 16;
 
-function useViewportWidth() {
-  const [width, setWidth] = useState(() => window.innerWidth);
-  useEffect(() => {
-    const onResize = () => setWidth(window.innerWidth);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-  return width;
+/** Ancho real de un elemento, en px, al día con sus cambios de tamaño. */
+function useElementWidth() {
+  const [element, setElement] = useState<HTMLDivElement | null>(null);
+  const [width, setWidth] = useState(0);
+  useLayoutEffect(() => {
+    if (!element) return;
+    // Primera medida antes de pintar, para no colocar los bloques con un ancho falso.
+    setWidth(element.getBoundingClientRect().width);
+    const observer = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [element]);
+  return [setElement, width] as const;
 }
 
 /**
@@ -280,7 +216,7 @@ function useViewportWidth() {
  * altura real de su contenido. Cada bloque se mide ya con su ancho definitivo.
  */
 function StackedPanel({ widgets, states }: { widgets: PlacedWidget[]; states: Map<string, ConnectionState> }) {
-  const viewport = useViewportWidth();
+  const [gridRef, area] = useElementWidth();
   const [heights, setHeights] = useState<Record<string, number>>({});
   const observer = useRef<ResizeObserver | null>(null);
   if (!observer.current && typeof ResizeObserver !== "undefined") {
@@ -311,13 +247,13 @@ function StackedPanel({ widgets, states }: { widgets: PlacedWidget[]; states: Ma
   }, []);
 
   const visible = widgets.filter((widget) => states.has(widget.connection_id));
-  const items = responsiveItems(visible, viewport);
+  const items = area > 0 ? responsiveItems(visible, area, GAP) : [];
   const ready = items.length > 0 && items.every((item) => heights[item.id] !== undefined);
   const { placed, height } = stackLayout(items, heights, GAP);
   const byId = new Map(placed.map((p) => [p.id, p]));
   const column = (n: number) => `calc((100% + ${GAP}px) * ${n} / ${COLUMNS})`;
   return (
-    <div className={ready ? "panel-grid stacked measured" : "panel-grid stacked"} style={{ height }}>
+    <div ref={gridRef} className={ready ? "panel-grid stacked measured" : "panel-grid stacked"} style={{ height }}>
       {items.map((item) => {
         const widget = visible.find((w) => w.id === item.id)!;
         const spot = byId.get(item.id)!;
@@ -342,20 +278,6 @@ function StackedPanel({ widgets, states }: { widgets: PlacedWidget[]; states: Ma
         );
       })}
     </div>
-  );
-}
-
-function StateLabel({ tone, children }: { tone: Tone; children: ReactNode }) {
-  return (
-    <span className={`service-state ${tone}`}>
-      <svg viewBox="0 0 16 16" aria-hidden="true">
-        {tone === "good" && <circle cx="8" cy="8" r="6" fill="currentColor" />}
-        {tone === "warn" && <path d="M8 1.5 15 14H1Z" fill="currentColor" />}
-        {tone === "bad" && <rect x="2.5" y="2.5" width="11" height="11" fill="currentColor" />}
-        {tone === "muted" && <circle cx="8" cy="8" r="5" fill="none" stroke="currentColor" strokeWidth="2" />}
-      </svg>
-      {children}
-    </span>
   );
 }
 
@@ -406,11 +328,13 @@ export function Service({ connection }: { connection: ConnectionState }) {
         </h2>
         <StateLabel tone={state.tone}>{state.label}</StateLabel>
       </div>
-      {failed && <p role="status" className="service-notice">{collectError(connection.error)}</p>}
-      {data ? <widget.Body data={data} /> : null}
-      <p className="service-foot">
-        {freshness && version ? `${freshness} (${version})` : freshness || version}
-      </p>
+      <div className="service-body">
+        {failed && <p role="status" className="service-notice">{collectError(connection.error)}</p>}
+        {data ? <widget.Body data={data} /> : null}
+        <p className="service-foot">
+          {freshness && version ? `${freshness} (${version})` : freshness || version}
+        </p>
+      </div>
     </section>
   );
 }

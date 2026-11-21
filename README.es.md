@@ -8,7 +8,7 @@
 
 [Read in English](README.md)
 
-![Panel de Talaia: un túnel está parado, así que la cabecera y el bloque de la VPN se ponen en ámbar](docs/img/portada-es.png)
+![Panel de Talaia: un túnel está parado, así que el resumen de la columna y el bloque de la VPN se ponen en ámbar](docs/img/portada-es.png)
 
 > **Estado:** `v0.6.0` publicada. La instalación, la actualización y el arranque automático en Proxmox VE están verificados en un servidor real.
 
@@ -16,7 +16,8 @@
 
 ## Por qué Talaia
 
-- **Responde primero a una pregunta.** La cabecera resume todos los servicios de todas las páginas: «Los 6 servicios están en orden», o «Necesita atención: VPN» con un enlace a su bloque. La luz de la atalaya y cada bloque afectado se ponen en ámbar o en rojo.
+- **Responde primero a una pregunta.** Una columna lateral resume todos los servicios de todas las páginas: «Los 12 servicios están en orden», o «Necesita atención» con cada servicio, su motivo y un enlace a su bloque. La luz del faro y cada bloque afectado se ponen en ámbar o en rojo.
+- **Sirve de página de inicio.** Una docena de servicios caben en una pantalla ancha sin desplazarse, y la misma columna lleva accesos a cada servicio para abrirlo sin recordar su dirección.
 - **Solo lectura, y se puede compartir.** Talaia solo lee de tus servicios. Las credenciales se guardan cifradas y nunca salen del servidor; el panel público no muestra URL, direcciones IP, claves ni nombres de peers.
 - **Te avisa aunque no estés mirando.** Cuando un servicio se pone en ámbar o en rojo, y cuando vuelve a estar en orden, Talaia envía un aviso por Telegram, ntfy o un webhook JSON, con las mismas palabras que el panel.
 - **En vivo.** Los bloques se actualizan solos, sin recargar. Si un servicio falla, su bloque conserva el último dato y dice su antigüedad.

@@ -120,7 +120,14 @@ Once there are services, each one has its own block, with the service's icon nex
 
 ![Dashboard with an AdGuard service](img/07-panel.png)
 
-**At a glance:** next to Talaia's name you see whether everything is fine, for example "All 6 services are fine", and when the data was last updated. Talaia's version appears at the bottom of the page. If a service has a warning or is failing, the header says so and names each service, even if it is on another page; click a name to go to its block. The watchtower's light changes too: amber for warnings and red for failures. Those blocks also get a stripe of the same colour along their top edge.
+**The left-hand column:** Talaia's lighthouse keeps watch from a fixed column, designed so the dashboard can be your browser's start page. From top to bottom it has:
+
+- **The summary:** whether everything is fine, for example "All 12 services are fine", and when the data was last updated. If a service has a warning or is failing, it names it with its reason, even if it is on another page, for example "NAS: Volume almost full", and tells you how many are still fine. Click a name to go to its block. The lighthouse's light changes too: amber for warnings and red for failures. Those blocks also get a stripe of the same colour along their top edge.
+- **The pages,** if you have more than one.
+- **The shortcuts:** a link to each service on the dashboard, with its icon and the shape of its status, which opens it in a new tab. That way you don't need to remember their addresses.
+- **At the bottom,** administration, the language and Talaia's version.
+
+**Fitting everything without scrolling:** in the [dashboard editor](#arranging-the-dashboard), set the blocks to a quarter of a row. On a screen about 2000 px wide, four then fit per row and a dozen services fit without scrolling. On a narrower screen, such as a laptop's, Talaia widens the blocks that would be too narrow and puts three per row; the column stays in view. With the keyboard, the first stop is **Skip to services**, which takes you straight to the blocks.
 
 **AdGuard status:**
 
@@ -191,7 +198,7 @@ CPU and RAM are Home Assistant's, not the whole host's.
 
 Only the entities you choose appear. Power and energy sensors go in **Consumption** and the rest in **Entities**. Consumption figures aren't added up, so a main meter and its smart plugs aren't counted twice: if you want a total, create an aggregate sensor in Home Assistant and choose it here.
 
-**If a service fails,** the header and the watchtower turn red, and its block shows the reason and keeps the last known data dimmed, with how old it is. It recovers on its own when the service comes back.
+**If a service fails,** the summary and the lighthouse turn red, and its block shows the reason and keeps the last known data dimmed, with how old it is. It recovers on its own when the service comes back.
 
 ![Block of a failing service](img/09-panel-con-fallos.png)
 
@@ -664,7 +671,7 @@ Telegram and ntfy.sh need the Talaia machine to have Internet access. If it does
 
 - **Language:** Talaia uses your browser's language if it is Spanish, and English otherwise. The **English** or **Español** button switches it, and the choice is remembered in that browser and applied to its other open tabs.
 - **Light or dark mode:** by default it follows your system. You can fix it in [Settings](#settings).
-- **Phone:** the interface adapts to small screens.
+- **Phone:** the interface adapts to small screens. On the dashboard, the column becomes a bar at the top, with the summary and the shortcuts in a row you swipe with your finger; the blocks follow, one after another.
 
 ![Dashboard on a phone in dark mode](img/10-movil-oscuro.png)
 

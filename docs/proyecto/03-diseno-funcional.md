@@ -51,28 +51,33 @@ Mientras no exista un administrador, todas las rutas muestran el asistente de pr
 
 **Sin servicios:** muestra un mensaje y un enlace a la administración.
 
-**Con servicios:** cada página muestra sus bloques en la posición elegida en el editor. Con más de una página aparecen pestañas.
+**Con servicios:** el faro vigila desde una columna fija a la izquierda y los bloques de la página ocupan el resto (DEC-59). Pensado para la página de inicio del navegador: ver de un vistazo cómo está todo y entrar en cualquier servicio con un clic.
 
-- **Recuadro:** cada bloque tiene fondo y borde, sin sombra. Si su estado es un aviso o un fallo, el borde superior es grueso y ámbar o rojo, para verlo a distancia.
-- **Secciones del bloque:** cada sección (cifras, listas, tablas o un apartado con título) lleva una línea encima y ninguna debajo. Dentro de un apartado con título, las cifras no llevan línea propia.
-- **Resumen en la cabecera:** junto al nombre, el estado de todos los servicios del panel, de cualquier página. Si todos están bien, «Los N servicios están en orden»; si no, «N servicios necesitan atención:» y sus nombres, con los fallos primero. Cada nombre lleva a su bloque, en su página, y le da el foco. Los servicios en neutro, como «Sin túneles», no cuentan como avisos.
-- **Atalaya:** la luz y el haz de la cabecera toman el color del peor estado: el acento elegido si todo va bien, ámbar con avisos y rojo con fallos, con el haz más intenso y la línea inferior del mismo color. Al cambiar el peor estado, el haz vuelve a barrer una vez, salvo con movimiento reducido.
-- **Colocación:** cada bloque conserva las columnas, el ancho y el orden del editor. En vertical queda justo debajo del último bloque de sus columnas, según la altura real de su contenido, con 1,5rem entre bloques. Si un bloque cambia de altura con los datos, los de debajo se recolocan sin animación.
-- **Ancho del dashboard:** toda la ventana, con su margen lateral.
-- **Pantallas de 900 a 1400 px:** los bloques de menos de media fila pasan a media fila y se colocan por orden en dos mitades.
-- **Pantallas de menos de 900 px:** una sola columna, en el orden del editor.
+- **Columna lateral:** con la ventana de 1100 px o más. Mide 16,5rem, va sobre el color del mar en los dos temas, se queda fija al desplazar los bloques y se desplaza por sí sola si su contenido no cabe. De arriba abajo: el faro y la marca, el resumen, las páginas, los accesos y, al pie, Administración, el cambio de idioma y la versión de Talaia.
+- **Barra superior:** con la ventana de menos de 1100 px. Lleva el faro, la marca, la forma del peor estado, Administración y el idioma; debajo, el resumen y los accesos en una fila que se desliza en horizontal (iconos grandes con el nombre debajo, de al menos 44 px de alto). Luego van las pestañas de página, los bloques y la versión al final.
+- **Resumen:** el estado de todos los servicios del panel, de cualquier página. Si todos están bien, «Los N servicios están en orden» y la antigüedad. Si no, «N servicios necesitan atención» y una lista con cada uno y su motivo, que es la etiqueta de estado de su bloque («NAS: Volumen casi lleno»), con los fallos primero; debajo, «Los otros N, en orden» y la antigüedad. Cada nombre lleva a su bloque, en su página, y le da el foco. Con avisos, el resumen lleva un fondo teñido y un filo del color del peor estado. Los servicios en neutro, como «Sin túneles», no cuentan como avisos.
+- **Atalaya:** la luz y el haz del faro toman el color del peor estado: el acento elegido si todo va bien, ámbar con avisos y rojo con fallos, con el haz más intenso. Al cambiar el peor estado, el haz vuelve a barrer una vez, salvo con movimiento reducido.
+- **Páginas:** solo con más de una. En la columna, una lista vertical con la página actual resaltada; en la barra, pestañas.
+- **Accesos:** un enlace por cada servicio del panel que tenga URL, de todas las páginas, sin repetir y en el orden del panel, con el icono de la marca, el nombre y la forma de su estado. Se abre en una pestaña nueva. Sin ninguno, la sección no aparece.
+- **Teclado:** el primer elemento es «Saltar a los servicios», visible al recibir el foco, que lleva a los bloques. El orden del foco es el orden en que se ve: la columna y la barra son dos maquetaciones del mismo contenido.
+- **Recuadro:** cada bloque tiene fondo, borde y esquinas redondeadas, sin sombra. La cabecera (icono, nombre y estado) va separada del cuerpo por una línea. Si su estado es un aviso o un fallo, el borde superior es una franja ámbar o roja.
+- **Secciones del bloque:** cada sección (cifras, listas, tablas o un apartado con título) lleva una línea encima y ninguna debajo, salvo la primera, que ya separa la cabecera. Dentro de un apartado con título, las cifras no llevan línea propia.
+- **Tamaños:** nombre del servicio a 15 px, estado a 13 px, cifras a 24 px, filas de detalle a 13 px, y etiquetas, notas y pie a 12 px como mínimo.
+- **Colocación:** cada bloque conserva las columnas, el ancho y el orden del editor. En vertical queda justo debajo del último bloque de sus columnas, según la altura real de su contenido, con 1rem entre bloques. Si un bloque cambia de altura con los datos, los de debajo se recolocan sin animación.
+- **Bloques estrechos:** la colocación se calcula con el ancho real del área de bloques, no con el de la ventana. Un bloque que quedaría por debajo de 340 px pasa al siguiente ancho del editor (un cuarto, un tercio, media fila, dos tercios o la fila) que llegue, y entonces los bloques se colocan por orden, de izquierda a derecha. Con un área de menos de 700 px, una sola columna, en el orden del editor. Los anchos guardados no cambian.
+- **Referencia:** con todos los bloques a un cuarto, en una ventana de 2000 × 1100 px caben cuatro por fila y doce servicios sin desplazarse; en un portátil de unos 1470 × 830 px van tres por fila, con la columna siempre a la vista.
 - **Página vacía:** indica que no tiene servicios.
 - **Sesión obligatoria:** si está activa, sin sesión se muestra el inicio de sesión. Quien tuviera el panel abierto deja de verlo.
 
 | Elemento | Comportamiento |
 |---|---|
 | Nombre del servicio | Enlace a su URL, con un icono, que se abre en una pestaña nueva |
-| Icono del servicio | A la izquierda del nombre, a su altura, con el color de la marca. Si ese color apenas se distingue del fondo del bloque (contraste menor de 1,5, como el negro de GitHub en modo oscuro), se pinta con el color del texto. No se encoge aunque el nombre ocupe varias líneas. Sin icono, el nombre queda solo. La atalaya de la cabecera no lleva iconos |
+| Icono del servicio | A la izquierda del nombre, a su altura, con el color de la marca. Si ese color apenas se distingue del fondo del bloque (contraste menor de 1,5, como el negro de GitHub en modo oscuro), se pinta con el color del texto; en la columna y la barra, que son siempre oscuras, el ajuste es el del tema oscuro. No se encoge aunque el nombre ocupe varias líneas. Sin icono, el nombre queda solo. El resumen no lleva iconos; los accesos, sí |
 | Actualización | En vivo. Si se pierde, muestra un aviso y reintenta |
-| Antigüedad | En la cabecera, «Actualizado hace…» con el dato más reciente, recalculado cada 10 segundos. Un bloque solo indica la suya si falla («Último dato hace…»); si no, su pie da solo el servicio y su versión |
+| Antigüedad | En el resumen, «Actualizado hace…» con el dato más reciente, recalculado cada 10 segundos. Un bloque solo indica la suya si falla («Último dato hace…»); si no, su pie da solo el servicio y su versión |
 | Estado | Se indica con texto y forma, no solo con color |
 | Cifras | Un escalón por debajo del nombre y del estado, para que el estado se lea primero |
-| Versión de Talaia | Al pie de la página, como en la administración |
+| Versión de Talaia | Al pie de la columna, o al final de la página con la barra |
 
 **Estados de un bloque de AdGuard:**
 
