@@ -2,7 +2,7 @@
 
 Talaia is a dashboard that shows the status of your homelab services at a glance. It is meant to be your browser's start page.
 
-> **Manual version:** `v0.6.0`. Each block shows its service's icon, which you can change. It shows data from AdGuard Home, Proxmox VE, Home Assistant, OPNsense, Portainer, WGDashboard, QNAP, a UPS through NUT and a printer over IPP, checks whether other network devices respond, and sends notifications through Telegram, ntfy or a webhook when a service changes state. See the [current limitations](#current-limitations).
+> **Manual version:** `v0.7.0`. The panel has a side column with the summary and shortcuts to each service. Each block shows its service's icon, which you can change. It shows data from AdGuard Home, Proxmox VE, Home Assistant, OPNsense, Portainer, WGDashboard, QNAP, a UPS through NUT and a printer over IPP, checks whether other network devices respond, and sends notifications through Telegram, ntfy or a webhook when a service changes state. See the [current limitations](#current-limitations).
 >
 > This manual is a translation of the [Spanish user manual](../usuario/manual-de-usuario.md), which is the reference. The project documentation is only in Spanish.
 
