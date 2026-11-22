@@ -22,9 +22,13 @@
 | 16 | Notificaciones por Telegram, ntfy o webhook cuando un servicio cambia de color | Terminado y verificado con el Telegram del cliente, publicado en `v0.4.0` |
 | 17 | Disponibilidad de equipos de red por TCP o HTTP, sin credenciales | Terminado y verificado con cuatro equipos del cliente (TCP, caída con sus avisos y HTTPS), publicado en `v0.5.0` |
 | 18 | Impresora por IPP: estado, avisos y nivel de los tóneres | Terminado y verificado con la impresora del cliente (en reposo, con sus cuatro tóneres, y con la tapa abierta en rojo), publicado en `v0.6.0` |
-| 19 | Panel con torre lateral: resumen con motivo, accesos y bloques más densos | Terminado; verificado en Safari con el panel real del cliente |
+| 19 | Panel con torre lateral: resumen con motivo, accesos y bloques más densos | Terminado y verificado en Safari con el panel real del cliente, publicado en `v0.7.0` |
 
 ## Historial
+
+### `v0.7.0` (2026-11-22)
+
+Trae el hito 19, el rediseño del panel con una columna lateral fija con el faro, el resumen con el motivo de cada aviso y los accesos a cada servicio, y bloques más densos que muestran más servicios por pantalla. Incluye los binarios para amd64 y arm64, las sumas SHA-256 y el instalador; se actualiza desde `v0.6.0` con `talaia-proxmox.sh update`.
 
 ### Hito 19 (2026-11-21)
 
