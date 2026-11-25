@@ -23,9 +23,13 @@
 | 17 | Disponibilidad de equipos de red por TCP o HTTP, sin credenciales | Terminado y verificado con cuatro equipos del cliente (TCP, caída con sus avisos y HTTPS), publicado en `v0.5.0` |
 | 18 | Impresora por IPP: estado, avisos y nivel de los tóneres | Terminado y verificado con la impresora del cliente (en reposo, con sus cuatro tóneres, y con la tapa abierta en rojo), publicado en `v0.6.0` |
 | 19 | Panel con torre lateral: resumen con motivo, accesos y bloques más densos | Terminado y verificado en Safari con el panel real del cliente, publicado en `v0.7.0` |
-| 20 | Enlaces guardados en grupos y accesos a elegir en la columna | Terminado y verificado con el panel real del cliente |
+| 20 | Enlaces guardados en grupos y accesos a elegir en la columna | Terminado y verificado con el panel real del cliente, publicado en `v0.8.0` |
 
 ## Historial
+
+### `v0.8.0` (2026-11-25)
+
+Trae el hito 20: enlaces guardados a sitios que Talaia no vigila, en grupos con nombre que se gestionan en la pestaña nueva **Enlaces**, y una casilla en cada conexión para elegir si sale en los accesos de la columna. Incluye los binarios para amd64 y arm64, las sumas SHA-256 y el instalador; se actualiza desde `v0.7.0` con `talaia-proxmox.sh update`.
 
 ### Hito 20 (2026-11-25)
 
