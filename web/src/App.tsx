@@ -12,6 +12,7 @@ import { applyTheme } from "./theme";
 
 // El editor y la rejilla arrastrable solo se cargan al abrirlos.
 const PanelEditor = lazy(() => import("./PanelEditor"));
+const LinksEditor = lazy(() => import("./LinksEditor"));
 
 function usePath(): [string, (path: string) => void] {
   const [path, setPath] = useState(window.location.pathname);
@@ -207,6 +208,10 @@ function Admin({
         <Suspense fallback={<p className="loading">{t("app.loading")}</p>}>
           <PanelEditor navigate={navigate} />
         </Suspense>
+      ) : path === LINKS_PATH ? (
+        <Suspense fallback={<p className="loading">{t("app.loading")}</p>}>
+          <LinksEditor navigate={navigate} />
+        </Suspense>
       ) : path === SETTINGS_PATH ? (
         <Settings />
       ) : (
@@ -226,10 +231,12 @@ function ConnectionHealth({ state }: { state?: ConnectionState }) {
 
 const NEW_CONNECTION_PATH = "/admin/connections/new";
 const PANEL_PATH = "/admin/panel";
+const LINKS_PATH = "/admin/links";
 const SETTINGS_PATH = "/admin/settings";
 const ADMIN_SECTIONS = [
-  { path: "/admin", label: "connections.title", active: (p: string) => p !== PANEL_PATH && p !== SETTINGS_PATH },
+  { path: "/admin", label: "connections.title", active: (p: string) => p !== PANEL_PATH && p !== LINKS_PATH && p !== SETTINGS_PATH },
   { path: PANEL_PATH, label: "panel.title", active: (p: string) => p === PANEL_PATH },
+  { path: LINKS_PATH, label: "links.title", active: (p: string) => p === LINKS_PATH },
   { path: SETTINGS_PATH, label: "settings.title", active: (p: string) => p === SETTINGS_PATH },
 ] as const;
 
@@ -445,6 +452,7 @@ function ConnectionDialog({
   const [entities, setEntities] = useState<string[]>(connection?.entities ?? []);
   const [link, setLink] = useState(connection?.link_url ?? "");
   const [notify, setNotify] = useState(connection?.notify ?? true);
+  const [showAccess, setShowAccess] = useState(connection?.show_access ?? true);
   const [icon, setIcon] = useState(connection?.icon ?? "");
 
   useEffect(() => {
@@ -471,6 +479,7 @@ function ConnectionDialog({
     link_url: link,
     notify,
     icon,
+    show_access: showAccess,
     ...(secret ? { secret } : {}),
     ...(snmp && privacySecret ? { privacy_secret: privacySecret } : {}),
   });
@@ -635,6 +644,13 @@ function ConnectionDialog({
           <span>
             {t("form.notify")}
             <small>{t("form.notifyHint")}</small>
+          </span>
+        </label>
+        <label className="check">
+          <input type="checkbox" checked={showAccess} onChange={(e) => setShowAccess(e.target.checked)} />
+          <span>
+            {t("form.showAccess")}
+            <small>{t("form.showAccessHint")}</small>
           </span>
         </label>
         {save.isError && <p role="alert" className="error">{errorText(code(save.error))}</p>}

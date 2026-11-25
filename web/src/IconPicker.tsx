@@ -13,10 +13,11 @@ function fold(text: string) {
 }
 
 /** Busca por nombre sin distinguir mayúsculas, tildes ni signos; vacía, da los iconos de los tipos de Talaia. */
-export function searchIcons(index: BrandIconData[], query: string, type: ConnectionType): BrandIconData[] {
+export function searchIcons(index: BrandIconData[], query: string, type?: ConnectionType): BrandIconData[] {
   const q = fold(query);
   if (!q) {
-    const slugs = [catalogEntry(type).iconSlug, ...CATALOG.map((e) => e.iconSlug).filter((s) => s !== catalogEntry(type).iconSlug)];
+    const first = type ? catalogEntry(type).iconSlug : null;
+    const slugs = [...(first ? [first] : []), ...CATALOG.map((e) => e.iconSlug).filter((s) => s !== first)];
     return slugs.flatMap((slug) => index.filter((icon) => icon.slug === slug));
   }
   const starts: BrandIconData[] = [];
@@ -36,13 +37,18 @@ export function defaultIcon(type: ConnectionType): BrandIconData {
   return { slug: entry.iconSlug, title: entry.icon.title, hex: entry.icon.hex };
 }
 
-export function IconPicker({ type, value, onChange }: { type: ConnectionType; value: string; onChange: (value: string) => void }) {
+/**
+ * Selector de icono. Con tipo de conexión: vacío es el icono del tipo y "none", sin icono.
+ * Sin tipo (enlaces guardados): vacío es sin icono.
+ */
+export function IconPicker({ type, value, onChange }: { type?: ConnectionType; value: string; onChange: (value: string) => void }) {
   const { t } = useI18n();
   const id = useId();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const custom = value !== "" && value !== NONE;
+  const typeDefault = type ? defaultIcon(type) : null;
   const index = useQuery({
     queryKey: ["icons"],
     queryFn: async (): Promise<BrandIconData[]> => {
@@ -53,7 +59,7 @@ export function IconPicker({ type, value, onChange }: { type: ConnectionType; va
     enabled: open || custom,
     staleTime: Infinity,
   });
-  const current = value === "" ? defaultIcon(type) : custom ? (index.data?.find((i) => i.slug === value) ?? null) : null;
+  const current = value === "" ? typeDefault : custom ? (index.data?.find((i) => i.slug === value) ?? null) : null;
   const results = useMemo(() => (index.data ? searchIcons(index.data, query, type) : []), [index.data, query, type]);
   // La primera opción es siempre «Sin icono».
   const options: (BrandIconData | null)[] = [null, ...results];
@@ -62,7 +68,8 @@ export function IconPicker({ type, value, onChange }: { type: ConnectionType; va
   const label = (icon: BrandIconData) =>
     icon.slug.startsWith("talaia-") ? t(`type.${icon.slug.slice("talaia-".length) as ConnectionType}`) : icon.title;
   const choose = (icon: BrandIconData | null) => {
-    onChange(icon ? (icon.slug === defaultIcon(type).slug ? "" : icon.slug) : NONE);
+    if (!typeDefault) onChange(icon ? icon.slug : "");
+    else onChange(icon ? (icon.slug === typeDefault.slug ? "" : icon.slug) : NONE);
     setOpen(false);
     setQuery("");
   };
@@ -99,7 +106,7 @@ export function IconPicker({ type, value, onChange }: { type: ConnectionType; va
           <BrandIcon icon={current} />
           <span id={`${id}-value`}>{current ? label(current) : custom && index.isPending ? "…" : t("form.icon.none")}</span>
         </button>
-        {value !== "" && (
+        {typeDefault && value !== "" && (
           <button type="button" className="quiet" onClick={() => onChange("")}>
             {t("form.icon.reset")}
           </button>

@@ -64,6 +64,7 @@ Talaia es un dashboard autoalojado para ver de un vistazo el estado de los servi
 | RF-26 | El dashboard resume, en su columna lateral o en su barra superior, el peor estado de los servicios de todas sus páginas, con el motivo de cada uno que necesita atención y un enlace a su bloque; los bloques con aviso o fallo se distinguen a distancia | 11, 19 | Implementado |
 | RF-27 | Cada bloque del dashboard queda justo debajo del anterior de sus columnas, según la altura real de su contenido, y el dashboard usa todo el ancho de la ventana | 13 | Implementado |
 | RF-120 | El dashboard sirve de página de inicio del navegador: en una ventana de 2000 × 1100 px caben doce servicios sin desplazarse, y una lista de accesos lleva a cada servicio del panel con un clic, también en el móvil | 19 | Implementado |
+| RF-121 | El administrador elige qué servicios salen en los accesos de la columna y guarda enlaces a sitios que Talaia no vigila, en grupos con nombre y en el orden que quiera, que se muestran en la columna y en la fila del móvil debajo de los servicios | 20 | Implementado |
 | RF-24 | El dashboard admite tema claro, oscuro o del sistema, y color de acento | 5 | Implementado |
 | RF-28 | Cada bloque lleva junto a su nombre el icono de su servicio, el mismo del catálogo. Cada conexión puede cambiarlo por cualquier logotipo de `simple-icons` o quedarse sin icono, sin que el navegador pida nada a terceros. El icono se ve en modo claro y oscuro, y en el móvil | — | Implementado |
 

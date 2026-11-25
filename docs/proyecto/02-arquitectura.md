@@ -92,12 +92,13 @@ Los motivos detallados están en [Decisiones](05-decisiones.md).
 | `web/src/i18n/states.json` | Textos de estado de los servicios en español e inglés, compartidos por el panel y los avisos |
 | `web/src/widgets` | Contenido y pie del bloque de cada integración |
 | `web/src/Dashboard.tsx` | Panel: resumen de estados, accesos y bloques de la página |
-| `web/src/Lookout.tsx` | Carcasa del panel: columna lateral desde 1100 px de ventana, barra superior por debajo (DEC-59) |
+| `web/src/Lookout.tsx` | Carcasa del panel: columna lateral desde 1100 px de ventana, barra superior por debajo (DEC-59), con los servicios y los grupos de enlaces guardados (DEC-60) |
 | `web/src/status.tsx` | Piezas compartidas del estado: forma de cada tono, etiqueta, antigüedad y tipos del resumen y los accesos |
 | `web/src/stack.ts` | Colocación de los bloques según el ancho real del área y la altura de su contenido |
 | `web/src/IconPicker.tsx` | Buscador de iconos del formulario de conexión |
 | `web/scripts/icons.mjs` y `web/icons` | Copia los iconos de `simple-icons` y los propios (`talaia-nut`, `talaia-availability` y `talaia-printer`, que el buscador nombra como su tipo) a `dist/icons/`, con su índice |
 | `web/src/PanelEditor.tsx` | Editor de páginas y bloques |
+| `web/src/LinksEditor.tsx` | Editor de los enlaces guardados: grupos, enlaces, orden e icono (DEC-60) |
 | `web/src/Settings.tsx` | Tema, acento, acceso y contraseña |
 | `web/src/Notifications.tsx` | Ajustes de avisos, canales y últimos envíos |
 | `e2e` | Pruebas de extremo a extremo y generación de capturas |
@@ -341,13 +342,14 @@ Las respuestas son JSON. Las escrituras exigen `Content-Type: application/json` 
 |---|---|---|
 | `GET /healthz` | Público | Comprobación de vida |
 | `GET /api/state` | Público | Si falta el primer arranque, versión, usuario actual, tema, acento y si el panel exige sesión |
-| `GET /api/dashboard` | Público o sesión, según ajustes | Páginas y estado de las conexiones colocadas en ellas, con el enlace a cada servicio y su icono (`icon`: `slug`, `title` y `hex`, o `null` sin icono) |
+| `GET /api/dashboard` | Público o sesión, según ajustes | Páginas y estado de las conexiones colocadas en ellas, con el enlace a cada servicio, si sale en los accesos (`show_access`) y su icono (`icon`: `slug`, `title` y `hex`, o `null` sin icono); y `link_groups`, los grupos de enlaces guardados con enlaces, en orden, cada uno con `name` y `links` (`name`, `url` e `icon` resuelto o `null`), sin identificadores |
 | `GET /api/dashboard/events` | Público o sesión, según ajustes | Eventos SSE con el mismo contenido. Se cierran si se pierde el permiso |
 | `POST /api/setup` | Público, solo una vez | Crea el primer administrador e inicia sesión |
 | `POST /api/auth/login` | Público | Inicia sesión |
 | `POST /api/auth/logout` | Público | Cierra la sesión y la revoca en el servidor |
 | `GET /api/admin/status` | Sesión | Estado de todas las conexiones, estén o no en el panel |
 | `GET` y `PUT /api/admin/panel` | Sesión | Lee o sustituye de forma atómica las páginas y sus bloques |
+| `GET` y `PUT /api/admin/links` | Sesión | Lee o sustituye de forma atómica los grupos de enlaces guardados y sus enlaces (`{groups: [{id, name, links: [{id, name, url, icon}]}]}`). Valida identificadores únicos, hasta 20 grupos y 100 enlaces (`invalid_links`), nombres de grupo de 1 a 40 caracteres (`invalid_group_name`) y de enlace de 1 a 60 (`invalid_link_name`), la URL con la misma regla que el enlace de una conexión (`invalid_link`) y el icono, vacío o del índice (`invalid_icon`); un icono ya guardado en ese enlace se admite aunque se haya retirado del índice |
 | `GET` y `PUT /api/admin/settings` | Sesión | Lee o guarda tema, acento, acceso, idioma de los avisos y retardo |
 | `POST /api/admin/password` | Sesión | Cambia la contraseña y revoca las demás sesiones |
 | `GET /api/admin/connections` | Sesión | Lista las conexiones |
@@ -376,6 +378,7 @@ erDiagram
     pages ||--o{ widgets : contiene
     connections ||--o{ widgets : aparece
     connections ||--o| notify_state : avisado
+    link_groups ||--o{ links : contiene
     settings {
         text key PK
         text value
@@ -419,8 +422,22 @@ erDiagram
         text link_url
         integer notify
         text icon
+        integer show_access
         integer created_at
         integer updated_at
+    }
+    link_groups {
+        text id PK
+        text name
+        integer position
+    }
+    links {
+        text id PK
+        text group_id FK
+        text name
+        text url
+        text icon
+        integer position
     }
     notify_state {
         text connection_id PK
@@ -474,17 +491,17 @@ erDiagram
 | Archivos | Al crearlos, directorio de datos `700` y base de datos `600` |
 | Salida a servicios | Sin proxy, sin seguir redirecciones, 10 s de espera por petición y respuestas de 32 MiB como máximo. Por SNMP, 3 s por petición y un reintento. Por NUT, 5 s para conectar y 10 s por consulta. Por disponibilidad, 10 s por prueba. Por IPP, 10 s y 1 MiB |
 | TLS | Verificación activa por defecto, con excepción explícita por conexión |
-| API pública | Sin usuarios ni credenciales. Incluye el enlace al servicio: la URL de conexión o la dirección propia configurada |
-| Enlaces | Solo `http` y `https`, sin credenciales; se abren con `noopener` y `noreferrer`. Una dirección `snmp://`, `nut://` o `ipp(s)://`, y la de una conexión de disponibilidad, nunca se publica como enlace |
+| API pública | Sin usuarios ni credenciales. Incluye el enlace al servicio (la URL de conexión o la dirección propia configurada) y los enlaces guardados, que son direcciones que el administrador eligió mostrar |
+| Enlaces | Solo `http` y `https`, sin credenciales, también en los enlaces guardados; se abren con `noopener` y `noreferrer`. Una dirección `snmp://`, `nut://` o `ipp(s)://`, y la de una conexión de disponibilidad, nunca se publica como enlace |
 | Navegador | Sin `unsafe-inline`: el editor evita el `<style>` que `react-draggable` insertaría. CSP `default-src 'self'`, `frame-ancestors 'none'`, `nosniff` y `Referrer-Policy: same-origin` |
 | CSRF | Cookie `SameSite=Lax`, comprobación de `Origin` y JSON obligatorio |
-| Tamaño de petición | 64 KiB como máximo |
+| Tamaño de petición | 64 KiB como máximo; 512 KiB al guardar los enlaces, que van todos juntos (100 URL de hasta 2048 caracteres). Si se supera, `too_large` |
 
 ### Riesgos aceptados
 
 - **Dashboard abierto por defecto:** cualquiera que llegue al puerto puede ver el estado de los servicios. Para publicarlo fuera de la red de confianza hay que exigir inicio de sesión en los ajustes (RF-07) y usar HTTPS.
 - **Recuperación por acceso al equipo:** quien pueda ejecutar `talaia reset-password` puede tomar la cuenta. Es el mismo nivel de acceso que ya da leer la carpeta de datos.
-- **Enlaces visibles:** quien abra el panel ve la dirección de cada servicio, que puede ser interna. Una dirección propia evita mostrar la URL de conexión.
+- **Enlaces visibles:** quien abra el panel ve la dirección de cada servicio y de cada enlace guardado, que puede ser interna. Una dirección propia evita mostrar la URL de conexión.
 - **Token de administrador para los recursos:** Home Assistant solo da CPU y memoria a un administrador, de modo que quien quiera verlas debe dar a Talaia un token con todos esos permisos, aunque solo lea.
 - **Primer arranque abierto sin el instalador:** al ejecutar el binario sin `-setup-token-file`, cualquiera en la red puede crear el administrador hasta que exista. El instalador siempre usa el código.
 - **Bloqueo por IP detrás de un proxy inverso:** Talaia ve la IP del proxy, de modo que los fallos cuentan para todos los clientes. No se confía en `X-Forwarded-For` porque se podría falsificar.

@@ -35,6 +35,12 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestDashboardDefaultIcon` | Sin elegir icono, el panel público da el del tipo, con su nombre y color | RF-28 |
 | `TestConnectionIconChange` | Un icono elegido sale en el panel; «none» lo quita y vacío vuelve al del tipo | RF-28 |
 | `TestConnectionInvalidIcon` | Rechaza con `invalid_icon` un icono que no está en el índice, una ruta o un texto largo | RF-28 |
+| `TestSaveLinksValidation` | Los enlaces guardados rechazan, sin guardar nada, identificadores repetidos o no válidos, más de 20 grupos o 100 enlaces (`invalid_links`), nombres vacíos o largos (`invalid_group_name`, `invalid_link_name`), URL que no son `http(s)`, sin host o con usuario (`invalid_link`) e iconos que no existen (`invalid_icon`); lo válido se guarda recortado y en orden | RF-121 |
+| `TestSaveLinksKeepsRetiredIcon` | Un enlace conserva un icono retirado del índice al volver a guardarse, otro enlace no puede elegirlo, y el panel lo pinta sin icono | RF-121 |
+| `TestSaveLinksAtLimits` | Se guardan de una vez 100 enlaces con el nombre y la URL más largos admitidos | RF-121 |
+| `TestLinksRequireAuth` | Leer y guardar los enlaces exige sesión | RF-121, RNF-03 |
+| `TestDashboardLinkGroups` | El panel público da los grupos con enlaces en orden, sin los vacíos ni identificadores, con el icono resuelto, y `show_access` en cada conexión | RF-121 |
+| `TestConnectionShowAccess` | Una conexión sin `show_access` sale en los accesos; con `false` lo guarda, lo devuelve y llega al panel | RF-121 |
 | `TestEveryTypeHasDefaultIcon` | Cada tipo de conexión tiene icono por defecto | RF-28 |
 | `TestIconsCached` | `/icons/` se sirve con una semana de caché | RF-28 |
 | `TestEditKeepsVanishedIcon` | Al editar se conserva un icono guardado que una versión nueva de `simple-icons` retiró; otro icono inexistente sigue rechazándose | RF-28 |
@@ -99,6 +105,9 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | `TestMigratesExistingDatabase` | Una base de datos anterior migra, conserva sus conexiones y las coloca en el panel | RNF-05, RF-22 |
 | `TestConnectionIconRoundTrip` | El icono elegido se guarda al crear y al editar | RF-28 |
 | `TestMigrationKeepsDefaultIcon` | Una conexión anterior a la columna del icono queda con el de su tipo | RF-28, RNF-05 |
+| `TestMigrationKeepsAccess` | Al actualizar desde `v0.6.0` o `v0.7.0`, todas las conexiones salen en los accesos y no hay grupos de enlaces | RF-121, RNF-05 |
+| `TestShowAccessSaved` | `show_access` se guarda al crear y al actualizar una conexión | RF-121 |
+| `TestLinkGroupsRoundTrip` | Los grupos y enlaces se guardan y leen en orden, un grupo vacío tiene la lista vacía y quitar un grupo borra sus enlaces | RF-121 |
 | `TestChannelSecretEncrypted` | El secreto de un canal no está en claro y se recupera | RF-108, RNF-04 |
 | `TestUpdateChannelKeepsSecret` | Editar sin secreto lo conserva; con secreto, lo cambia; borrar elimina el canal | RF-108 |
 | `TestNotifiedToneCascade` | El color avisado se guarda y se borra con la conexión | RF-112 |
@@ -372,6 +381,7 @@ Las pruebas E2E comparten un único recorrido: cada escenario parte del estado q
 | E2E-52 | Alta de una impresora por IPP: sin campo de clave, `http://` rechazado y conexión correcta, que llega a la impresora simulada | RF-10, RF-119 |
 | E2E-53 | Impresora en el panel: «Lista», cuatro tóneres con su color y nivel, modelo y firmware en el pie y sin enlace; amarillo bajo en ámbar, «Imprimiendo» en verde, atasco en rojo con «Tóner bajo» en los avisos, tapa abierta y sin papel en rojo, caída y recuperación; sin nombre, ubicación, serie, UUID, mensaje de pantalla ni dirección en la API pública | RF-20, RF-21, RF-117, RF-118, RF-119 |
 | E2E-54 | Panel completo con todos los servicios a un cuarto: a 2000 × 1100 px, cuatro por fila y sin desplazarse; a 1470 × 830 px, la columna a la vista, tres por fila, ninguno por debajo de 340 px y sin desbordamiento | RF-27, RF-120 |
+| E2E-55 | Un servicio con **Mostrar en los accesos de la columna** desmarcado sale de la columna y vuelve al marcarlo; en **Enlaces**, sin grupos se explica la pantalla; se crean grupos y enlaces, uno con icono buscado; una URL `ftp://` muestra su error y no se guarda nada; se reordenan grupos y enlaces y se guarda. En la columna van «Servicios» y los grupos en su orden, sin el vacío, con sus enlaces en orden y el icono; un enlace abre su sitio en otra pestaña con `noopener noreferrer`. A 375 px, la fila lleva el nombre de cada grupo delante de sus enlaces, de al menos 44 px | RF-121 |
 
 Los servicios simulados reproducen las rutas y la forma de respuesta usadas. El receptor de avisos simulado (`e2e/fake-notify.mjs`) hace de API de bots de Telegram, gracias a `TALAIA_TELEGRAM_API`, de servidor ntfy y de webhook, y guarda cada mensaje. La impresora simulada (`e2e/fake-printer.mjs`) solo responde a `Get-Printer-Attributes` por `POST` en `/ipp/print`, con la forma de la Brother real. El QNAP simulado es un agente SNMPv3 (`net-snmp`) con AES, porque el OpenSSL de Node no trae DES; ver DEC-43. Las discrepancias con el servicio real las cubren las verificaciones manuales.
 
@@ -415,6 +425,7 @@ El workflow también prueba todo cuando no puede calcular la lista: en un push q
 
 | Fecha | Versión de Talaia | Servicio | Resultado |
 |---|---|---|---|
+| 2026-11-25 | Hito 20 (`v0.7.0-2-gd1168f1-dirty`, binario de la rama) | Panel real del cliente con 13 servicios, con Talaia actualizado en su Proxmox VE con el instalador y `--binary` | Correcto según la captura del cliente: tras actualizar, la columna sigue con los servicios en «Servicios»; desmarcó dos servicios, que salieron de la columna y siguen en el panel, y creó un grupo con dos enlaces a sitios externos, con su icono, que aparece debajo de «Servicios» |
 | 2026-11-22 | `v0.7.0` | Proxmox VE real del cliente, actualización con el instalador descargado de GitHub y sin `--binary`, desde el binario de prueba del hito 19 (`v0.6.0-4-g67071f0-dirty`) | Correcto según la salida del instalador y una captura del panel en Safari. El instalador descargó la última versión para amd64, pidió confirmación, paró Talaia, hizo la copia de seguridad de la versión anterior dentro del contenedor, en `/var/lib/talaia/backups/`, e instaló `v0.7.0`. En la captura, la columna lateral indica `Talaia v0.7.0`, el resumen dice «Los 13 servicios están en orden» y los accesos llevan a los trece bloques; los cuatro equipos de Disponibilidad responden (uno por HTTP 200 y tres por TCP) y el resto de bloques (AdGuard Home, OPNsense, Proxmox VE, WGDashboard, Home Assistant, NUT, QNAP, Portainer e Impresora) muestran datos actuales en verde |
 | 2026-11-22 | `v0.7.0` | Versión publicada por `release.yml` | Correcto: no preliminar y marcada como la última, con ambos binarios, sumas e instalador. Descargados desde `releases/latest/download`: sumas correctas, binarios ELF amd64 y arm64, los dos indican `v0.7.0` e incluyen los textos nuevos del resumen del hito 19 (`watch.others.one`), y el instalador es igual al del repositorio. El PR de preparación pasó la CI solo con `docs`, con `test` e `installer` saltados (DEC-52) |
 | 2026-11-22 | Hito 19 (`v0.6.0-4-g67071f0-dirty`, binario de la rama) | Panel real del cliente en Safari, con Talaia actualizado en su Proxmox VE con el instalador y `--binary` | Correcto según capturas del cliente: columna lateral con el resumen y los accesos. Los accesos de la columna y los nombres de los bloques abren su servicio en otra pestaña con un clic normal. Un primer intento falló porque Safari tenía bloqueadas las ventanas emergentes de ese sitio (Ajustes → Sitios web → Ventanas emergentes), lo que también impide abrir con un clic normal los enlaces a otra pestaña; con Cmd + clic sí abrían y la consola mostraba el clic en el enlace sin cancelar. |
@@ -501,6 +512,7 @@ El workflow también prueba todo cuando no puede calcular la lista: en un push q
 
 **Aún sin verificar:**
 - **Panel con la columna lateral (hito 19):** probado con los simuladores a 2000 × 1100, 1470 × 830, 1280, 1000 y 375 px (E2E-13, E2E-37, E2E-38 y E2E-54) y en Safari con el panel real del cliente; falta verlo en su monitor de 27 pulgadas y en la pantalla del portátil por separado, y en Firefox.
+- **Enlaces guardados (hito 20), con el panel real:** probados con los simuladores (E2E-55) y con un grupo de dos enlaces en el panel del cliente; falta verlos en un móvil real, con muchos grupos y enlaces en la columna, y mover un enlace de un grupo a otro.
 - **Impresora real, casos no probados:** con la Brother del cliente (2026-11-21) se han visto «Lista» con los cuatro tóneres y la tapa abierta en rojo. Los motivos reales de la Brother en un atasco, sin papel o con un tóner bajo, y si los marca como `-error`, `-warning` o sin sufijo, solo se han probado con el simulador, a partir de RFC 8011 y PWG 5100.9. Tampoco se han probado IPPS, una cola de CUPS ni impresoras de tinta.
 - **Iconos de los bloques en otros navegadores:** la máscara CSS con la que se pintan solo se ha probado en Chromium (E2E) y en el navegador del cliente con su panel real; no en Safari ni Firefox de forma expresa.
 - **Disponibilidad real, casos no probados:** IPv6, un equipo lento y el modo HTTP sin cifrar. Con equipos reales (2026-11-20) se han visto TCP, un equipo caído con su aviso en rojo y su vuelta a verde, y HTTPS con un código de error (403, en ámbar) y con 200 (en verde).
@@ -591,6 +603,7 @@ Los requisitos pendientes se probarán en su hito.
 | RF-118 | `TestState` (printer), `TestReasons`, `TestPrinterErrors`, E2E-53 |
 | RF-119 | `TestTarget` (printer), `TestCollectReadsRealShape`, `TestPrinterDataHidesIdentity`, `TestParseIgnoresBadMarkers`, `TestPrinterConnectionRules`, E2E-52, E2E-53 |
 | RF-120 | E2E-13, E2E-37, E2E-54 |
+| RF-121 | `TestMigrationKeepsAccess`, `TestShowAccessSaved`, `TestLinkGroupsRoundTrip`, `TestSaveLinksValidation`, `TestSaveLinksKeepsRetiredIcon`, `TestSaveLinksAtLimits`, `TestLinksRequireAuth`, `TestDashboardLinkGroups`, `TestConnectionShowAccess`, E2E-55 |
 | RF-61 | INS-04, INS-05, INS-06, INS-11, INS-12 |
 | RF-62 | `TestSetupRequiresTokenWhenConfigured`, `TestSetupTokenAttemptsAreLimited`, `TestEmptySetupTokenNeverMatches`, E2E-29, INS-02 |
 | RNF-01 | Por diseño: el modelo de datos no tiene tablas de métricas |

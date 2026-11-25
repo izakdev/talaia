@@ -103,7 +103,21 @@ CREATE TABLE notification_log (
 	code         TEXT NOT NULL,
 	attempts     INTEGER NOT NULL
 );`, `
-ALTER TABLE connections ADD COLUMN icon TEXT NOT NULL DEFAULT '';`}
+ALTER TABLE connections ADD COLUMN icon TEXT NOT NULL DEFAULT '';`, `
+ALTER TABLE connections ADD COLUMN show_access INTEGER NOT NULL DEFAULT 1;
+CREATE TABLE link_groups (
+	id       TEXT PRIMARY KEY,
+	name     TEXT NOT NULL,
+	position INTEGER NOT NULL
+);
+CREATE TABLE links (
+	id       TEXT PRIMARY KEY,
+	group_id TEXT NOT NULL REFERENCES link_groups(id) ON DELETE CASCADE,
+	name     TEXT NOT NULL,
+	url      TEXT NOT NULL,
+	icon     TEXT NOT NULL DEFAULT '',
+	position INTEGER NOT NULL
+);`}
 
 // Store accede a la base de datos.
 type Store struct {
@@ -257,12 +271,14 @@ type Connection struct {
 	// Notify indica si sus cambios de estado se avisan por los canales.
 	Notify bool
 	// Icon es el icono elegido: vacío, el de su tipo; "none", sin icono.
-	Icon      string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	Icon string
+	// ShowAccess indica si su enlace sale en los accesos de la columna.
+	ShowAccess bool
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
-const connectionColumns = `id, name, type, base_url, username, interval_seconds, tls_skip_verify, options, entities, link_url, notify, icon, created_at, updated_at`
+const connectionColumns = `id, name, type, base_url, username, interval_seconds, tls_skip_verify, options, entities, link_url, notify, icon, show_access, created_at, updated_at`
 
 type scanner interface{ Scan(...any) error }
 
@@ -270,7 +286,7 @@ func scanConnection(row scanner) (Connection, error) {
 	var c Connection
 	var created, updated int64
 	var options, entities string
-	if err := row.Scan(&c.ID, &c.Name, &c.Type, &c.BaseURL, &c.Username, &c.IntervalSeconds, &c.TLSSkipVerify, &options, &entities, &c.LinkURL, &c.Notify, &c.Icon, &created, &updated); err != nil {
+	if err := row.Scan(&c.ID, &c.Name, &c.Type, &c.BaseURL, &c.Username, &c.IntervalSeconds, &c.TLSSkipVerify, &options, &entities, &c.LinkURL, &c.Notify, &c.Icon, &c.ShowAccess, &created, &updated); err != nil {
 		return c, err
 	}
 	c.CreatedAt, c.UpdatedAt = time.Unix(created, 0).UTC(), time.Unix(updated, 0).UTC()
@@ -336,9 +352,9 @@ func (s *Store) CreateConnection(ctx context.Context, c Connection, secret strin
 	defer tx.Rollback()
 	now := time.Now().Unix()
 	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO connections(id, name, type, base_url, username, secret, interval_seconds, tls_skip_verify, options, entities, link_url, notify, icon, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		c.ID, c.Name, c.Type, c.BaseURL, c.Username, sealed, c.IntervalSeconds, c.TLSSkipVerify, options, entities, c.LinkURL, c.Notify, c.Icon, now, now); err != nil {
+		`INSERT INTO connections(id, name, type, base_url, username, secret, interval_seconds, tls_skip_verify, options, entities, link_url, notify, icon, show_access, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		c.ID, c.Name, c.Type, c.BaseURL, c.Username, sealed, c.IntervalSeconds, c.TLSSkipVerify, options, entities, c.LinkURL, c.Notify, c.Icon, c.ShowAccess, now, now); err != nil {
 		return c, err
 	}
 	if err := placeNewConnection(ctx, tx, hex.EncodeToString(widgetID), c.ID); err != nil {
@@ -356,8 +372,8 @@ func (s *Store) UpdateConnection(ctx context.Context, c Connection, secret *stri
 	if err != nil {
 		return c, err
 	}
-	query := `UPDATE connections SET name = ?, base_url = ?, username = ?, interval_seconds = ?, tls_skip_verify = ?, options = ?, entities = ?, link_url = ?, notify = ?, icon = ?, updated_at = ?`
-	args := []any{c.Name, c.BaseURL, c.Username, c.IntervalSeconds, c.TLSSkipVerify, options, entities, c.LinkURL, c.Notify, c.Icon, time.Now().Unix()}
+	query := `UPDATE connections SET name = ?, base_url = ?, username = ?, interval_seconds = ?, tls_skip_verify = ?, options = ?, entities = ?, link_url = ?, notify = ?, icon = ?, show_access = ?, updated_at = ?`
+	args := []any{c.Name, c.BaseURL, c.Username, c.IntervalSeconds, c.TLSSkipVerify, options, entities, c.LinkURL, c.Notify, c.Icon, c.ShowAccess, time.Now().Unix()}
 	if secret != nil {
 		sealed, err := s.box.Seal([]byte(*secret), []byte(c.ID))
 		if err != nil {

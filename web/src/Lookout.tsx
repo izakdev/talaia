@@ -1,4 +1,5 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
+import type { BrandIconData, DashboardLinkGroup } from "./api";
 import { BrandIcon, LanguageSwitch, Tower } from "./chrome";
 import { useI18n } from "./i18n";
 import { relativeTime, StateLabel, ToneMark, useNow, type AccessItem, type Watched, type WatchState } from "./status";
@@ -27,6 +28,7 @@ interface LookoutProps {
   pages: PageLink[];
   currentPageId?: string;
   access: AccessItem[];
+  linkGroups: DashboardLinkGroup[];
   navigate: (path: string) => void;
   version: string;
   children: ReactNode;
@@ -36,7 +38,7 @@ interface LookoutProps {
  * Carcasa del panel. La columna y la barra son dos maquetaciones del mismo contenido:
  * cada una en el orden en que se ve, para que el foco siga el mismo orden.
  */
-export function Lookout({ summary, goTo, pages, currentPageId, access, navigate, version, children }: LookoutProps) {
+export function Lookout({ summary, goTo, pages, currentPageId, access, linkGroups, navigate, version, children }: LookoutProps) {
   const { t } = useI18n();
   const wide = useViewportWidth() >= WIDE_FROM_PX;
   const link = (to: string, label: string, className: string, current?: boolean) => (
@@ -95,10 +97,28 @@ export function Lookout({ summary, goTo, pages, currentPageId, access, navigate,
           )}
           {access.length > 0 && (
             <section className="side-section">
-              <h2>{t("panel.access")}</h2>
-              <AccessList access={access} />
+              <h2>{t("panel.services")}</h2>
+              <ul className="access-list">
+                {access.map((item) => (
+                  <li key={item.id}>
+                    <AccessLink name={item.name} url={item.link} icon={item.icon} tone={item.tone} />
+                  </li>
+                ))}
+              </ul>
             </section>
           )}
+          {linkGroups.map((group, i) => (
+            <section key={i} className="side-section">
+              <h2>{group.name}</h2>
+              <ul className="access-list">
+                {group.links.map((link, j) => (
+                  <li key={j}>
+                    <AccessLink name={link.name} url={link.url} icon={link.icon} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
           <div className="side-foot">
             {admin}
             <LanguageSwitch />
@@ -122,9 +142,25 @@ export function Lookout({ summary, goTo, pages, currentPageId, access, navigate,
           <LanguageSwitch />
         </div>
         <WatchSummary summary={summary} goTo={goTo} />
-        {access.length > 0 && (
+        {(access.length > 0 || linkGroups.length > 0) && (
           <nav className="access-row" aria-label={t("panel.access")}>
-            <AccessList access={access} />
+            <ul className="access-list">
+              {access.map((item) => (
+                <li key={item.id}>
+                  <AccessLink name={item.name} url={item.link} icon={item.icon} tone={item.tone} />
+                </li>
+              ))}
+              {linkGroups.map((group, i) => (
+                <Fragment key={i}>
+                  <li className="access-group">{group.name}</li>
+                  {group.links.map((link, j) => (
+                    <li key={j}>
+                      <AccessLink name={link.name} url={link.url} icon={link.icon} />
+                    </li>
+                  ))}
+                </Fragment>
+              ))}
+            </ul>
           </nav>
         )}
       </header>
@@ -135,28 +171,19 @@ export function Lookout({ summary, goTo, pages, currentPageId, access, navigate,
   );
 }
 
-function AccessList({ access }: { access: AccessItem[] }) {
+/** Un acceso: un servicio vigilado (con su estado) o un enlace guardado (sin estado). */
+function AccessLink({ name, url, icon, tone }: { name: string; url: string; icon: BrandIconData | null; tone?: AccessItem["tone"] }) {
   const { t } = useI18n();
   return (
-    <ul className="access-list">
-      {access.map((item) => (
-        <li key={item.id}>
-          <a
-            href={item.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={t("service.open", { name: item.name })}
-            title={item.link}
-          >
-            {item.icon ? <BrandIcon icon={item.icon} /> : <span className="brand-icon placeholder" aria-hidden="true" />}
-            <span className="access-name">{item.name}</span>
-            <span className={`access-tone ${item.tone}`}>
-              <ToneMark tone={item.tone} />
-            </span>
-          </a>
-        </li>
-      ))}
-    </ul>
+    <a href={url} target="_blank" rel="noopener noreferrer" aria-label={t("service.open", { name })} title={url}>
+      {icon ? <BrandIcon icon={icon} /> : <span className="brand-icon placeholder" aria-hidden="true" />}
+      <span className="access-name">{name}</span>
+      {tone && (
+        <span className={`access-tone ${tone}`}>
+          <ToneMark tone={tone} />
+        </span>
+      )}
+    </a>
   );
 }
 

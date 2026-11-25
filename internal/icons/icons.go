@@ -56,6 +56,15 @@ func (s Set) Has(slug string) bool {
 	return ok
 }
 
+// Lookup da el icono de un slug, o nil si está vacío o ya no está en el índice.
+func (s Set) Lookup(slug string) *Icon {
+	icon, ok := s.bySlug[slug]
+	if !ok {
+		return nil
+	}
+	return &icon
+}
+
 // Resolve da el icono que se pinta: el del tipo si no se eligió otro, nil sin icono
 // o si el elegido ya no existe.
 func (s Set) Resolve(connType, stored string) *Icon {
