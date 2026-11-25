@@ -168,7 +168,7 @@ func TestAvailabilityLinkHidesAddress(t *testing.T) {
 func TestMigratesExistingDatabase(t *testing.T) {
 	s, path := newStore(t)
 	ctx := context.Background()
-	if _, err := s.db.Exec(`ALTER TABLE connections DROP COLUMN icon; DROP TABLE notify_state; DROP TABLE notification_channels; DROP TABLE notification_log; ALTER TABLE connections DROP COLUMN notify; DROP TABLE widgets; DROP TABLE pages; DROP TABLE settings; ALTER TABLE connections DROP COLUMN link_url; ALTER TABLE connections DROP COLUMN entities; ALTER TABLE connections DROP COLUMN options; PRAGMA user_version = 1;`); err != nil {
+	if _, err := s.db.Exec(`DROP TABLE links; DROP TABLE link_groups; ALTER TABLE connections DROP COLUMN show_access; ALTER TABLE connections DROP COLUMN icon; DROP TABLE notify_state; DROP TABLE notification_channels; DROP TABLE notification_log; ALTER TABLE connections DROP COLUMN notify; DROP TABLE widgets; DROP TABLE pages; DROP TABLE settings; ALTER TABLE connections DROP COLUMN link_url; ALTER TABLE connections DROP COLUMN entities; ALTER TABLE connections DROP COLUMN options; PRAGMA user_version = 1;`); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.db.Exec(`INSERT INTO connections(id, name, type, base_url, secret, interval_seconds, created_at, updated_at)
@@ -316,7 +316,7 @@ func TestMigrationKeepsDefaultIcon(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Vuelve a la base de datos de antes de la migración del icono.
-	if _, err := s.db.Exec(fmt.Sprintf(`ALTER TABLE connections DROP COLUMN icon; PRAGMA user_version = %d`, len(migrations)-1)); err != nil {
+	if _, err := s.db.Exec(fmt.Sprintf(`DROP TABLE links; DROP TABLE link_groups; ALTER TABLE connections DROP COLUMN show_access; ALTER TABLE connections DROP COLUMN icon; PRAGMA user_version = %d`, len(migrations)-2)); err != nil {
 		t.Fatal(err)
 	}
 	s.Close()
@@ -328,5 +328,87 @@ func TestMigrationKeepsDefaultIcon(t *testing.T) {
 	defer s.Close()
 	if got, err := s.GetConnection(ctx, c.ID); err != nil || got.Icon != "" {
 		t.Fatalf("icono tras migrar = %q, %v", got.Icon, err)
+	}
+}
+
+func TestMigrationKeepsAccess(t *testing.T) {
+	s, path := newStore(t)
+	ctx := context.Background()
+	c, err := s.CreateConnection(ctx, Connection{Name: "a", Type: "adguard", BaseURL: "http://x", IntervalSeconds: 30, ShowAccess: false}, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Vuelve a la base de datos de antes de los enlaces guardados (v0.6.0).
+	if _, err := s.db.Exec(fmt.Sprintf(`DROP TABLE links; DROP TABLE link_groups; ALTER TABLE connections DROP COLUMN show_access; PRAGMA user_version = %d`, len(migrations)-1)); err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+	box, _ := secrets.New(bytes.Repeat([]byte{7}, 32))
+	s, err = Open(path, box)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	if got, err := s.GetConnection(ctx, c.ID); err != nil || !got.ShowAccess {
+		t.Fatalf("show_access tras migrar = %v, %v", got.ShowAccess, err)
+	}
+	if groups, err := s.LinkGroups(ctx); err != nil || len(groups) != 0 {
+		t.Fatalf("grupos tras migrar = %v, %v", groups, err)
+	}
+}
+
+func TestShowAccessSaved(t *testing.T) {
+	s, _ := newStore(t)
+	ctx := context.Background()
+	c, err := s.CreateConnection(ctx, Connection{Name: "a", Type: "adguard", BaseURL: "http://x", IntervalSeconds: 30, ShowAccess: false}, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := s.GetConnection(ctx, c.ID); got.ShowAccess {
+		t.Fatal("show_access al crear = true")
+	}
+	c.ShowAccess = true
+	if _, err := s.UpdateConnection(ctx, c, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := s.GetConnection(ctx, c.ID); !got.ShowAccess {
+		t.Fatal("show_access al actualizar = false")
+	}
+}
+
+func TestLinkGroupsRoundTrip(t *testing.T) {
+	s, _ := newStore(t)
+	ctx := context.Background()
+	groups := []LinkGroup{
+		{ID: "red", Name: "Red", Links: []Link{
+			{ID: "router", Name: "Router", URL: "http://192.0.2.1/", Icon: ""},
+			{ID: "switch", Name: "Switch", URL: "http://192.0.2.2/", Icon: "tplink"},
+		}},
+		{ID: "vacio", Name: "Vacío", Links: []Link{}},
+		{ID: "ext", Name: "Externos", Links: []Link{{ID: "docs", Name: "Docs", URL: "https://example.com/docs"}}},
+	}
+	if err := s.SaveLinkGroups(ctx, groups); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.LinkGroups(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fmt.Sprint(got) != fmt.Sprint(groups) {
+		t.Fatalf("grupos = %v", got)
+	}
+	if got[1].Links == nil {
+		t.Fatal("Links de un grupo vacío es nil")
+	}
+	if err := s.SaveLinkGroups(ctx, groups[2:]); err != nil {
+		t.Fatal(err)
+	}
+	got, _ = s.LinkGroups(ctx)
+	if len(got) != 1 || got[0].ID != "ext" {
+		t.Fatalf("grupos tras quitar = %v", got)
+	}
+	var n int
+	if err := s.db.QueryRow(`SELECT COUNT(*) FROM links`).Scan(&n); err != nil || n != 1 {
+		t.Fatalf("enlaces que quedan = %d, %v", n, err)
 	}
 }

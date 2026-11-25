@@ -37,6 +37,7 @@ type Snapshot struct {
 	Name          string             `json:"name"`
 	Type          string             `json:"type"`
 	Link          string             `json:"link"`
+	ShowAccess    bool               `json:"show_access"`
 	Icon          *icons.Icon        `json:"icon"`
 	Status        string             `json:"status"`
 	Error         string             `json:"error,omitempty"`
@@ -147,7 +148,7 @@ func (m *Manager) start(c store.Connection) {
 		old.cancel()
 		if old.target == target {
 			snapshot = old.snapshot
-			snapshot.Name, snapshot.Link = c.Name, c.Link()
+			snapshot.Name, snapshot.Link, snapshot.ShowAccess = c.Name, c.Link(), c.ShowAccess
 		}
 	}
 	snapshot.Icon = m.icons.Resolve(c.Type, c.Icon)
@@ -275,7 +276,7 @@ func (m *Manager) notifyLocked() {
 }
 
 func pendingSnapshot(c store.Connection) Snapshot {
-	return Snapshot{ID: c.ID, Name: c.Name, Type: c.Type, Link: c.Link(), Status: StatusPending, State: stateOf(StatusPending, nil)}
+	return Snapshot{ID: c.ID, Name: c.Name, Type: c.Type, Link: c.Link(), ShowAccess: c.ShowAccess, Status: StatusPending, State: stateOf(StatusPending, nil)}
 }
 
 // stateOf calcula el color de un servicio: el mismo para su bloque, la cabecera y los avisos.

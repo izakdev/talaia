@@ -92,6 +92,7 @@ export interface Connection {
   notify: boolean;
   // Vacío, el icono de su tipo; "none", sin icono; si no, el slug del icono.
   icon: string;
+  show_access: boolean;
   updated_at: string;
 }
 
@@ -109,6 +110,32 @@ export interface ConnectionInput {
   link_url: string;
   notify: boolean;
   icon: string;
+  show_access: boolean;
+}
+
+/** Enlace guardado: un sitio que Talaia no vigila. Icono vacío, sin icono. */
+export interface SavedLink {
+  id: string;
+  name: string;
+  url: string;
+  icon: string;
+}
+
+export interface LinkGroup {
+  id: string;
+  name: string;
+  links: SavedLink[];
+}
+
+export interface DashboardLink {
+  name: string;
+  url: string;
+  icon: BrandIconData | null;
+}
+
+export interface DashboardLinkGroup {
+  name: string;
+  links: DashboardLink[];
 }
 
 export interface EntityOption {
@@ -376,6 +403,7 @@ export interface ConnectionState {
   name: string;
   type: ConnectionType;
   link: string;
+  show_access: boolean;
   icon: BrandIconData | null;
   status: "pending" | "ok" | "error";
   error?: string;
@@ -388,6 +416,7 @@ export interface ConnectionState {
 export interface DashboardState {
   pages: Page[];
   connections: ConnectionState[];
+  link_groups: DashboardLinkGroup[];
 }
 
 export interface TestResult {
@@ -441,6 +470,8 @@ export const api = {
   status: () => request<{ connections: ConnectionState[] }>("GET", "/api/admin/status"),
   panel: () => request<{ pages: Page[] }>("GET", "/api/admin/panel"),
   savePanel: (pages: Page[]) => request<{ pages: Page[] }>("PUT", "/api/admin/panel", { pages }),
+  links: () => request<{ groups: LinkGroup[] }>("GET", "/api/admin/links"),
+  saveLinks: (groups: LinkGroup[]) => request<{ groups: LinkGroup[] }>("PUT", "/api/admin/links", { groups }),
   settings: () => request<AppSettings>("GET", "/api/admin/settings"),
   saveSettings: (settings: AppSettings) => request<AppSettings>("PUT", "/api/admin/settings", settings),
   changePassword: (current: string, next: string) =>

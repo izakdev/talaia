@@ -17,7 +17,7 @@
 ## Por qué Talaia
 
 - **Responde primero a una pregunta.** Una columna lateral resume todos los servicios de todas las páginas: «Los 12 servicios están en orden», o «Necesita atención» con cada servicio, su motivo y un enlace a su bloque. La luz del faro y cada bloque afectado se ponen en ámbar o en rojo.
-- **Sirve de página de inicio.** Una docena de servicios caben en una pantalla ancha sin desplazarse, y la misma columna lleva accesos a cada servicio para abrirlo sin recordar su dirección.
+- **Sirve de página de inicio.** Una docena de servicios caben en una pantalla ancha sin desplazarse, y la misma columna lleva accesos a cada servicio para abrirlo sin recordar su dirección, y tus propios enlaces a sitios que Talaia no vigila, en grupos con nombre.
 - **Solo lectura, y se puede compartir.** Talaia solo lee de tus servicios. Las credenciales se guardan cifradas y nunca salen del servidor; el panel público no muestra URL, direcciones IP, claves ni nombres de peers.
 - **Te avisa aunque no estés mirando.** Cuando un servicio se pone en ámbar o en rojo, y cuando vuelve a estar en orden, Talaia envía un aviso por Telegram, ntfy o un webhook JSON, con las mismas palabras que el panel.
 - **En vivo.** Los bloques se actualizan solos, sin recargar. Si un servicio falla, su bloque conserva el último dato y dice su antigüedad.

@@ -107,6 +107,8 @@ func (s *Server) Handler() http.Handler {
 			r.Get("/status", s.adminStatus)
 			r.Get("/panel", s.getPanel)
 			r.Put("/panel", s.savePanel)
+			r.Get("/links", s.getLinks)
+			r.Put("/links", s.saveLinks)
 			r.Get("/settings", s.getSettings)
 			r.Put("/settings", s.saveSettings)
 			r.Post("/password", s.changePassword)
@@ -162,7 +164,12 @@ func sameOrigin(next http.Handler) http.Handler {
 
 func limitBody(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		r.Body = http.MaxBytesReader(w, r.Body, maxBody)
+		limit := int64(maxBody)
+		// Los enlaces guardados se envían todos juntos: 100 URL de hasta 2048 caracteres.
+		if r.URL.Path == "/api/admin/links" {
+			limit = maxLinksBody
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, limit)
 		next.ServeHTTP(w, r)
 	})
 }
@@ -450,6 +457,8 @@ type connectionIn struct {
 	Notify *bool `json:"notify"`
 	// Icon: vacío, el de su tipo; "none", sin icono; si no, uno del índice.
 	Icon string `json:"icon"`
+	// ShowAccess es opcional: si no llega, su enlace sale en los accesos.
+	ShowAccess *bool `json:"show_access"`
 }
 
 type connectionOut struct {
@@ -465,11 +474,12 @@ type connectionOut struct {
 	LinkURL         string          `json:"link_url"`
 	Notify          bool            `json:"notify"`
 	Icon            string          `json:"icon"`
+	ShowAccess      bool            `json:"show_access"`
 	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
 func toOut(c store.Connection) connectionOut {
-	return connectionOut{c.ID, c.Name, c.Type, c.BaseURL, c.Username, c.IntervalSeconds, c.TLSSkipVerify, c.Options, c.Entities, c.LinkURL, c.Notify, c.Icon, c.UpdatedAt}
+	return connectionOut{c.ID, c.Name, c.Type, c.BaseURL, c.Username, c.IntervalSeconds, c.TLSSkipVerify, c.Options, c.Entities, c.LinkURL, c.Notify, c.Icon, c.ShowAccess, c.UpdatedAt}
 }
 
 // validate comprueba la conexión y que su icono exista. saved es el icono ya guardado:
@@ -538,8 +548,7 @@ func validateConnection(in *connectionIn) string {
 	in.LinkURL = strings.TrimSpace(in.LinkURL)
 	if in.LinkURL != "" {
 		// El enlace se muestra en el panel: solo http o https, nunca javascript: ni similares.
-		link, err := url.Parse(in.LinkURL)
-		if err != nil || (link.Scheme != "http" && link.Scheme != "https") || link.Host == "" || link.User != nil || len(in.LinkURL) > 2048 {
+		if !validLink(in.LinkURL) {
 			return "invalid_link"
 		}
 	}
@@ -656,7 +665,7 @@ func (s *Server) createConnection(w http.ResponseWriter, r *http.Request) {
 	c, err := s.store.CreateConnection(r.Context(), store.Connection{
 		Name: in.Name, Type: in.Type, BaseURL: in.BaseURL, Username: in.Username,
 		IntervalSeconds: in.IntervalSeconds, TLSSkipVerify: in.TLSSkipVerify, Options: in.Options, Entities: in.Entities, LinkURL: in.LinkURL,
-		Notify: in.Notify == nil || *in.Notify, Icon: in.Icon,
+		Notify: in.Notify == nil || *in.Notify, Icon: in.Icon, ShowAccess: in.ShowAccess == nil || *in.ShowAccess,
 	}, *in.Secret)
 	if err != nil {
 		s.internal(w, err)
@@ -696,7 +705,7 @@ func (s *Server) updateConnection(w http.ResponseWriter, r *http.Request) {
 	c, err := s.store.UpdateConnection(r.Context(), store.Connection{
 		ID: id, Name: in.Name, BaseURL: in.BaseURL, Username: in.Username,
 		IntervalSeconds: in.IntervalSeconds, TLSSkipVerify: in.TLSSkipVerify, Options: in.Options, Entities: in.Entities, LinkURL: in.LinkURL,
-		Notify: in.Notify == nil || *in.Notify, Icon: in.Icon,
+		Notify: in.Notify == nil || *in.Notify, Icon: in.Icon, ShowAccess: in.ShowAccess == nil || *in.ShowAccess,
 	}, in.Secret)
 	if s.storeError(w, err) {
 		return
@@ -832,7 +841,11 @@ func (s *Server) dashboardState(ctx context.Context) (map[string]any, error) {
 			connections = append(connections, snapshot)
 		}
 	}
-	return map[string]any{"pages": pages, "connections": connections}, nil
+	groups, err := s.store.LinkGroups(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"pages": pages, "connections": connections, "link_groups": s.publicLinks(groups)}, nil
 }
 
 // canViewDashboard indica si la petición puede ver el panel según los ajustes.

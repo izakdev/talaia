@@ -124,7 +124,8 @@ Cuando hay servicios, cada uno tiene su propio bloque, con el icono del servicio
 
 - **El resumen:** si todo va bien, por ejemplo «Los 12 servicios están en orden», y cuándo se actualizaron los datos por última vez. Si algún servicio tiene un aviso o falla, lo nombra con su motivo, aunque esté en otra página, por ejemplo «NAS: Volumen casi lleno», y te dice cuántos siguen en orden. Pulsa un nombre para ir a su bloque. La luz del faro también cambia: ámbar con avisos y roja con fallos. Esos bloques llevan además una franja del mismo color en su borde superior.
 - **Las páginas,** si tienes más de una.
-- **Los accesos:** un enlace a cada servicio del panel, con su icono y la forma de su estado, que lo abre en una pestaña nueva. Así no tienes que recordar sus direcciones.
+- **Los servicios:** un enlace a cada servicio del panel, con su icono y la forma de su estado, que lo abre en una pestaña nueva. Así no tienes que recordar sus direcciones. Si no quieres alguno aquí, edita su conexión y desmarca **Mostrar en los accesos de la columna**; el servicio sigue en el panel.
+- **Tus enlaces:** los sitios que Talaia no vigila, como la web del router o una herramienta externa, cada grupo en su apartado. Los creas en [Enlaces](#enlaces-guardados).
 - **Al pie,** la administración, el idioma y la versión de Talaia.
 
 **Que quepa todo sin desplazarte:** en el [editor del panel](#organizar-el-panel), pon los bloques a un cuarto de fila. En una pantalla de unos 2000 px de ancho caben así cuatro por fila y una docena de servicios sin desplazarte. En una pantalla más estrecha, como la de un portátil, Talaia ensancha los bloques que quedarían demasiado estrechos y van tres por fila; la columna sigue a la vista. Con el teclado, lo primero es **Saltar a los servicios**, que lleva directamente a los bloques.
@@ -596,6 +597,23 @@ En la administración, abre **Panel**. Cada conexión nueva se añade sola a la 
 **Cómo se ve después:** el panel ocupa todo el ancho de la pantalla. Cada bloque queda justo debajo del anterior de sus columnas, según lo que ocupe su contenido: así, dos bloques cortos uno encima de otro caben al lado de uno largo, sin huecos. Si un bloque crece con los datos, los de debajo se recolocan solos. En pantallas medianas, los bloques de menos de media fila se muestran a media fila, y en las estrechas, en una sola columna.
 
 **Privacidad:** un servicio que no esté en ninguna página no sale por la API pública, aunque Talaia lo siga consultando.
+
+### Enlaces guardados
+
+Para tener a mano sitios que Talaia no vigila (la web del router, la de una cámara, la documentación de algo…), abre **Enlaces** en la administración.
+
+1. Pulsa **Añadir grupo** y ponle nombre, por ejemplo «Red».
+2. En el grupo, pulsa **Añadir enlace** y escribe su **Nombre** y su **URL**, que debe empezar por `http://` o `https://`. Si quieres, elige un **Icono** con el mismo buscador que las conexiones.
+3. Ordena con **Subir** y **Bajar**, tanto los grupos como los enlaces de cada grupo. Para pasar un enlace a otro grupo, elígelo en **Grupo**.
+4. Pulsa **Guardar enlaces**, o **Descartar** para deshacer los cambios.
+
+![Editor de enlaces con dos grupos](img/31-editor-enlaces.png)
+
+En la columna, debajo de **Servicios**, cada grupo tiene su apartado con su nombre, en el orden que hayas elegido. Un grupo sin enlaces no se muestra. En el móvil van en la misma fila que los servicios, con el nombre de cada grupo delante de sus enlaces.
+
+![Columna con los servicios y dos grupos de enlaces](img/32-panel-con-enlaces.png)
+
+Puedes tener hasta 20 grupos y 100 enlaces. Los enlaces se ven en el panel público, igual que el enlace de cada servicio: no guardes direcciones que no quieras mostrar, ni con usuario o contraseña dentro, que Talaia rechaza.
 
 ## Ajustes
 

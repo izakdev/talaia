@@ -17,7 +17,7 @@
 ## Why Talaia
 
 - **Answers one question first.** A side column sums up every service on every page: "All 12 services are fine", or "Needs attention" with each service, its reason and a link to its block. The lighthouse's light and each affected block turn amber or red.
-- **Works as a start page.** A dozen services fit on a wide screen without scrolling, and the same column has shortcuts to open each service without remembering its address.
+- **Works as a start page.** A dozen services fit on a wide screen without scrolling, and the same column has shortcuts to open each service without remembering its address, plus your own links to sites Talaia doesn't monitor, in named groups.
 - **Read-only and safe to share.** Talaia only reads from your services. Credentials are stored encrypted and never leave the server; the public dashboard shows no URLs, IP addresses, keys or peer names.
 - **Tells you, even when you're not looking.** When a service turns amber or red, and when it's back to normal, Talaia sends an alert through Telegram, ntfy or a JSON webhook, with the same words as the dashboard.
 - **Live.** Blocks update on their own, without reloading. If a service fails, its block keeps the last data and says how old it is.

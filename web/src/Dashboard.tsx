@@ -109,7 +109,7 @@ function accessItems(dashboard: DashboardState | undefined, t: I18n["t"]): Acces
   for (const page of dashboard?.pages ?? []) {
     for (const widget of [...page.widgets].sort((a, b) => a.y - b.y || a.x - b.x)) {
       const connection = states.get(widget.connection_id);
-      if (!connection?.link || seen.has(connection.id) || !WIDGETS[connection.type]) continue;
+      if (!connection?.link || !connection.show_access || seen.has(connection.id) || !WIDGETS[connection.type]) continue;
       seen.add(connection.id);
       items.push({ id: connection.id, name: connection.name, link: connection.link, icon: connection.icon, tone: serviceState(connection, t).tone });
     }
@@ -180,6 +180,7 @@ export default function Dashboard({
       pages={pages}
       currentPageId={page?.id}
       access={accessItems(dashboard.data, t)}
+      linkGroups={dashboard.data?.link_groups ?? []}
       navigate={navigate}
       version={version}
     >

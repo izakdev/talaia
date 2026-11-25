@@ -18,6 +18,7 @@ flowchart TD
     Form -->|Guardar| Conn
     Conn -->|Ver el panel| Dash
     Conn -->|Panel| Ed[Editor del panel]
+    Conn -->|Enlaces| Links[Enlaces guardados]
     Conn -->|Ajustes| Set[Ajustes]
 ```
 
@@ -28,6 +29,7 @@ flowchart TD
 | `/p/<id>` | Una página concreta del dashboard |
 | `/admin/connections/new` | Catálogo de servicios |
 | `/admin/panel` | Editor del panel |
+| `/admin/links` | Enlaces guardados |
 | `/admin/settings` | Ajustes |
 
 Mientras no exista un administrador, todas las rutas muestran el asistente de primer arranque.
@@ -53,12 +55,13 @@ Mientras no exista un administrador, todas las rutas muestran el asistente de pr
 
 **Con servicios:** el faro vigila desde una columna fija a la izquierda y los bloques de la página ocupan el resto (DEC-59). Pensado para la página de inicio del navegador: ver de un vistazo cómo está todo y entrar en cualquier servicio con un clic.
 
-- **Columna lateral:** con la ventana de 1100 px o más. Mide 16,5rem, va sobre el color del mar en los dos temas, se queda fija al desplazar los bloques y se desplaza por sí sola si su contenido no cabe. De arriba abajo: el faro y la marca, el resumen, las páginas, los accesos y, al pie, Administración, el cambio de idioma y la versión de Talaia.
-- **Barra superior:** con la ventana de menos de 1100 px. Lleva el faro, la marca, la forma del peor estado, Administración y el idioma; debajo, el resumen y los accesos en una fila que se desliza en horizontal (iconos grandes con el nombre debajo, de al menos 44 px de alto). Luego van las pestañas de página, los bloques y la versión al final.
+- **Columna lateral:** con la ventana de 1100 px o más. Mide 16,5rem, va sobre el color del mar en los dos temas, se queda fija al desplazar los bloques y se desplaza por sí sola si su contenido no cabe. De arriba abajo: el faro y la marca, el resumen, las páginas, los servicios, un apartado por cada grupo de enlaces guardados y, al pie, Administración, el cambio de idioma y la versión de Talaia.
+- **Barra superior:** con la ventana de menos de 1100 px. Lleva el faro, la marca, la forma del peor estado, Administración y el idioma; debajo, el resumen y los accesos en una fila que se desliza en horizontal (iconos grandes con el nombre debajo, de al menos 44 px de alto): primero los servicios y después los enlaces guardados, con el nombre de cada grupo delante de los suyos. Luego van las pestañas de página, los bloques y la versión al final.
 - **Resumen:** el estado de todos los servicios del panel, de cualquier página. Si todos están bien, «Los N servicios están en orden» y la antigüedad. Si no, «N servicios necesitan atención» y una lista con cada uno y su motivo, que es la etiqueta de estado de su bloque («NAS: Volumen casi lleno»), con los fallos primero; debajo, «Los otros N, en orden» y la antigüedad. Cada nombre lleva a su bloque, en su página, y le da el foco. Con avisos, el resumen lleva un fondo teñido y un filo del color del peor estado. Los servicios en neutro, como «Sin túneles», no cuentan como avisos.
 - **Atalaya:** la luz y el haz del faro toman el color del peor estado: el acento elegido si todo va bien, ámbar con avisos y rojo con fallos, con el haz más intenso. Al cambiar el peor estado, el haz vuelve a barrer una vez, salvo con movimiento reducido.
 - **Páginas:** solo con más de una. En la columna, una lista vertical con la página actual resaltada; en la barra, pestañas.
-- **Accesos:** un enlace por cada servicio del panel que tenga URL, de todas las páginas, sin repetir y en el orden del panel, con el icono de la marca, el nombre y la forma de su estado. Se abre en una pestaña nueva. Sin ninguno, la sección no aparece.
+- **Servicios:** un enlace por cada servicio del panel que tenga URL y la casilla **Mostrar en los accesos de la columna** marcada, de todas las páginas, sin repetir y en el orden del panel, con el icono de la marca, el nombre y la forma de su estado. Se abre en una pestaña nueva. Sin ninguno, el apartado no aparece.
+- **Enlaces guardados:** un apartado por grupo, con su nombre como título, en el orden elegido en [Enlaces guardados](#enlaces-guardados). Cada enlace lleva su icono, si lo tiene, o un marcador vacío, y su nombre, sin estado. Se abre en una pestaña nueva. Los grupos sin enlaces no aparecen.
 - **Teclado:** el primer elemento es «Saltar a los servicios», visible al recibir el foco, que lleva a los bloques. El orden del foco es el orden en que se ve: la columna y la barra son dos maquetaciones del mismo contenido.
 - **Recuadro:** cada bloque tiene fondo, borde y esquinas redondeadas, sin sombra. La cabecera (icono, nombre y estado) va separada del cuerpo por una línea. Si su estado es un aviso o un fallo, el borde superior es una franja ámbar o roja.
 - **Secciones del bloque:** cada sección (cifras, listas, tablas o un apartado con título) lleva una línea encima y ninguna debajo, salvo la primera, que ya separa la cabecera. Dentro de un apartado con título, las cifras no llevan línea propia.
@@ -189,6 +192,7 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 | Enlace para abrir el servicio | Todos | Opcional, `http` o `https`, sin credenciales. Vacío, usa la URL de conexión |
 | No verificar TLS | Todos salvo QNAP y SAI (NUT) | Desactivado por defecto. En Disponibilidad solo se guarda con `https://`, y en Impresora, con `ipps://` |
 | Avisar de sus cambios | Todos | Activado por defecto. Desactivado, la conexión sigue en el panel, pero no envía avisos; ver [Notificaciones](#notificaciones) |
+| Mostrar en los accesos de la columna | Todos | Activado por defecto, también en las conexiones que ya existían al actualizar. Desactivado, el servicio sigue en el panel, pero no sale en **Servicios** de la columna ni en la fila del móvil. Sin enlace, no sale aunque esté marcado |
 
 | Credencial | Formato |
 |---|---|
@@ -230,6 +234,22 @@ La CPU y la RAM son las de Home Assistant, no las del equipo completo.
 - **Guardar:** los cambios no se aplican hasta pulsar **Guardar panel**. Las alturas medidas no cuentan como cambios. **Descartar** vuelve a lo guardado, y el navegador avisa si se cierra la página con cambios.
 
 Una misma conexión puede estar en varias páginas, una vez en cada una. Una conexión fuera de todas las páginas se sigue consultando y su estado se ve en **Conexiones**, pero no sale por la API pública.
+
+### Enlaces guardados
+
+Sitios que Talaia no vigila, en grupos con nombre, para la columna del dashboard. Sin grupos, la pantalla explica para qué sirve y muestra **Añadir grupo**.
+
+- **Grupos:** añadir (con el nombre «Grupo N», que se cambia en el campo **Nombre del grupo**, hasta 40 caracteres), **Subir grupo**, **Bajar grupo** y **Borrar grupo**. Si el grupo tiene enlaces, borrarlo pide confirmación en la misma fila. Hasta 20 grupos.
+- **Enlaces:** **Añadir enlace** en cada grupo; por enlace, **Nombre** (hasta 60 caracteres), **URL** (`http://` o `https://`, con host, sin usuario ni contraseña, hasta 2048 caracteres), **Icono** (el mismo buscador que la conexión; la opción por defecto es sin icono), **Grupo** (con más de un grupo, para moverlo al final de otro), **Subir**, **Bajar** y **Borrar**. Hasta 100 enlaces en total.
+- **Guardar:** como en el editor del panel, nada se aplica hasta pulsar **Guardar enlaces**; **Descartar** vuelve a lo guardado, el estado dice «Cambios sin guardar» y el navegador avisa si se cierra la página con cambios. Un dashboard abierto recibe los enlaces nuevos sin recargar.
+
+| Error | Mensaje |
+|---|---|
+| Un grupo sin nombre o con más de 40 caracteres | Cada grupo necesita un nombre de hasta 40 caracteres. |
+| Un enlace sin nombre o con más de 60 caracteres | Cada enlace necesita un nombre de hasta 60 caracteres. |
+| Una URL que no es `http://` ni `https://`, sin host o con credenciales | El enlace debe empezar por http:// o https:// y no incluir credenciales. |
+| Más de 20 grupos o 100 enlaces, o un identificador no válido | Hay demasiados grupos o enlaces (como mucho, 20 grupos y 100 enlaces), o alguno no es válido. Recarga la página e inténtalo de nuevo. |
+| Un icono que no existe | El icono no existe. |
 
 ### Ajustes
 

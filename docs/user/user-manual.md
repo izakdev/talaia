@@ -124,7 +124,8 @@ Once there are services, each one has its own block, with the service's icon nex
 
 - **The summary:** whether everything is fine, for example "All 12 services are fine", and when the data was last updated. If a service has a warning or is failing, it names it with its reason, even if it is on another page, for example "NAS: Volume almost full", and tells you how many are still fine. Click a name to go to its block. The lighthouse's light changes too: amber for warnings and red for failures. Those blocks also get a stripe of the same colour along their top edge.
 - **The pages,** if you have more than one.
-- **The shortcuts:** a link to each service on the dashboard, with its icon and the shape of its status, which opens it in a new tab. That way you don't need to remember their addresses.
+- **The services:** a link to each service on the dashboard, with its icon and the shape of its status, which opens it in a new tab. That way you don't need to remember their addresses. If you don't want one here, edit its connection and untick **Show in the sidebar shortcuts**; the service stays on the dashboard.
+- **Your links:** sites Talaia doesn't monitor, like your router's web page or an external tool, each group in its own section. You create them in [Links](#saved-links).
 - **At the bottom,** administration, the language and Talaia's version.
 
 **Fitting everything without scrolling:** in the [dashboard editor](#arranging-the-dashboard), set the blocks to a quarter of a row. On a screen about 2000 px wide, four then fit per row and a dozen services fit without scrolling. On a narrower screen, such as a laptop's, Talaia widens the blocks that would be too narrow and puts three per row; the column stays in view. With the keyboard, the first stop is **Skip to services**, which takes you straight to the blocks.
@@ -596,6 +597,23 @@ In the administration, open **Dashboard**. Each new connection is added on its o
 **How it looks afterwards:** the dashboard uses the whole width of the screen. Each block sits right below the previous one in its columns, according to how much its content takes up: so two short blocks one above the other fit next to a long one, with no gaps. If a block grows with the data, the ones below move on their own. On medium screens, blocks narrower than half a row are shown at half a row, and on narrow ones, in a single column.
 
 **Privacy:** a service that isn't on any page doesn't go out through the public API, although Talaia keeps querying it.
+
+### Saved links
+
+To keep sites Talaia doesn't monitor at hand (your router's web page, a camera's, some documentation…), open **Links** in administration.
+
+1. Click **Add group** and give it a name, for example "Network".
+2. In the group, click **Add link** and enter its **Name** and **URL**, which must start with `http://` or `https://`. If you like, choose an **Icon** with the same search as connections.
+3. Reorder with **Up** and **Down**, both the groups and the links in each group. To move a link to another group, choose it in **Group**.
+4. Click **Save links**, or **Discard** to undo your changes.
+
+![Links editor with two groups](img/31-editor-enlaces.png)
+
+In the column, below **Services**, each group gets its own section with its name, in the order you chose. A group with no links isn't shown. On a phone they go in the same row as the services, with each group's name before its links.
+
+![Column with the services and two groups of links](img/32-panel-con-enlaces.png)
+
+You can have up to 20 groups and 100 links. Links are visible on the public dashboard, like each service's link: don't save addresses you don't want to show, nor ones with a username or password inside, which Talaia rejects.
 
 ## Settings
 

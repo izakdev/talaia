@@ -23,8 +23,20 @@
 | 17 | Disponibilidad de equipos de red por TCP o HTTP, sin credenciales | Terminado y verificado con cuatro equipos del cliente (TCP, caída con sus avisos y HTTPS), publicado en `v0.5.0` |
 | 18 | Impresora por IPP: estado, avisos y nivel de los tóneres | Terminado y verificado con la impresora del cliente (en reposo, con sus cuatro tóneres, y con la tapa abierta en rojo), publicado en `v0.6.0` |
 | 19 | Panel con torre lateral: resumen con motivo, accesos y bloques más densos | Terminado y verificado en Safari con el panel real del cliente, publicado en `v0.7.0` |
+| 20 | Enlaces guardados en grupos y accesos a elegir en la columna | Terminado y verificado con el panel real del cliente |
 
 ## Historial
+
+### Hito 20 (2026-11-25)
+
+**Añadido:**
+- Enlaces guardados (DEC-60): sitios que Talaia no vigila, en grupos con nombre, que se crean, ordenan y borran en la pestaña nueva **Enlaces** de la administración, con un icono opcional. En la columna, cada grupo tiene su apartado debajo de «Servicios»; en el móvil, van en la misma fila, con el nombre de cada grupo delante.
+- Casilla **Mostrar en los accesos de la columna** en cada conexión, marcada por defecto, también en las que ya existían.
+
+**Cambiado:**
+- El apartado de los servicios de la columna se llama «Servicios» en vez de «Accesos».
+
+**Verificado:** con el panel real del cliente, dos servicios desmarcados y un grupo con dos enlaces.
 
 ### `v0.7.0` (2026-11-22)
 

@@ -1609,6 +1609,96 @@ const scenarios = [
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.getByRole("link", { name: "Administración" }).click();
   }],
+  ["E2E-55", "Enlaces guardados en grupos y accesos a elegir", async () => {
+    await page.setViewportSize({ width: 1470, height: 830 });
+    const side = page.locator(".lookout-side");
+    const adguardAccess = side.getByRole("link", { name: "Abrir AdGuard principal en una pestaña nueva" });
+    const setShowAccess = async (on) => {
+      await row("AdGuard principal").getByRole("button", { name: "Editar" }).click();
+      const dialog = page.locator("dialog");
+      await dialog.getByRole("checkbox", { name: /Mostrar en los accesos/ }).setChecked(on);
+      await dialog.getByRole("button", { name: "Guardar" }).click();
+      await dialog.waitFor({ state: "detached" });
+    };
+    // Un servicio desmarcado sale de los accesos y vuelve al marcarlo.
+    await setShowAccess(false);
+    await toDashboard();
+    await page.getByText("Protección activa").first().waitFor();
+    assert.equal(await adguardAccess.count(), 0);
+    await toAdmin();
+    await setShowAccess(true);
+    await toDashboard();
+    await adguardAccess.waitFor();
+    await toAdmin();
+
+    // Pestaña Enlaces, vacía.
+    await page.getByRole("link", { name: "Enlaces", exact: true }).click();
+    await page.getByText("Aún no hay enlaces").waitFor();
+    const group = (name) => page.getByRole("region", { name, exact: true });
+    const addGroup = async (name) => {
+      await page.getByRole("button", { name: "Añadir grupo" }).click();
+      const last = page.locator(".link-group").last();
+      await last.getByLabel("Nombre del grupo").fill(name);
+      return group(name);
+    };
+    const addLink = async (inGroup, name, url) => {
+      await inGroup.getByRole("button", { name: "Añadir enlace" }).click();
+      const added = inGroup.locator(".link-row").last();
+      await added.getByLabel("Nombre", { exact: true }).fill(name);
+      await added.getByLabel("URL").fill(url);
+      return inGroup.getByRole("listitem", { name, exact: true });
+    };
+    const red = await addGroup("Red");
+    await addLink(red, "Router", "http://router.example.com/");
+    const sw = await addLink(red, "Switch", "ftp://switch.example.com/");
+    const externos = await addGroup("Externos");
+    const docs = await addLink(externos, "Documentación", "https://example.com/docs");
+    await docs.getByRole("button", { name: /^Icono/ }).click();
+    await docs.getByRole("combobox", { name: "Buscar un icono" }).fill("github");
+    await docs.getByRole("option", { name: "GitHub", exact: true }).click();
+    await docs.getByRole("button", { name: /^Icono GitHub/ }).waitFor();
+    await addGroup("Vacío");
+    await page.getByRole("status").filter({ hasText: "Cambios sin guardar" }).waitFor();
+    // Una URL que no es http ni https no se guarda.
+    await page.getByRole("button", { name: "Guardar enlaces" }).click();
+    await page.getByRole("alert").getByText("El enlace debe empezar por http:// o https://").waitFor();
+    assert.deepEqual((await page.request.get(`${BASE}/api/admin/links`).then((r) => r.json())).groups, []);
+    await sw.getByLabel("URL").fill("http://switch.example.com/");
+    // Reordenar: Switch delante de Router y Externos delante de Red.
+    await red.getByRole("button", { name: "Bajar Router" }).click();
+    await externos.getByRole("button", { name: "Subir grupo" }).click();
+    assert.deepEqual(await page.locator(".link-group-head input").evaluateAll((all) => all.map((i) => i.value)), ["Externos", "Red", "Vacío"]);
+    await shot(page, "31-editor-enlaces");
+    await page.getByRole("button", { name: "Guardar enlaces" }).click();
+    await page.getByRole("status").filter({ hasText: "Sin cambios" }).waitFor();
+
+    // En la columna: Servicios, luego cada grupo en su orden; el grupo vacío no sale.
+    await toDashboard();
+    await side.getByRole("heading", { name: "Externos" }).waitFor();
+    assert.deepEqual(await side.locator(".side-section h2").allInnerTexts(), ["Servicios", "Externos", "Red"]);
+    const redLinks = side.locator(".side-section", { has: page.getByRole("heading", { name: "Red" }) }).getByRole("link");
+    assert.deepEqual(await redLinks.allInnerTexts(), ["Switch", "Router"]);
+    assert.equal(await side.locator('.brand-icon[data-icon="github"]').count(), 1);
+    await context.route("http://router.example.com/**", (route) => route.fulfill({ body: "router", contentType: "text/html" }));
+    const router = side.getByRole("link", { name: "Abrir Router en una pestaña nueva" });
+    assert.equal(await router.getAttribute("rel"), "noopener noreferrer");
+    const [tab] = await Promise.all([page.waitForEvent("popup"), router.click()]);
+    await tab.waitForLoadState("domcontentloaded");
+    assert.equal(tab.url(), "http://router.example.com/");
+    await tab.close();
+    await context.unroute("http://router.example.com/**");
+    await page.mouse.move(0, 0);
+    await shot(page, "32-panel-con-enlaces");
+
+    // En el móvil, una sola fila con el nombre de cada grupo delante de sus enlaces.
+    await page.setViewportSize({ width: 375, height: 800 });
+    const strip = page.getByRole("navigation", { name: "Accesos" });
+    await strip.locator(".access-group").first().waitFor();
+    assert.deepEqual(await strip.locator(".access-group").allInnerTexts(), ["Externos", "Red"]);
+    for (const box of await strip.getByRole("link").evaluateAll((all) => all.map((a) => a.getBoundingClientRect().height))) assert.ok(box >= 44, `acceso de ${box} px`);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await toAdmin();
+  }],
   ["E2E-12", "Cambio de idioma recordado y aplicado a las demás pestañas", async () => {
     await page.getByRole("button", { name: "English" }).click();
     await page.getByRole("heading", { name: "Connections", exact: true }).waitFor();
